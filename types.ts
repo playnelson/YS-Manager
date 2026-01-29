@@ -1,4 +1,10 @@
 
+// Auth Types
+export interface User {
+  id: string;
+  nick: string;
+}
+
 // Kanban Types
 export interface KanbanCard {
   id: string;
@@ -22,8 +28,8 @@ export interface FlowNode {
   x: number;
   y: number;
   label: string;
-  value?: number; // For Input
-  operation?: FlowOperation; // For Op
+  value?: number;
+  operation?: FlowOperation;
   calculatedValue?: number | null;
 }
 
@@ -49,9 +55,27 @@ export interface EmailTemplate {
   savedAt: string;
 }
 
-// Global App Data (for save/load)
+// Professional Links Types
+export interface ProfessionalLink {
+  id: string;
+  title: string;
+  url: string;
+  category: string;
+}
+
+// Sticky Note Type
+export interface PostIt {
+  id: string;
+  text: string;
+  color: string;
+  rotation: number;
+}
+
+// Global App Data
 export interface AppData {
   kanban: KanbanState;
   flow: FlowState;
   emails: EmailTemplate[];
+  links: ProfessionalLink[];
+  postIts: PostIt[];
 }
