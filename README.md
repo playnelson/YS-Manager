@@ -1,20 +1,21 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Run and deploy your AI Studio app
+# YSoffice - Enterprise Personal Management System
 
-This contains everything you need to run your app locally.
+Sistema de gestão pessoal discreto e profissional, focado em produtividade e organização de dados.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1gS6Mq3WJ46Qatir5Ud-wUYLjtxSrVTpN
+## Tecnologias
+- **Frontend**: React 19 (ESM)
+- **Estilização**: Tailwind CSS
+- **Backend**: Supabase (Auth & Database)
+- **Ícones**: Lucide React
 
-## Run Locally
+## Implantação (GitHub Pages)
+1. Certifique-se de que todos os arquivos estão no diretório raiz do repositório.
+2. Ative o GitHub Pages em `Settings > Pages`.
+3. Selecione a branch `main` e a pasta `/` (root).
+4. O site estará disponível em `https://<seu-usuario>.github.io/<nome-do-repo>/`.
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Segurança
+- O sistema utiliza autenticação via Supabase.
+- Chaves anônimas de publicação estão configuradas em `supabase.ts`.
+- Políticas de Segurança de Linha (RLS) devem estar ativas no Supabase para garantir que usuários vejam apenas seus próprios dados.

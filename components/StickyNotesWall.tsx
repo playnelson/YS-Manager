@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Plus, Trash2, Palette } from 'lucide-react';
+import { Plus, Trash2, Palette, FileText, Calendar } from 'lucide-react';
 import { PostIt } from '../types';
 
 interface StickyNotesWallProps {
@@ -9,23 +9,21 @@ interface StickyNotesWallProps {
 }
 
 const COLORS = [
-  { name: 'yellow', bg: 'bg-yellow-200', border: 'border-yellow-300', text: 'text-yellow-900' },
-  { name: 'blue', bg: 'bg-blue-200', border: 'border-blue-300', text: 'text-blue-900' },
-  { name: 'green', bg: 'bg-green-200', border: 'border-green-300', text: 'text-green-900' },
-  { name: 'pink', bg: 'bg-pink-200', border: 'border-pink-300', text: 'text-pink-900' },
-  { name: 'orange', bg: 'bg-orange-200', border: 'border-orange-300', text: 'text-orange-900' },
+  { name: 'white', bg: 'bg-[#ffffff]', border: 'border-[#dee2e6]', bar: 'bg-[#ced4da]', text: 'text-[#1c2d3d]' },
+  { name: 'blue', bg: 'bg-[#f0f7ff]', border: 'border-[#cfe2ff]', bar: 'bg-[#0064d2]', text: 'text-[#002d5e]' },
+  { name: 'gray', bg: 'bg-[#f8f9fa]', border: 'border-[#e9ecef]', bar: 'bg-[#556b82]', text: 'text-[#343a40]' },
+  { name: 'mint', bg: 'bg-[#f3faf8]', border: 'border-[#d1e7dd]', bar: 'bg-[#198754]', text: 'text-[#0f5132]' },
+  { name: 'sand', bg: 'bg-[#fffcf5]', border: 'border-[#fff3cd]', bar: 'bg-[#ffc107]', text: 'text-[#664d03]' },
 ];
 
 export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChange }) => {
   
   const addNote = () => {
-    const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)].name;
-    const randomRotation = Math.floor(Math.random() * 6) - 3; // -3 to +3 degrees
     const newNote: PostIt = {
       id: `note_${Date.now()}`,
       text: '',
-      color: randomColor,
-      rotation: randomRotation
+      color: 'white',
+      rotation: 0
     };
     onChange([newNote, ...notes]);
   };
@@ -51,60 +49,65 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
 
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex justify-between items-center border-b border-[#f0f0f0] pb-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Mural de Idéias</h2>
-          <p className="text-sm text-slate-500 font-medium">Anote pensamentos rápidos e lembretes.</p>
+          <h2 className="text-xl font-bold text-[#1c2d3d] flex items-center gap-2">
+            Anotações Corporativas
+          </h2>
+          <p className="text-xs text-[#556b82] mt-1">Gestão de rascunhos e lembretes operacionais.</p>
         </div>
         <button 
           onClick={addNote}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-indigo-200 transition-all active:scale-95"
+          className="flex items-center gap-2 bg-[#0064d2] hover:bg-[#0052ad] text-white px-4 py-2 rounded-md font-bold text-xs transition-colors shadow-sm uppercase tracking-wider"
         >
-          <Plus size={18} /> Novo Post-it
+          <Plus size={16} /> Nova Entrada
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto pr-2">
         {notes.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center border-4 border-dashed border-slate-200 rounded-3xl opacity-40">
-            <Plus size={48} className="text-slate-300 mb-2" />
-            <p className="font-bold text-slate-400 uppercase tracking-widest">Seu mural está vazio</p>
+          <div className="h-full flex flex-col items-center justify-center text-[#dee2e6] border-2 border-dashed border-[#dee2e6] rounded-md">
+            <FileText size={48} className="mb-2 opacity-10" />
+            <p className="text-[10px] font-bold opacity-30 uppercase tracking-[0.2em]">Nenhum dado registrado</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-8">
             {notes.map((note) => {
               const colorInfo = COLORS.find(c => c.name === note.color) || COLORS[0];
               return (
                 <div 
                   key={note.id}
-                  style={{ transform: `rotate(${note.rotation}deg)` }}
-                  className={`${colorInfo.bg} ${colorInfo.border} border shadow-lg p-5 min-h-[220px] flex flex-col transition-all hover:scale-105 hover:shadow-xl group relative`}
+                  className={`${colorInfo.bg} ${colorInfo.border} border rounded shadow-sm min-h-[160px] flex flex-col transition-all group overflow-hidden hover:shadow-md`}
                 >
-                  {/* Pin logic visualization */}
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-red-500 rounded-full shadow-inner border-2 border-red-600 z-10" />
-                  
-                  <textarea
-                    className={`flex-1 w-full bg-transparent resize-none outline-none font-medium leading-relaxed ${colorInfo.text} placeholder:text-black/20`}
-                    placeholder="Escreva algo..."
-                    value={note.text}
-                    onChange={(e) => updateNote(note.id, e.target.value)}
-                  />
-                  
-                  <div className="mt-4 flex justify-between items-center pt-3 border-t border-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={() => changeColor(note.id)}
-                      className="p-1.5 hover:bg-black/5 rounded-lg transition-colors"
-                      title="Mudar Cor"
-                    >
-                      <Palette size={16} className={colorInfo.text} />
-                    </button>
-                    <button 
-                      onClick={() => deleteNote(note.id)}
-                      className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors text-red-700"
-                      title="Excluir"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                  <div className={`h-1 w-full ${colorInfo.bar}`} />
+                  <div className="p-4 flex flex-col flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                       <Calendar size={12} className="text-[#556b82] opacity-40" />
+                       <span className="text-[8px] font-bold text-[#556b82] opacity-40">AUTO-SAVE ACTIVE</span>
+                    </div>
+                    <textarea
+                      className={`flex-1 w-full bg-transparent resize-none outline-none text-sm font-medium leading-relaxed ${colorInfo.text} placeholder:opacity-20`}
+                      placeholder="Inserir conteúdo..."
+                      value={note.text}
+                      onChange={(e) => updateNote(note.id, e.target.value)}
+                    />
+                    
+                    <div className="mt-3 flex justify-between items-center pt-2 border-t border-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => changeColor(note.id)}
+                        className="p-1.5 hover:bg-black/5 rounded text-[#556b82] transition-colors"
+                        title="Alternar Categoria"
+                      >
+                        <Palette size={14} />
+                      </button>
+                      <button 
+                        onClick={() => deleteNote(note.id)}
+                        className="p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors"
+                        title="Remover Registro"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

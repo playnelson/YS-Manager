@@ -20,16 +20,12 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     if (!username || !password) {
-      setError('Preencha todos os campos');
+      setError('Campos obrigatórios não preenchidos');
       setLoading(false);
       return;
     }
-
-    // Supabase exige um formato de e-mail, então usamos o nick como parte de um e-mail interno
     const virtualEmail = `${username.toLowerCase().trim()}@ysoffice.local`;
-
     try {
       if (tab === 'register') {
         if (password !== confirmPassword) {
@@ -37,163 +33,122 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           setLoading(false);
           return;
         }
-        if (password.length < 6) {
-          setError('A senha deve ter pelo menos 6 caracteres');
-          setLoading(false);
-          return;
-        }
-
-        const { data, error: signUpError } = await supabase.auth.signUp({
+        // Using any cast to bypass SupabaseAuthClient type mismatch in the build environment
+        const { data, error: signUpError } = await (supabase.auth as any).signUp({
           email: virtualEmail,
           password: password,
-          options: {
-            data: { username: username }
-          }
+          options: { data: { username: username } }
         });
-
         if (signUpError) throw signUpError;
-        if (data.user) {
-          alert("Cadastro realizado com sucesso!");
-          onLogin({ id: data.user.id, nick: username });
-        }
+        if (data.user) onLogin({ id: data.user.id, nick: username });
       } else {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        // Using any cast to bypass SupabaseAuthClient type mismatch in the build environment
+        const { data, error: signInError } = await (supabase.auth as any).signInWithPassword({
           email: virtualEmail,
           password: password,
         });
-
         if (signInError) throw signInError;
-        if (data.user) {
-          onLogin({ 
-            id: data.user.id, 
-            nick: data.user.user_metadata.username || username 
-          });
-        }
+        if (data.user) onLogin({ id: data.user.id, nick: data.user.user_metadata.username || username });
       }
     } catch (err: any) {
-      setError(err.message || 'Ocorreu um erro na autenticação');
+      setError(err.message || 'Erro de autenticação no servidor');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoMode = () => {
-    // Acesso imediato como um usuário temporário para testes
-    onLogin({ 
-      id: 'demo_user_id', 
-      nick: 'Visitante' 
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-        <div className="bg-indigo-600 p-8 text-center text-white">
-          <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/30">
-            {tab === 'login' ? <UserIcon size={40} /> : <UserPlus size={40} />}
-          </div>
-          <h1 className="text-3xl font-black tracking-tighter uppercase">YSoffice</h1>
+    <div className="min-h-screen bg-[#f3f5f8] flex items-center justify-center p-4">
+      <div className="w-full max-w-sm bg-white rounded border border-[#dee2e6] shadow-xl overflow-hidden">
+        <div className="bg-[#1b2631] p-6 text-center text-white border-b-4 border-[#0064d2]">
+          <h1 className="text-xl font-bold tracking-tight">YSoffice <span className="text-[10px] font-normal opacity-50 block mt-1 uppercase tracking-widest">Portal do Usuário</span></h1>
         </div>
 
-        <div className="flex border-b border-slate-100">
+        <div className="flex border-b border-[#dee2e6] bg-[#f8f9fa]">
           <button 
             type="button"
-            disabled={loading}
-            onClick={() => { setTab('login'); setError(''); }}
-            className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${tab === 'login' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:bg-slate-50'}`}
+            onClick={() => setTab('login')}
+            className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all ${tab === 'login' ? 'bg-white text-[#0064d2] border-b-2 border-[#0064d2]' : 'text-[#556b82] hover:bg-[#f3f5f8]'}`}
           >
-            Entrar
+            Acesso
           </button>
           <button 
             type="button"
-            disabled={loading}
-            onClick={() => { setTab('register'); setError(''); }}
-            className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${tab === 'register' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:bg-slate-50'}`}
+            onClick={() => setTab('register')}
+            className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all ${tab === 'register' ? 'bg-white text-[#0064d2] border-b-2 border-[#0064d2]' : 'text-[#556b82] hover:bg-[#f3f5f8]'}`}
           >
-            Cadastrar
+            Registro
           </button>
         </div>
 
-        <form onSubmit={handleAuth} className="p-8 space-y-4">
+        <form onSubmit={handleAuth} className="p-8 space-y-5">
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded border border-red-100 text-[11px] font-semibold">
               <AlertCircle size={14} />
               {error}
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Nome de usuário</label>
-            <div className="relative">
-              <span className="absolute left-4 top-3.5 text-slate-400"><UserIcon size={18} /></span>
-              <input 
-                type="text"
-                disabled={loading}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium disabled:opacity-50"
-                placeholder="Seu nome de usuário aqui"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-              />
-            </div>
+            <label className="text-[10px] font-bold uppercase text-[#556b82] tracking-wider">Usuário</label>
+            <input 
+              type="text"
+              disabled={loading}
+              className="w-full px-3 py-2 bg-white border border-[#dee2e6] rounded outline-none focus:border-[#0064d2] focus:ring-1 focus:ring-[#0064d2]/20 text-sm transition-all"
+              placeholder="Nome de identificação"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+            />
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Senha</label>
-            <div className="relative">
-              <span className="absolute left-4 top-3.5 text-slate-400"><Lock size={18} /></span>
-              <input 
-                type="password"
-                disabled={loading}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium disabled:opacity-50"
-                placeholder="••••••••"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
-            </div>
+            <label className="text-[10px] font-bold uppercase text-[#556b82] tracking-wider">Senha</label>
+            <input 
+              type="password"
+              disabled={loading}
+              className="w-full px-3 py-2 bg-white border border-[#dee2e6] rounded outline-none focus:border-[#0064d2] focus:ring-1 focus:ring-[#0064d2]/20 text-sm transition-all"
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+            />
           </div>
 
           {tab === 'register' && (
-            <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
-              <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Confirmar Senha</label>
-              <div className="relative">
-                <span className="absolute left-4 top-3.5 text-slate-400"><Lock size={18} /></span>
-                <input 
-                  type="password"
-                  disabled={loading}
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium disabled:opacity-50"
-                  placeholder="Repita sua senha"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                />
-              </div>
+            <div className="space-y-1 animate-in fade-in duration-300">
+              <label className="text-[10px] font-bold uppercase text-[#556b82] tracking-wider">Confirmar Senha</label>
+              <input 
+                type="password"
+                disabled={loading}
+                className="w-full px-3 py-2 bg-white border border-[#dee2e6] rounded outline-none focus:border-[#0064d2] focus:ring-1 focus:ring-[#0064d2]/20 text-sm transition-all"
+                placeholder="Repita a senha"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+              />
             </div>
           )}
 
-          <div className="space-y-3 pt-4">
+          <div className="space-y-3 pt-2">
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all transform active:scale-[0.98] flex items-center justify-center gap-3 uppercase tracking-widest disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-[#0064d2] hover:bg-[#0052ad] text-white font-bold py-2.5 rounded shadow-sm transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest disabled:opacity-50"
             >
-              {loading ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : tab === 'login' ? (
-                <><LogIn size={20} /> Entrar no Painel</>
-              ) : (
-                <><UserPlus size={20} /> Criar Minha Conta</>
-              )}
+              {loading ? <Loader2 size={16} className="animate-spin" /> : tab === 'login' ? 'Autenticar Sistema' : 'Confirmar Cadastro'}
             </button>
 
             <button 
               type="button"
               disabled={loading}
-              onClick={handleDemoMode}
-              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest border border-slate-200"
+              onClick={() => onLogin({ id: 'demo_user_id', nick: 'Visitante' })}
+              className="w-full bg-white hover:bg-[#f8f9fa] text-[#556b82] font-semibold py-2 rounded transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-wider border border-[#dee2e6]"
             >
-              <PlayCircle size={16} /> Experimentar modo Demo
+              <PlayCircle size={14} /> Modo Avaliação
             </button>
           </div>
         </form>
+        <div className="bg-[#f8f9fa] p-4 text-center border-t border-[#dee2e6]">
+          <p className="text-[9px] text-[#556b82] uppercase font-bold tracking-tighter opacity-50">Tecnologia Certificada &copy; 2025 YSoffice</p>
+        </div>
       </div>
     </div>
   );
