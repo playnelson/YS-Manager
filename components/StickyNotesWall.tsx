@@ -53,7 +53,7 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
       <div className="mb-6 flex justify-between items-center border-b border-[#f0f0f0] pb-4">
         <div>
           <h2 className="text-xl font-bold text-[#1c2d3d] flex items-center gap-2">
-            Anotações Corporativas
+            Anotações
           </h2>
           <p className="text-xs text-[#556b82] mt-1">Gestão de rascunhos e lembretes operacionais.</p>
         </div>
