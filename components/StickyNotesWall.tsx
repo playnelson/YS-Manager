@@ -55,7 +55,6 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
           <h2 className="text-xl font-bold text-[#1c2d3d] flex items-center gap-2">
             Anotações
           </h2>
-          <p className="text-xs text-[#556b82] mt-1">Gestão de rascunhos e lembretes operacionais.</p>
         </div>
         <Button onClick={addNote} icon={<Plus size={14} />}>
            NOVA ENTRADA
@@ -79,9 +78,8 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
                 >
                   <div className={`h-1 w-full ${colorInfo.bar}`} />
                   <div className="p-4 flex flex-col flex-1">
-                    <div className="flex justify-between items-start mb-2">
+                    <div className="flex justify-end items-start mb-2">
                        <Calendar size={12} className="text-[#556b82] opacity-40" />
-                       <span className="text-[8px] font-bold text-[#556b82] opacity-40">AUTO-SAVE ACTIVE</span>
                     </div>
                     <textarea
                       className={`flex-1 w-full bg-transparent resize-none outline-none text-sm font-medium leading-relaxed ${colorInfo.text} placeholder:opacity-20`}

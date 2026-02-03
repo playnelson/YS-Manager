@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus, Save, Mail, Trash2, Send, ExternalLink } from 'lucide-react';
 import { EmailTemplate } from '../types';
@@ -52,10 +53,17 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
   };
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm("Excluir este modelo?")) {
-      onChange(emails.filter(em => em.id !== id));
-      if (selectedId === id) handleNew();
+    e.preventDefault();
+    e.stopPropagation(); // Garante que não selecione a linha ao clicar em apagar
+    
+    if (window.confirm("Deseja realmente excluir este modelo permanentemente?")) {
+      const updatedEmails = emails.filter(em => em.id !== id);
+      onChange(updatedEmails);
+      
+      // Se o email deletado era o selecionado, limpa o formulário
+      if (selectedId === id) {
+        handleNew();
+      }
     }
   };
 
@@ -78,28 +86,32 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
   };
 
   return (
-    <div className="flex h-full gap-6">
+    <div className="flex h-full gap-2">
       {/* Sidebar List */}
-      <div className="w-64 flex flex-col bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-          <h3 className="font-bold text-slate-700">Modelos</h3>
-          <Button size="sm" variant="ghost" onClick={handleNew}><Plus size={16} /></Button>
+      <div className="w-64 flex flex-col bg-win95-bg win95-raised p-1">
+        <div className="px-2 py-1 mb-1 bg-[#000080] text-white flex justify-between items-center">
+          <h3 className="font-bold text-xs">Modelos</h3>
+          <button onClick={handleNew} className="text-white hover:bg-[#0000d0] p-0.5"><Plus size={12} /></button>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto win95-sunken bg-white p-1 space-y-0.5">
           {emails.length === 0 && (
-            <div className="text-center p-4 text-slate-400 text-sm">Nenhum modelo ainda.</div>
+            <div className="text-center p-4 text-[#808080] text-xs">Nenhum modelo.</div>
           )}
           {emails.map(email => (
             <div 
               key={email.id}
               onClick={() => handleSelect(email.id)}
-              className={`p-3 rounded-lg cursor-pointer text-sm flex justify-between items-center group transition-colors ${
-                selectedId === email.id ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'hover:bg-slate-50 border border-transparent'
+              className={`px-2 py-1 cursor-pointer text-xs flex justify-between items-center group border border-transparent ${
+                selectedId === email.id ? 'bg-[#000080] text-white border-dotted border-white' : 'text-black hover:bg-[#e0e0e0]'
               }`}
             >
-              <div className="truncate font-medium">{email.name}</div>
-              <button onClick={(e) => handleDelete(email.id, e)} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100">
-                <Trash2 size={14} />
+              <div className="truncate font-bold flex-1">{email.name}</div>
+              <button 
+                onClick={(e) => handleDelete(email.id, e)} 
+                className="ml-2 w-5 h-5 flex items-center justify-center win95-raised bg-[#c0c0c0] hover:bg-red-600 group/btn shrink-0"
+                title="Excluir"
+              >
+                <Trash2 size={10} className="text-red-600 group-hover/btn:text-white" />
               </button>
             </div>
           ))}
@@ -107,69 +119,69 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
       </div>
 
       {/* Editor */}
-      <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-           <h3 className="font-bold text-slate-700 flex items-center gap-2">
-             <Mail size={18} />
-             {selectedId ? 'Editar Modelo' : 'Novo Modelo'}
+      <div className="flex-1 flex flex-col bg-win95-bg win95-raised p-1">
+        <div className="p-1 mb-2 bg-[#808080] flex justify-between items-center border-b border-white">
+           <h3 className="font-bold text-white text-xs flex items-center gap-2 px-2">
+             <Mail size={14} />
+             {selectedId ? 'EDITOR DE MODELO' : 'NOVO MODELO'}
            </h3>
            <div className="flex gap-2">
              {formData.name && (
                <>
                  <button 
                    onClick={openInOutlook}
-                   className="flex items-center gap-2 px-3 py-1.5 bg-[#0078d4] hover:bg-[#005a9e] text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                   className="flex items-center gap-1 px-3 py-1 bg-[#0078d4] text-white text-[10px] font-bold border-t-2 border-l-2 border-white border-b-2 border-r-2 border-[#000000] shadow-[1px_1px_0px_#808080] active:border-t-[#000000] active:border-l-[#000000] active:border-b-white active:border-r-white active:shadow-none active:translate-y-[1px] active:translate-x-[1px]"
                    title="Abrir no Outlook Web"
                  >
-                   <ExternalLink size={14} /> Outlook
+                   <ExternalLink size={12} /> Outlook
                  </button>
                  <button 
                    onClick={openInDefaultMail}
-                   className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                   className="flex items-center gap-1 px-3 py-1 bg-[#334155] text-white text-[10px] font-bold border-t-2 border-l-2 border-white border-b-2 border-r-2 border-[#000000] shadow-[1px_1px_0px_#808080] active:border-t-[#000000] active:border-l-[#000000] active:border-b-white active:border-r-white active:shadow-none active:translate-y-[1px] active:translate-x-[1px]"
                    title="Abrir no App de E-mail padrão"
                  >
-                   <Send size={14} /> Enviar
+                   <Send size={12} /> Enviar
                  </button>
                </>
              )}
-             <Button onClick={handleSave} size="sm" icon={<Save size={16} />}>Salvar</Button>
+             <Button onClick={handleSave} size="sm" icon={<Save size={12} />}>SALVAR</Button>
            </div>
         </div>
         
-        <div className="p-6 flex flex-col gap-4 overflow-y-auto flex-1">
+        <div className="p-2 flex flex-col gap-3 overflow-y-auto flex-1">
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nome do Modelo</label>
+            <label className="block text-[10px] font-bold text-black mb-0.5">Nome do Modelo:</label>
             <input 
-              className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full px-2 py-1 win95-sunken bg-white outline-none text-xs text-black font-medium"
               value={formData.name || ''}
               onChange={e => setFormData({...formData, name: e.target.value})}
               placeholder="ex: Relatório Mensal"
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
              <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Para</label>
+              <label className="block text-[10px] font-bold text-black mb-0.5">Para:</label>
               <input 
-                className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-2 py-1 win95-sunken bg-white outline-none text-xs text-black font-medium"
                 value={formData.to || ''}
                 onChange={e => setFormData({...formData, to: e.target.value})}
                 placeholder="cliente@exemplo.com"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CC</label>
+              <label className="block text-[10px] font-bold text-black mb-0.5">CC:</label>
               <input 
-                className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-2 py-1 win95-sunken bg-white outline-none text-xs text-black font-medium"
                 value={formData.cc || ''}
                 onChange={e => setFormData({...formData, cc: e.target.value})}
                 placeholder="copia@exemplo.com"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Assunto</label>
+              <label className="block text-[10px] font-bold text-black mb-0.5">Assunto:</label>
               <input 
-                className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-2 py-1 win95-sunken bg-white outline-none text-xs text-black font-medium"
                 value={formData.subject || ''}
                 onChange={e => setFormData({...formData, subject: e.target.value})}
                 placeholder="Acompanhamento de Reunião"
@@ -178,9 +190,9 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
           </div>
 
           <div className="flex-1 flex flex-col">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Corpo da Mensagem</label>
+            <label className="block text-[10px] font-bold text-black mb-0.5">Mensagem:</label>
             <textarea 
-              className="flex-1 w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none font-mono text-sm leading-relaxed"
+              className="flex-1 w-full p-2 win95-sunken bg-white outline-none resize-none font-mono text-xs leading-relaxed text-black"
               value={formData.body || ''}
               onChange={e => setFormData({...formData, body: e.target.value})}
               placeholder="Digite o conteúdo do seu e-mail aqui..."
