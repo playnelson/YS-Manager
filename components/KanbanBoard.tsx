@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Plus, Trash2, ArrowRight, CheckCircle2, Clock, ListTodo } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { KanbanState, KanbanCard } from '../types';
 import { Button } from './ui/Button';
 

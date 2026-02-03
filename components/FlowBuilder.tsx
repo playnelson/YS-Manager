@@ -166,7 +166,6 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
         
         // ORDENAÇÃO CRÍTICA:
         // Encontra os nós de origem e ordena pela posição Y (Cima para Baixo)
-        // Isso garante que A - B seja sempre "O nó de cima menos o nó de baixo"
         const sourceNodes = connections
           .filter(c => c.to === node.id)
           .map(c => nodes.find(n => n.id === c.from))
@@ -197,7 +196,6 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
           }
         } else {
           // Result nodes just sum everything for now, or pass through
-          // Se for usado como nó de saída intermediário, pega o último valor
           result = validInputs.length > 0 ? validInputs[validInputs.length - 1] : 0;
         }
         
@@ -218,11 +216,13 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
       .filter(c => c.to === node.id)
       .map(c => data.nodes.find(n => n.id === c.from))
       .filter(n => n && n.calculatedValue !== null && n.calculatedValue !== undefined)
-      .sort((a, b) => (a?.y || 0) - (b?.y || 0)); // Visual sort matches Logic sort
+      .sort((a, b) => (a?.y || 0) - (b?.y || 0));
 
     if (incoming.length === 0) return <span className="text-gray-400">Aguardando entrada...</span>;
 
-    const symbol = {
+    const op = node.operation || '+';
+    // Mapeamento tipado para evitar erros de índice com tipos união
+    const symbolMap: Record<string, string> = {
         '+': ' + ',
         '-': ' - ',
         '*': ' × ',
@@ -230,16 +230,18 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
         'AVG': ' , ',
         'MAX': ' , ',
         'MIN': ' , ',
-        'PCT': ' % de '
-    }[node.operation || '+'];
-
+        'PCT': ' % de ',
+        'POW': ' ^ '
+    };
+    
+    const symbol = symbolMap[op] || ' ? ';
     const values = incoming.map(n => formatNumber(n?.calculatedValue));
 
     // Exibição especial para funções
-    if (['AVG', 'MAX', 'MIN'].includes(node.operation || '')) {
-        return `${node.operation}(${values.join(', ')})`;
+    if (['AVG', 'MAX', 'MIN'].includes(op)) {
+        return `${op}(${values.join(', ')})`;
     }
-    if (node.operation === 'PCT' && values.length >= 2) {
+    if (op === 'PCT' && values.length >= 2) {
         return `${values[1]}% de ${values[0]}`;
     }
 
@@ -487,7 +489,6 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
                 </div>
             )}
             
-            {/* Agora renderiza o pino de saída para TODOS os nós (exceto onde você quiser restringir, mas agora Result também tem) */}
             <div 
                 className="absolute -right-1.5 top-10 w-3 h-3 win95-raised bg-[#c0c0c0] flex items-center justify-center cursor-crosshair node-control hover:bg-white"
                 onMouseDown={(e) => startConnection(e, node.id)}
@@ -500,7 +501,6 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
         ))}
       </div>
       
-      {/* Template Modal - (Mantido igual) */}
       {isTemplatesOpen && (
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-50">
            <div className="w-80 win95-raised p-1 shadow-2xl">
@@ -543,7 +543,6 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
         </div>
       )}
 
-      {/* Footer Status */}
       <div className="bg-win95-bg border-t border-white p-1 flex justify-between items-center text-[10px]">
           <span className="win95-sunken px-2 bg-win95-bg w-32 border-none text-black">Pronto</span>
           <span className="win95-sunken px-2 bg-white w-20 text-right text-black">{data.nodes.length} Objetos</span>
