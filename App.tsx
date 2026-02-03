@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Layout, Trello, GitMerge, Mail, MessageSquare, Download, Menu, LogOut, User as UserIcon, RefreshCw, Globe, StickyNote, X } from 'lucide-react';
+import { Layout, Trello, GitMerge, Mail, MessageSquare, Download, Menu, LogOut, User as UserIcon, RefreshCw, Globe, StickyNote, X, Contrast } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
@@ -24,6 +24,9 @@ const App: React.FC = () => {
   const [links, setLinks] = useState<ProfessionalLink[]>([]);
   const [postIts, setPostIts] = useState<PostIt[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Invert Colors State
+  const [isInverted, setIsInverted] = useState(() => localStorage.getItem('ysoffice_inverted') === 'true');
 
   useEffect(() => {
     (supabase.auth as any).getSession().then(({ data: { session } }: any) => {
@@ -39,6 +42,16 @@ const App: React.FC = () => {
     }) as any;
     return () => subscription.unsubscribe();
   }, []);
+
+  // Handle Invert Colors Effect
+  useEffect(() => {
+    if (isInverted) {
+      document.body.classList.add('invert-colors');
+    } else {
+      document.body.classList.remove('invert-colors');
+    }
+    localStorage.setItem('ysoffice_inverted', String(isInverted));
+  }, [isInverted]);
 
   useEffect(() => {
     if (!user) return;
@@ -113,6 +126,14 @@ const App: React.FC = () => {
         </div>
         <div className="flex items-center gap-4 text-xs">
            <span>Usuário: <b>{user.nick}</b></span>
+           <Button 
+             onClick={() => setIsInverted(!isInverted)} 
+             size="sm" 
+             className="min-w-[30px]" 
+             title="Inverter Cores"
+           >
+             <Contrast size={14} />
+           </Button>
            <Button onClick={handleLogout} size="sm" className="min-w-[60px]">Sair</Button>
         </div>
       </div>

@@ -30,8 +30,21 @@
         background-color: #c0c0c0; /* Standard Windows Gray */
         color: black;
         image-rendering: pixelated;
+        transition: filter 0.3s ease;
       }
       
+      /* Modo Invertido (Dark Mode Retro) */
+      .invert-colors {
+        filter: invert(1) hue-rotate(180deg);
+      }
+      
+      /* Preserva imagens e vídeos de serem invertidos */
+      .invert-colors img, 
+      .invert-colors video,
+      .invert-colors iframe {
+        filter: invert(1) hue-rotate(180deg);
+      }
+
       /* Efeito Relevo (Raised) */
       .win95-raised {
         border-top: 2px solid #ffffff;
