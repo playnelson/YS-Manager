@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User as UserIcon, Lock, Key, HelpCircle, UserPlus, LogIn, Loader2 } from 'lucide-react';
+import { User as UserIcon, Lock, Key, HelpCircle, UserPlus, LogIn, Loader2, Mail } from 'lucide-react';
 import { User } from '../types';
 import { supabase } from '../supabase';
 import { Button } from './ui/Button';
@@ -11,66 +11,75 @@ interface AuthProps {
 
 export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [isRegistering, setIsRegistering] = useState(false);
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nickname, setNickname] = useState(''); // Novo campo para o nome de exibição
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     setLoading(true);
     
-    // Simulação de delay para feedback visual
-    await new Promise(r => setTimeout(r, 500));
-
-    // Cria um email virtual para o Supabase, já que o usuário usa apenas "username"
-    const virtualEmail = `${username.toLowerCase().trim().replace(/\s+/g, '')}@ysoffice.local`;
+    // Pequeno delay para feedback visual
+    await new Promise(r => setTimeout(r, 300));
 
     try {
       if (isRegistering) {
-        // --- Lógica de REGISTRO ---
+        // --- Lógica de REGISTRO (Com E-mail Real) ---
+        if (!nickname.trim()) throw new Error('Por favor, escolha um nome de exibição.');
+
         const { data, error: signUpError } = await (supabase.auth as any).signUp({
-          email: virtualEmail,
+          email: email,
           password: password,
-          options: { data: { username: username } }
+          options: { data: { username: nickname } }
         });
 
         if (signUpError) throw signUpError;
 
         if (data.user) {
-          // Se o "Confirm Email" estiver desativado no Supabase, o login é automático.
-          // Se estiver ativado, o usuário ficaria preso aqui.
           if (data.session) {
-            onLogin({ id: data.user.id, nick: username });
+            // Login automático (se confirmação de email estiver desligada no Supabase)
+            onLogin({ id: data.user.id, nick: nickname });
           } else {
-            setError('Registro criado! Se o login não for automático, verifique as configurações do Supabase.');
-            setIsRegistering(false); // Volta para tela de login
+            // Aguardando confirmação de email
+            setSuccessMsg(`Conta criada! Verifique a caixa de entrada de ${email} para confirmar seu cadastro.`);
+            setIsRegistering(false); // Volta para tela de login para induzir o usuário a checar o email
+            setEmail('');
+            setPassword('');
+            setNickname('');
           }
         }
       } else {
-        // --- Lógica de LOGIN ---
+        // --- Lógica de LOGIN (Com E-mail Real) ---
         const { data, error: signInError } = await (supabase.auth as any).signInWithPassword({
-          email: virtualEmail,
+          email: email,
           password: password,
         });
 
         if (signInError) throw signInError;
 
         if (data.user) {
-          onLogin({ id: data.user.id, nick: data.user.user_metadata.username || username });
+          // Tenta pegar o username dos metadados, ou usa a parte antes do @ do email como fallback
+          const displayNick = data.user.user_metadata.username || email.split('@')[0];
+          onLogin({ id: data.user.id, nick: displayNick });
         }
       }
     } catch (err: any) {
       console.error(err);
       if (err.message.includes('Invalid login')) {
-        setError('Usuário ou senha incorretos.');
+        setError('E-mail ou senha incorretos.');
       } else if (err.message.includes('already registered')) {
-        setError('Este usuário já existe. Tente outro.');
+        setError('Este e-mail já está cadastrado.');
       } else if (err.message.includes('password')) {
         setError('A senha deve ter no mínimo 6 caracteres.');
+      } else if (err.message.includes('valid email')) {
+        setError('Por favor, insira um e-mail válido.');
       } else {
-        setError('Erro ao processar: ' + err.message);
+        setError('Erro: ' + err.message);
       }
     } finally {
       setLoading(false);
@@ -82,14 +91,14 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       <div className="w-96 win95-raised p-1 shadow-xl">
         {/* Title Bar */}
         <div className="bg-[#000080] text-white px-2 py-1 text-sm font-bold flex justify-between items-center mb-4 select-none">
-          <span>{isRegistering ? 'Novo Usuário' : 'Login do Sistema'}</span>
+          <span>{isRegistering ? 'Novo Cadastro' : 'Login YSoffice'}</span>
         </div>
 
         <div className="px-4 pb-4">
           <div className="flex gap-4 mb-4">
             <div className="pt-2">
                {isRegistering ? (
-                 <UserPlus size={48} className="text-[#808080]" strokeWidth={1.5} />
+                 <Mail size={48} className="text-[#808080]" strokeWidth={1.5} />
                ) : (
                  <Key size={48} className="text-[#808080]" strokeWidth={1.5} />
                )}
@@ -97,8 +106,8 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             <div className="flex-1">
               <p className="text-sm mb-4 text-black">
                 {isRegistering 
-                  ? 'Defina suas credenciais para criar uma nova conta.' 
-                  : 'Digite suas credenciais para acessar o YSoffice.'}
+                  ? 'Informe seu e-mail real para receber o link de confirmação.' 
+                  : 'Digite suas credenciais para entrar.'}
               </p>
               
               {error && (
@@ -106,19 +115,40 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   {error}
                 </div>
               )}
+              
+              {successMsg && (
+                <div className="mb-3 px-2 py-1 bg-[#008000] text-white text-xs font-bold text-center border border-white shadow-md">
+                  {successMsg}
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-3">
+                {isRegistering && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-black">Nome de Exibição:</label>
+                    <input 
+                      type="text"
+                      disabled={loading}
+                      required={isRegistering}
+                      className="w-full px-1 py-1 bg-white win95-sunken outline-none text-sm focus:bg-yellow-100 text-black"
+                      value={nickname}
+                      onChange={e => setNickname(e.target.value)}
+                      placeholder="Como quer ser chamado?"
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-black">Usuário:</label>
+                  <label className="text-xs font-bold text-black">E-mail:</label>
                   <input 
-                    type="text"
+                    type="email"
                     disabled={loading}
                     required
                     className="w-full px-1 py-1 bg-white win95-sunken outline-none text-sm focus:bg-yellow-100 text-black"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
                     autoFocus
-                    placeholder="Ex: joaosilva"
+                    placeholder="seu@email.com"
                   />
                 </div>
 
@@ -138,7 +168,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
                 <div className="flex justify-end gap-2 pt-4">
                     <Button type="submit" disabled={loading} className="min-w-[80px]">
-                       {loading ? <Loader2 className="animate-spin" size={14} /> : (isRegistering ? 'CRIAR' : 'ENTRAR')}
+                       {loading ? <Loader2 className="animate-spin" size={14} /> : (isRegistering ? 'CADASTRAR' : 'ENTRAR')}
                     </Button>
                 </div>
               </form>
@@ -154,6 +184,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   onClick={() => {
                     setIsRegistering(!isRegistering);
                     setError('');
+                    setSuccessMsg('');
                     setPassword('');
                   }}
                   className="text-xs font-bold text-[#000080] hover:underline focus:outline-dotted flex items-center gap-1"
@@ -161,7 +192,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   {isRegistering ? (
                     <><LogIn size={12}/> Já tenho conta</>
                   ) : (
-                    <><UserPlus size={12}/> Criar conta</>
+                    <><UserPlus size={12}/> Criar conta com E-mail</>
                   )}
                </button>
                
