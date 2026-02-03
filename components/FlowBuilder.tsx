@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Trash2, X, Calculator, MousePointer2, Settings2, RefreshCw, Save, FolderOpen, Play, ChevronRight, Minimize2, Square, Undo, Redo } from 'lucide-react';
-import { FlowState, FlowNode, FlowConnection, FlowNodeType, FlowOperation, FlowTemplate } from '../types';
+import { Plus, X, Calculator, RefreshCw, Save, FolderOpen, Play, Undo, Redo, Square } from 'lucide-react';
+import { FlowState, FlowNode, FlowNodeType, FlowOperation, FlowTemplate } from '../types';
 import { Button } from './ui/Button';
 
 interface FlowBuilderProps {
@@ -33,7 +33,6 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
 
   // --- History Management ---
   const saveHistory = () => {
-    // Limita o histórico a 50 passos para não pesar a memória
     setHistory(prev => {
       const newHistory = [...prev, JSON.parse(JSON.stringify(data))];
       return newHistory.length > 50 ? newHistory.slice(1) : newHistory;
@@ -61,7 +60,6 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     onChange(next);
   }, [future, data, onChange]);
 
-  // Keyboard Shortcuts (Ctrl+Z / Ctrl+Y)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -166,9 +164,16 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
         const node = nodes[i];
         if (node.type === 'input' || node.calculatedValue !== null) continue;
         
-        const inputs = connections
+        // ORDENAÇÃO CRÍTICA:
+        // Encontra os nós de origem e ordena pela posição Y (Cima para Baixo)
+        // Isso garante que A - B seja sempre "O nó de cima menos o nó de baixo"
+        const sourceNodes = connections
           .filter(c => c.to === node.id)
-          .map(c => nodes.find(n => n.id === c.from)?.calculatedValue);
+          .map(c => nodes.find(n => n.id === c.from))
+          .filter((n): n is (FlowNode & { calculatedValue: number | null }) => !!n)
+          .sort((a, b) => a.y - b.y);
+
+        const inputs = sourceNodes.map(n => n.calculatedValue);
         
         if (inputs.length === 0 || inputs.some(v => v === null)) continue;
         
@@ -184,11 +189,16 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
             case 'AVG': result = validInputs.reduce((a, b) => a + b, 0) / validInputs.length; break;
             case 'MAX': result = Math.max(...validInputs); break;
             case 'MIN': result = Math.min(...validInputs); break;
-            case 'PCT': result = validInputs.length >= 2 ? validInputs[0] * (validInputs[1] / 100) : (validInputs[0] || 0); break;
+            case 'PCT': 
+              // Lógica percentual: Primeiro valor é base, segundo é a %
+              result = validInputs.length >= 2 ? validInputs[0] * (validInputs[1] / 100) : (validInputs[0] || 0); 
+              break;
             default: result = 0;
           }
         } else {
-          result = validInputs.reduce((a, b) => a + b, 0);
+          // Result nodes just sum everything for now, or pass through
+          // Se for usado como nó de saída intermediário, pega o último valor
+          result = validInputs.length > 0 ? validInputs[validInputs.length - 1] : 0;
         }
         
         if (nodes[i].calculatedValue !== result) {
@@ -200,12 +210,48 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     onChange({ ...data, nodes });
   }, [data, onChange]);
 
+  // --- Visual Helper: Get formula string ---
+  const getFormulaDisplay = (node: FlowNode) => {
+    if (node.type !== 'op') return null;
+
+    const incoming = data.connections
+      .filter(c => c.to === node.id)
+      .map(c => data.nodes.find(n => n.id === c.from))
+      .filter(n => n && n.calculatedValue !== null && n.calculatedValue !== undefined)
+      .sort((a, b) => (a?.y || 0) - (b?.y || 0)); // Visual sort matches Logic sort
+
+    if (incoming.length === 0) return <span className="text-gray-400">Aguardando entrada...</span>;
+
+    const symbol = {
+        '+': ' + ',
+        '-': ' - ',
+        '*': ' × ',
+        '/': ' ÷ ',
+        'AVG': ' , ',
+        'MAX': ' , ',
+        'MIN': ' , ',
+        'PCT': ' % de '
+    }[node.operation || '+'];
+
+    const values = incoming.map(n => formatNumber(n?.calculatedValue));
+
+    // Exibição especial para funções
+    if (['AVG', 'MAX', 'MIN'].includes(node.operation || '')) {
+        return `${node.operation}(${values.join(', ')})`;
+    }
+    if (node.operation === 'PCT' && values.length >= 2) {
+        return `${values[1]}% de ${values[0]}`;
+    }
+
+    return values.join(symbol);
+  };
+
   // --- Interaction Handlers ---
   const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
     if ((e.target as HTMLElement).closest('.node-control')) return;
     const node = data.nodes.find(n => n.id === nodeId);
     if (node) {
-      saveHistory(); // Save state before dragging starts
+      saveHistory();
       setDraggingNode(nodeId);
       setDragOffset({ x: e.clientX - node.x, y: e.clientY - node.y });
     }
@@ -240,7 +286,6 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
         setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       }
       if (draggingNode) {
-        // Direct update without history during drag to avoid spamming history
         updateNode(draggingNode, { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
       }
     };
@@ -377,17 +422,14 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
                       className="w-full win95-sunken px-1 py-0.5 text-xs outline-none node-control bg-white font-mono text-black"
                       value={activeInputId === node.id ? editValue : formatNumber(node.value)}
                       onFocus={(e) => {
-                        saveHistory(); // Salva estado antes da edição
+                        saveHistory();
                         setActiveInputId(node.id);
-                        // Ao focar, pega o valor, e permite edição natural.
                         setEditValue(node.value ? node.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
-                        // Seleciona tudo para facilitar substituição do 0
                         setTimeout(() => e.target.select(), 10);
                       }}
                       onChange={(e) => setEditValue(e.target.value)}
                       onBlur={() => {
                         setActiveInputId(null);
-                        // Parser Básico PT-BR: Remove pontos de milhar, troca vírgula por ponto
                         const raw = editValue.replace(/\./g, '').replace(',', '.');
                         const num = parseFloat(raw);
                         updateNode(node.id, { value: isNaN(num) ? 0 : num });
@@ -403,28 +445,32 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
                 <div className="flex flex-col gap-1">
                     <label className="text-[9px] text-black">Função:</label>
                     <select 
-                    className="w-full win95-sunken px-1 py-0.5 text-[10px] outline-none node-control bg-white cursor-pointer text-black"
-                    value={node.operation}
-                    onFocus={() => saveHistory()}
-                    onChange={(e) => updateNode(node.id, { operation: e.target.value as FlowOperation })}
+                        className="w-full win95-sunken px-1 py-0.5 text-[10px] outline-none node-control bg-white cursor-pointer text-black"
+                        value={node.operation}
+                        onFocus={() => saveHistory()}
+                        onChange={(e) => updateNode(node.id, { operation: e.target.value as FlowOperation })}
                     >
                         <option value="+">Soma (+)</option>
                         <option value="-">Subtração (-)</option>
                         <option value="*">Mult. (*)</option>
                         <option value="/">Divisão (/)</option>
                         <option value="AVG">Média</option>
-                        <option value="PCT">Porcentagem</option>
-                        <option value="MAX">Maior</option>
-                        <option value="MIN">Menor</option>
+                        <option value="PCT">Porcentagem (%)</option>
+                        <option value="MAX">Maior Valor</option>
+                        <option value="MIN">Menor Valor</option>
                     </select>
+                    
+                    {/* Visualização da Fórmula */}
+                    <div className="win95-sunken bg-[#e0e0e0] px-1 py-0.5 text-[9px] font-mono text-[#555] truncate" title="Fórmula baseada na ordem visual (cima para baixo)">
+                        {getFormulaDisplay(node)}
+                    </div>
                 </div>
               )}
 
-              {/* Só exibe 'Res:' se NÃO for input */}
               {node.type !== 'input' && (
                 <div className="mt-auto pt-1 border-t border-white flex justify-between items-center">
                    <span className="text-[9px] font-bold text-black">Res:</span>
-                   <span className="win95-sunken bg-white px-1 text-[10px] font-mono min-w-[50px] text-right block text-black">
+                   <span className="win95-sunken bg-white px-1 text-[10px] font-mono min-w-[50px] text-right block text-black font-bold">
                       {formatNumber(node.calculatedValue)}
                    </span>
                 </div>
@@ -440,20 +486,21 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
                     <div className="w-1 h-1 bg-black rounded-full" />
                 </div>
             )}
-            {node.type !== 'result' && (
-                <div 
-                    className="absolute -right-1.5 top-10 w-3 h-3 win95-raised bg-[#c0c0c0] flex items-center justify-center cursor-crosshair node-control hover:bg-white"
-                    onMouseDown={(e) => startConnection(e, node.id)}
-                    title="Saída"
-                >
-                    <div className="w-1 h-1 bg-black rounded-full" />
-                </div>
-            )}
+            
+            {/* Agora renderiza o pino de saída para TODOS os nós (exceto onde você quiser restringir, mas agora Result também tem) */}
+            <div 
+                className="absolute -right-1.5 top-10 w-3 h-3 win95-raised bg-[#c0c0c0] flex items-center justify-center cursor-crosshair node-control hover:bg-white"
+                onMouseDown={(e) => startConnection(e, node.id)}
+                title="Saída"
+            >
+                <div className="w-1 h-1 bg-black rounded-full" />
+            </div>
+            
           </div>
         ))}
       </div>
       
-      {/* Template Modal */}
+      {/* Template Modal - (Mantido igual) */}
       {isTemplatesOpen && (
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-50">
            <div className="w-80 win95-raised p-1 shadow-2xl">
