@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Layout, Trello, GitMerge, Mail, MessageSquare, Download, Menu, LogOut, User as UserIcon, RefreshCw, Globe, StickyNote } from 'lucide-react';
+import { Layout, Trello, GitMerge, Mail, MessageSquare, Download, Menu, LogOut, User as UserIcon, RefreshCw, Globe, StickyNote, X } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
@@ -10,9 +10,10 @@ import { ProfessionalLinks } from './components/ProfessionalLinks';
 import { StickyNotesWall } from './components/StickyNotesWall';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
+import { Button } from './components/ui/Button';
 
 const initialKanban: KanbanState = { todo: [], doing: [], done: [] };
-const initialFlow: FlowState = { nodes: [], connections: [] };
+const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -22,11 +23,9 @@ const App: React.FC = () => {
   const [emails, setEmails] = useState<EmailTemplate[]>([]);
   const [links, setLinks] = useState<ProfessionalLink[]>([]);
   const [postIts, setPostIts] = useState<PostIt[]>([]);
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
-    // Using any cast to bypass SupabaseAuthClient type mismatch in the build environment
     (supabase.auth as any).getSession().then(({ data: { session } }: any) => {
       if (session?.user) {
         setUser({ id: session.user.id, nick: session.user.user_metadata.username || session.user.email?.split('@')[0] || 'Usuário' });
@@ -35,7 +34,6 @@ const App: React.FC = () => {
         if (demoSession) setUser(JSON.parse(demoSession));
       }
     });
-    // Using any cast to bypass SupabaseAuthClient type mismatch in the build environment
     const { data: { subscription } } = (supabase.auth as any).onAuthStateChange((_event: any, session: any) => {
       if (session?.user) setUser({ id: session.user.id, nick: session.user.user_metadata.username || 'Usuário' });
     }) as any;
@@ -51,7 +49,7 @@ const App: React.FC = () => {
         if (saved) {
           const parsed: AppData = JSON.parse(saved);
           if (parsed.kanban) setKanbanData(parsed.kanban);
-          if (parsed.flow) setFlowData(parsed.flow);
+          if (parsed.flow) setFlowData({ ...initialFlow, ...parsed.flow }); // Ensure template array exists
           if (parsed.emails) setEmails(parsed.emails);
           if (parsed.links) setLinks(parsed.links);
           if (parsed.postIts) setPostIts(parsed.postIts);
@@ -61,7 +59,7 @@ const App: React.FC = () => {
         if (data?.payload) {
           const payload = data.payload as AppData;
           setKanbanData(payload.kanban || initialKanban);
-          setFlowData(payload.flow || initialFlow);
+          setFlowData({ ...initialFlow, ...(payload.flow || {}) });
           setEmails(payload.emails || []);
           setLinks(payload.links || []);
           setPostIts(payload.postIts || []);
@@ -89,7 +87,6 @@ const App: React.FC = () => {
   }, [kanbanData, flowData, emails, links, postIts, user]);
 
   const handleLogout = async () => {
-    // Using any cast to bypass SupabaseAuthClient type mismatch in the build environment
     if (user?.id !== 'demo_user_id') await (supabase.auth as any).signOut();
     localStorage.removeItem('ysoffice_demo_session');
     setUser(null);
@@ -98,86 +95,72 @@ const App: React.FC = () => {
   if (!user) return <Auth onLogin={setUser} />;
 
   const tabs = [
-    { id: 'mural', label: 'Painel de Notas', icon: <StickyNote size={18} /> },
-    { id: 'kanban', label: 'Gestão de Tarefas', icon: <Trello size={18} /> },
-    { id: 'flow', label: 'Fluxos de Cálculo', icon: <GitMerge size={18} /> },
-    { id: 'email', label: 'Modelos Oficiais', icon: <Mail size={18} /> },
-    { id: 'links', label: 'Repositório de Links', icon: <Globe size={18} /> },
-    { id: 'whatsapp', label: 'Mensagens Rápidas', icon: <MessageSquare size={18} /> },
+    { id: 'mural', label: 'Notas', icon: <StickyNote size={14} /> },
+    { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
+    { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
+    { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
+    { id: 'links', label: 'Links', icon: <Globe size={14} /> },
+    { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={14} /> },
   ];
 
   return (
-    <div className="flex h-screen bg-[#f3f5f8] text-[#1c2d3d] overflow-hidden">
-      <aside className={`${isSidebarOpen ? 'w-64' : 'w-16'} bg-[#1b2631] text-white flex flex-col transition-all duration-200 z-20`}>
-        <div className="h-14 flex items-center px-4 border-b border-white/10 bg-[#161e27]">
-          {isSidebarOpen && <span className="font-bold tracking-tight text-lg">YSoffice <span className="text-[10px] font-normal opacity-50 ml-1 italic">Enterprise</span></span>}
-          <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="ml-auto p-1.5 hover:bg-white/10 rounded">
-            <Menu size={18} />
-          </button>
+    <div className="flex flex-col h-screen bg-[#c0c0c0] p-2 font-sans text-black">
+      {/* Header Info */}
+      <div className="flex justify-between items-center px-1 mb-2">
+        <div className="flex items-center gap-2">
+           <span className="font-bold text-lg italic text-[#555]">YSoffice</span>
+           {isSyncing && <RefreshCw size={12} className="animate-spin text-[#000080]" />}
+        </div>
+        <div className="flex items-center gap-4 text-xs">
+           <span>Usuário: <b>{user.nick}</b></span>
+           <Button onClick={handleLogout} size="sm" className="min-w-[60px]">Sair</Button>
+        </div>
+      </div>
+
+      {/* Tabs Layout */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Tab Headers */}
+        <div className="flex gap-1 px-1 z-10">
+          {tabs.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`
+                   relative px-4 py-1.5 flex items-center gap-2 text-xs font-bold rounded-t-sm transition-none
+                   border-t-2 border-l-2 border-r-2 outline-none
+                   ${isActive 
+                     ? 'bg-[#c0c0c0] border-white border-r-[#808080] pb-2 -mb-[2px] z-20' 
+                     : 'bg-[#c0c0c0] border-white border-r-[#808080] border-b-2 border-b-white text-[#555] mb-0 z-0 hover:text-black'}
+                `}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
 
-        <div className="p-3 border-b border-white/5">
-          <div className="flex items-center gap-2 p-2 bg-white/5 rounded border border-white/10">
-            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-xs font-bold uppercase shrink-0">
-              {user.nick[0]}
-            </div>
-            {isSidebarOpen && (
-              <div className="min-w-0">
-                <p className="text-[10px] uppercase opacity-40 font-bold leading-none mb-1">Usuário Atual</p>
-                <p className="text-sm font-semibold truncate">{user.nick}</p>
-              </div>
-            )}
-          </div>
+        {/* Tab Content Area */}
+        <div className="flex-1 win95-raised p-1 relative z-10 flex flex-col overflow-hidden">
+             <div className="flex-1 win95-sunken bg-white overflow-hidden relative">
+                <div className="absolute inset-0 overflow-auto p-4">
+                  {activeTab === 'mural' && <StickyNotesWall notes={postIts} onChange={setPostIts} />}
+                  {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
+                  {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
+                  {activeTab === 'email' && <EmailManager emails={emails} onChange={setEmails} />}
+                  {activeTab === 'links' && <ProfessionalLinks links={links} onChange={setLinks} />}
+                  {activeTab === 'whatsapp' && <WhatsAppTool />}
+                </div>
+             </div>
         </div>
-
-        <nav className="flex-1 py-4 overflow-y-auto">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-sm ${
-                activeTab === tab.id ? 'bg-[#0064d2] text-white shadow-inner' : 'text-white/70 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <span className="shrink-0">{tab.icon}</span>
-              {isSidebarOpen && <span className="truncate">{tab.label}</span>}
-            </button>
-          ))}
-        </nav>
-
-        <div className="p-2 border-t border-white/10 bg-[#161e27]">
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold text-white/50 hover:text-red-400 hover:bg-red-950/20 rounded transition-colors">
-            <LogOut size={16} />
-            {isSidebarOpen && <span>Encerrar Sessão</span>}
-          </button>
-        </div>
-      </aside>
-
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 bg-white border-b border-[#dee2e6] flex items-center px-6 justify-between shrink-0">
-          <div className="flex items-center gap-4">
-            <h2 className="text-sm font-bold text-[#556b82] uppercase tracking-wide">
-              {tabs.find(t => t.id === activeTab)?.label}
-            </h2>
-            {isSyncing && <div className="flex items-center gap-2 text-[10px] text-primary font-bold animate-pulse"><RefreshCw size={10} className="animate-spin" /> SINCRONIZANDO</div>}
-          </div>
-          <div className="flex items-center gap-2">
-             <button onClick={() => window.location.reload()} className="p-2 text-[#556b82] hover:bg-[#f3f5f8] rounded" title="Recarregar">
-               <RefreshCw size={16} />
-             </button>
-          </div>
-        </header>
-
-        <main className="flex-1 p-6 overflow-hidden">
-          <div className="h-full bg-white border border-[#dee2e6] rounded-md shadow-sm p-6 overflow-auto">
-            {activeTab === 'mural' && <StickyNotesWall notes={postIts} onChange={setPostIts} />}
-            {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
-            {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
-            {activeTab === 'email' && <EmailManager emails={emails} onChange={setEmails} />}
-            {activeTab === 'links' && <ProfessionalLinks links={links} onChange={setLinks} />}
-            {activeTab === 'whatsapp' && <WhatsAppTool />}
-          </div>
-        </main>
+      </div>
+      
+      {/* Footer Status */}
+      <div className="mt-1 px-1 flex justify-between text-[10px] text-[#555]">
+         <span>YSoffice v1.0</span>
+         <span>{new Date().toLocaleDateString()}</span>
       </div>
     </div>
   );

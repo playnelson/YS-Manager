@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Trash2, X, Calculator, Zap, MousePointer2 } from 'lucide-react';
-import { FlowState, FlowNode, FlowConnection, FlowNodeType, FlowOperation } from '../types';
+import { Plus, Trash2, X, Calculator, MousePointer2, Settings2, RefreshCw, Save, FolderOpen, Play, ChevronRight, Minimize2, Square, Undo, Redo } from 'lucide-react';
+import { FlowState, FlowNode, FlowConnection, FlowNodeType, FlowOperation, FlowTemplate } from '../types';
 import { Button } from './ui/Button';
 
 interface FlowBuilderProps {
@@ -15,15 +15,84 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  
+  // Template State
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [saveMode, setSaveMode] = useState(false);
+
+  // Input Editing State
+  const [activeInputId, setActiveInputId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+
+  // History State for Undo/Redo
+  const [history, setHistory] = useState<FlowState[]>([]);
+  const [future, setFuture] = useState<FlowState[]>([]);
+  
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // --- History Management ---
+  const saveHistory = () => {
+    // Limita o histórico a 50 passos para não pesar a memória
+    setHistory(prev => {
+      const newHistory = [...prev, JSON.parse(JSON.stringify(data))];
+      return newHistory.length > 50 ? newHistory.slice(1) : newHistory;
+    });
+    setFuture([]);
+  };
+
+  const handleUndo = useCallback(() => {
+    if (history.length === 0) return;
+    const previous = history[history.length - 1];
+    const newHistory = history.slice(0, -1);
+    
+    setFuture(prev => [data, ...prev]);
+    setHistory(newHistory);
+    onChange(previous);
+  }, [history, data, onChange]);
+
+  const handleRedo = useCallback(() => {
+    if (future.length === 0) return;
+    const next = future[0];
+    const newFuture = future.slice(1);
+    
+    setHistory(prev => [...prev, data]);
+    setFuture(newFuture);
+    onChange(next);
+  }, [future, data, onChange]);
+
+  // Keyboard Shortcuts (Ctrl+Z / Ctrl+Y)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) handleRedo();
+        else handleUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
+
+  // --- Formatting Helpers ---
+  const formatNumber = (num: number | undefined | null) => {
+    if (num === undefined || num === null || isNaN(num)) return '0,00';
+    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+  };
+
+  // --- Node Operations ---
   const addNode = (type: FlowNodeType) => {
+    saveHistory();
     const newNode: FlowNode = {
       id: `node_${Date.now()}`,
       type,
-      x: 50 + Math.random() * 50,
-      y: 50 + Math.random() * 50,
-      label: type === 'input' ? 'Entrada' : type === 'op' ? 'Processo' : 'Saída',
+      x: 50 + Math.random() * 100,
+      y: 50 + Math.random() * 100,
+      label: type === 'input' ? 'Valor' : type === 'op' ? 'Cálculo' : 'Total',
       value: type === 'input' ? 0 : undefined,
       operation: type === 'op' ? '+' : undefined,
       calculatedValue: null
@@ -31,40 +100,57 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     onChange({ ...data, nodes: [...data.nodes, newNode] });
   };
 
-  const updateNode = (id: string, updates: Partial<FlowNode>) => {
+  const updateNode = (id: string, updates: Partial<FlowNode>, saveToHistory = false) => {
+    if (saveToHistory) saveHistory();
     const newNodes = data.nodes.map(n => n.id === id ? { ...n, ...updates } : n);
     onChange({ ...data, nodes: newNodes });
   };
 
   const removeNode = (id: string) => {
+    saveHistory();
     const newNodes = data.nodes.filter(n => n.id !== id);
     const newConnections = data.connections.filter(c => c.from !== id && c.to !== id);
-    onChange({ nodes: newNodes, connections: newConnections });
+    onChange({ ...data, nodes: newNodes, connections: newConnections });
   };
 
-  const handleNodeClick = (nodeId: string) => {
-    if (!isConnecting) return;
-    if (!connectSource) {
-      setConnectSource(nodeId);
-    } else {
-      if (connectSource === nodeId) {
-        setConnectSource(null);
-        return;
-      }
-      const exists = data.connections.some(c => c.from === connectSource && c.to === nodeId);
-      if (!exists) {
-        const newConnection: FlowConnection = {
-          id: `conn_${Date.now()}`,
-          from: connectSource,
-          to: nodeId
-        };
-        onChange({ ...data, connections: [...data.connections, newConnection] });
-      }
-      setConnectSource(null);
-      setIsConnecting(false);
+  // --- Template Operations ---
+  const saveTemplate = () => {
+    if (!templateName.trim()) return alert("Digite um nome para o modelo.");
+    
+    const newTemplate: FlowTemplate = {
+      id: `tpl_${Date.now()}`,
+      name: templateName,
+      nodes: data.nodes,
+      connections: data.connections
+    };
+
+    const updatedTemplates = [...(data.templates || []), newTemplate];
+    onChange({ ...data, templates: updatedTemplates });
+    setTemplateName('');
+    setIsTemplatesOpen(false);
+    alert('Modelo salvo com sucesso!');
+  };
+
+  const loadTemplate = (template: FlowTemplate) => {
+    if (confirm("Carregar este modelo substituirá o trabalho atual. Continuar?")) {
+      saveHistory();
+      onChange({
+        ...data,
+        nodes: template.nodes,
+        connections: template.connections
+      });
+      setIsTemplatesOpen(false);
     }
   };
 
+  const deleteTemplate = (id: string) => {
+    if (confirm("Excluir este modelo?")) {
+      const updatedTemplates = data.templates.filter(t => t.id !== id);
+      onChange({ ...data, templates: updatedTemplates });
+    }
+  };
+
+  // --- Calculation Logic ---
   const calculateFlow = useCallback(() => {
     let nodes = data.nodes.map(n => ({ ...n, calculatedValue: null as number | null }));
     const connections = data.connections;
@@ -79,34 +165,71 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
       for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i];
         if (node.type === 'input' || node.calculatedValue !== null) continue;
+        
         const inputs = connections
           .filter(c => c.to === node.id)
           .map(c => nodes.find(n => n.id === c.from)?.calculatedValue);
+        
         if (inputs.length === 0 || inputs.some(v => v === null)) continue;
+        
         const validInputs = inputs as number[];
         let result = 0;
+
         if (node.type === 'op') {
-          if (node.operation === '+') result = validInputs.reduce((a, b) => a + b, 0);
-          else if (node.operation === '-') result = validInputs.reduce((a, b) => a - b);
-          else if (node.operation === '*') result = validInputs.reduce((a, b) => a * b, 1);
-          else if (node.operation === '/') result = validInputs.reduce((a, b) => b === 0 ? 0 : a / b);
+          switch (node.operation) {
+            case '+': result = validInputs.reduce((a, b) => a + b, 0); break;
+            case '-': result = validInputs.length > 0 ? validInputs.reduce((a, b) => a - b) : 0; break;
+            case '*': result = validInputs.reduce((a, b) => a * b, 1); break;
+            case '/': result = validInputs.length > 0 ? validInputs.reduce((a, b) => b === 0 ? 0 : a / b) : 0; break;
+            case 'AVG': result = validInputs.reduce((a, b) => a + b, 0) / validInputs.length; break;
+            case 'MAX': result = Math.max(...validInputs); break;
+            case 'MIN': result = Math.min(...validInputs); break;
+            case 'PCT': result = validInputs.length >= 2 ? validInputs[0] * (validInputs[1] / 100) : (validInputs[0] || 0); break;
+            default: result = 0;
+          }
         } else {
           result = validInputs.reduce((a, b) => a + b, 0);
         }
-        nodes[i].calculatedValue = result;
-        changed = true;
+        
+        if (nodes[i].calculatedValue !== result) {
+            nodes[i].calculatedValue = result;
+            changed = true;
+        }
       }
     }
     onChange({ ...data, nodes });
   }, [data, onChange]);
 
+  // --- Interaction Handlers ---
   const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
-    if (isConnecting) return;
-    if ((e.target as HTMLElement).tagName.match(/INPUT|SELECT|BUTTON/)) return;
+    if ((e.target as HTMLElement).closest('.node-control')) return;
     const node = data.nodes.find(n => n.id === nodeId);
     if (node) {
+      saveHistory(); // Save state before dragging starts
       setDraggingNode(nodeId);
       setDragOffset({ x: e.clientX - node.x, y: e.clientY - node.y });
+    }
+  };
+
+  const startConnection = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    setConnectSource(nodeId);
+    setIsConnecting(true);
+  };
+
+  const completeConnection = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    if (connectSource && connectSource !== nodeId) {
+       const exists = data.connections.some(c => c.from === connectSource && c.to === nodeId);
+       if (!exists) {
+         saveHistory();
+         onChange({ 
+           ...data, 
+           connections: [...data.connections, { id: `c_${Date.now()}`, from: connectSource, to: nodeId }] 
+         });
+       }
+       setConnectSource(null);
+       setIsConnecting(false);
     }
   };
 
@@ -117,6 +240,7 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
         setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       }
       if (draggingNode) {
+        // Direct update without history during drag to avoid spamming history
         updateNode(draggingNode, { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
       }
     };
@@ -129,39 +253,87 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     };
   }, [draggingNode, dragOffset]);
 
+  const renderConnection = (x1: number, y1: number, x2: number, y2: number, key: string, isDraft = false) => {
+     const pathData = `M ${x1} ${y1} C ${x1 + 30} ${y1}, ${x2 - 30} ${y2}, ${x2} ${y2}`;
+     return (
+        <g key={key}>
+          <path 
+            d={pathData} 
+            fill="none" 
+            stroke={isDraft ? "#000080" : "#000000"} 
+            strokeWidth={isDraft ? "1" : "1.5"} 
+            strokeDasharray={isDraft ? "2,2" : "none"}
+          />
+          {!isDraft && (
+             <polygon points={`${x2},${y2} ${x2-6},${y2-3} ${x2-6},${y2+3}`} fill="#000000" />
+          )}
+        </g>
+     );
+  };
+
+  const PORT_OFFSET_Y = 40;
+  const PORT_OFFSET_X = 160;
+
   return (
-    <div className="flex flex-col h-full bg-[#f8f9fa] rounded border border-[#dee2e6] overflow-hidden">
-      <div className="flex items-center gap-2 p-3 bg-white border-b border-[#dee2e6] z-10">
-        <Button size="sm" variant="secondary" onClick={() => addNode('input')}>+ Valor</Button>
-        <Button size="sm" variant="secondary" onClick={() => addNode('op')}>+ Operação</Button>
-        <Button size="sm" variant="secondary" onClick={() => addNode('result')}>+ Saída</Button>
-        <div className="h-4 w-px bg-[#dee2e6] mx-1"></div>
-        <Button 
-          size="sm" 
-          variant={isConnecting ? "primary" : "secondary"}
-          onClick={() => { setIsConnecting(!isConnecting); setConnectSource(null); }}
-        >
-          {isConnecting ? "Definir Alvo..." : "Vincular"}
+    <div className="flex flex-col h-full bg-win95-bg border-2 border-win95-shadow overflow-hidden relative">
+      {/* Menu / Tool Bar */}
+      <div className="flex items-center gap-1 p-1 bg-win95-bg border-b-2 border-win95-shadow select-none overflow-x-auto">
+        <Button size="sm" onClick={() => addNode('input')}>
+          <Plus size={12} className="mr-1"/> Entrada
         </Button>
-        <Button size="sm" onClick={calculateFlow} icon={<Calculator size={14} />}>Executar Cálculo</Button>
+        <Button size="sm" onClick={() => addNode('op')}>
+          <Calculator size={12} className="mr-1"/> Processo
+        </Button>
+        <Button size="sm" onClick={() => addNode('result')}>
+          <Play size={12} className="mr-1"/> Saída
+        </Button>
+        <div className="w-0.5 h-5 bg-win95-shadow mx-1 border-r border-white"></div>
+        <Button size="sm" onClick={calculateFlow} title="Recalcular">
+          <RefreshCw size={12} className="mr-1"/> Calc
+        </Button>
+        <div className="w-0.5 h-5 bg-win95-shadow mx-1 border-r border-white"></div>
+        <Button size="sm" onClick={handleUndo} disabled={history.length === 0} title="Desfazer (Ctrl+Z)">
+          <Undo size={12} className="mr-1"/>
+        </Button>
+        <Button size="sm" onClick={handleRedo} disabled={future.length === 0} title="Refazer (Ctrl+Y)">
+          <Redo size={12} className="mr-1"/>
+        </Button>
+        <div className="w-0.5 h-5 bg-win95-shadow mx-1 border-r border-white"></div>
+        <Button size="sm" onClick={() => { setSaveMode(true); setIsTemplatesOpen(true); }} title="Salvar Modelo">
+          <Save size={12} />
+        </Button>
+        <Button size="sm" onClick={() => { setSaveMode(false); setIsTemplatesOpen(true); }} title="Abrir Modelo">
+          <FolderOpen size={12} />
+        </Button>
+        <div className="flex-1"></div>
+        <div className="text-[10px] text-[#808080] font-bold px-2 whitespace-nowrap">MODO EDIÇÃO</div>
       </div>
 
       <div 
         ref={containerRef}
-        className="flex-1 relative overflow-hidden"
-        style={{ backgroundImage: 'linear-gradient(#dee2e6 1px, transparent 1px), linear-gradient(90deg, #dee2e6 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+        className="flex-1 relative overflow-hidden bg-white win95-sunken m-1"
+        style={{ 
+            backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', 
+            backgroundSize: '20px 20px',
+            backgroundPosition: '10px 10px'
+        }}
       >
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
           {data.connections.map(conn => {
             const from = data.nodes.find(n => n.id === conn.from);
             const to = data.nodes.find(n => n.id === conn.to);
             if (!from || !to) return null;
-            return (
-              <line key={conn.id} x1={from.x + 140} y1={from.y + 40} x2={to.x} y2={to.y + 40} stroke="#0064d2" strokeWidth="1.5" strokeDasharray="4" />
-            );
+            return renderConnection(from.x + PORT_OFFSET_X, from.y + PORT_OFFSET_Y, to.x, to.y + PORT_OFFSET_Y, conn.id);
           })}
           {isConnecting && connectSource && (
-            <line x1={data.nodes.find(n => n.id === connectSource)!.x + 140} y1={data.nodes.find(n => n.id === connectSource)!.y + 40} x2={mousePos.x} y2={mousePos.y} stroke="#0064d2" strokeWidth="1" strokeDasharray="2" />
+            renderConnection(
+                data.nodes.find(n => n.id === connectSource)!.x + PORT_OFFSET_X, 
+                data.nodes.find(n => n.id === connectSource)!.y + PORT_OFFSET_Y, 
+                mousePos.x, 
+                mousePos.y, 
+                'draft', 
+                true
+            )
           )}
         </svg>
 
@@ -169,50 +341,165 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
           <div
             key={node.id}
             onMouseDown={(e) => handleMouseDown(e, node.id)}
-            onClick={() => handleNodeClick(node.id)}
-            className={`absolute w-36 bg-white border rounded shadow-sm transition-all overflow-hidden ${
-              isConnecting && connectSource === node.id ? 'border-[#0064d2] ring-2 ring-[#0064d2]/10' : 'border-[#dee2e6]'
-            }`}
-            style={{ left: node.x, top: node.y }}
+            className="absolute w-40 win95-raised flex flex-col group shadow-lg"
+            style={{ left: node.x, top: node.y, zIndex: draggingNode === node.id ? 20 : 10 }}
           >
-            <div className={`px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white ${
-              node.type === 'input' ? 'bg-[#556b82]' : node.type === 'op' ? 'bg-[#0064d2]' : 'bg-[#198754]'
-            } flex justify-between`}>
-              <span>{node.type === 'input' ? 'Input' : node.type === 'op' ? 'Logic' : 'Result'}</span>
-              <button onClick={() => removeNode(node.id)}><X size={10} /></button>
-            </div>
-            <div className="p-2 space-y-1">
-              <input 
-                className="w-full text-[10px] font-bold border-none outline-none text-[#1c2d3d]"
-                value={node.label}
-                onChange={(e) => updateNode(node.id, { label: e.target.value })}
-              />
-              {node.type === 'input' && (
-                <input 
-                  type="number" 
-                  className="w-full px-2 py-1 text-xs border border-[#dee2e6] rounded bg-[#f8f9fa]"
-                  value={node.value}
-                  onChange={(e) => updateNode(node.id, { value: Number(e.target.value) })}
-                />
-              )}
-              {node.type === 'op' && (
-                <select 
-                  className="w-full px-1 py-1 text-[10px] border border-[#dee2e6] rounded bg-[#f8f9fa]"
-                  value={node.operation}
-                  onChange={(e) => updateNode(node.id, { operation: e.target.value as FlowOperation })}
-                >
-                  <option value="+">ADICIONAR</option>
-                  <option value="-">SUBTRAIR</option>
-                  <option value="*">MULTIPLICAR</option>
-                  <option value="/">DIVIDIR</option>
-                </select>
-              )}
-              <div className="pt-1 text-center font-mono text-[11px] font-bold text-[#0064d2]">
-                {node.calculatedValue !== null ? node.calculatedValue.toFixed(2) : '---'}
+            {/* Window-like Header */}
+            <div className={`px-1 py-0.5 flex justify-between items-center cursor-move border-b border-[#808080] ${
+                node.id === draggingNode ? 'bg-[#000080] text-white' : 'bg-[#808080] text-[#c0c0c0]'
+            }`}>
+              <div className="flex items-center gap-1 overflow-hidden">
+                  <Square size={10} className="fill-white text-black" />
+                  <input 
+                    className={`bg-transparent border-none outline-none w-full font-bold text-[10px] node-control truncate ${
+                        node.id === draggingNode ? 'text-white placeholder-white' : 'text-white'
+                    }`}
+                    value={node.label}
+                    onFocus={() => saveHistory()}
+                    onChange={(e) => updateNode(node.id, { label: e.target.value })}
+                    placeholder="Sem título"
+                  />
               </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); removeNode(node.id); }} 
+                className="win95-raised w-3.5 h-3.5 flex items-center justify-center bg-[#c0c0c0] node-control hover:bg-[#ff0000] group/btn"
+              >
+                 <X size={8} className="text-black group-hover/btn:text-white" />
+              </button>
             </div>
+
+            <div className="p-2 bg-win95-bg flex flex-col gap-2 min-h-[60px]">
+              {node.type === 'input' && (
+                <div className="flex flex-col gap-1">
+                    <label className="text-[9px] text-black">Entrada:</label>
+                    <input 
+                      type="text"
+                      className="w-full win95-sunken px-1 py-0.5 text-xs outline-none node-control bg-white font-mono text-black"
+                      value={activeInputId === node.id ? editValue : formatNumber(node.value)}
+                      onFocus={(e) => {
+                        saveHistory(); // Salva estado antes da edição
+                        setActiveInputId(node.id);
+                        // Ao focar, pega o valor, e permite edição natural.
+                        setEditValue(node.value ? node.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+                        // Seleciona tudo para facilitar substituição do 0
+                        setTimeout(() => e.target.select(), 10);
+                      }}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={() => {
+                        setActiveInputId(null);
+                        // Parser Básico PT-BR: Remove pontos de milhar, troca vírgula por ponto
+                        const raw = editValue.replace(/\./g, '').replace(',', '.');
+                        const num = parseFloat(raw);
+                        updateNode(node.id, { value: isNaN(num) ? 0 : num });
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.currentTarget.blur();
+                      }}
+                    />
+                </div>
+              )}
+
+              {node.type === 'op' && (
+                <div className="flex flex-col gap-1">
+                    <label className="text-[9px] text-black">Função:</label>
+                    <select 
+                    className="w-full win95-sunken px-1 py-0.5 text-[10px] outline-none node-control bg-white cursor-pointer text-black"
+                    value={node.operation}
+                    onFocus={() => saveHistory()}
+                    onChange={(e) => updateNode(node.id, { operation: e.target.value as FlowOperation })}
+                    >
+                        <option value="+">Soma (+)</option>
+                        <option value="-">Subtração (-)</option>
+                        <option value="*">Mult. (*)</option>
+                        <option value="/">Divisão (/)</option>
+                        <option value="AVG">Média</option>
+                        <option value="PCT">Porcentagem</option>
+                        <option value="MAX">Maior</option>
+                        <option value="MIN">Menor</option>
+                    </select>
+                </div>
+              )}
+
+              {/* Só exibe 'Res:' se NÃO for input */}
+              {node.type !== 'input' && (
+                <div className="mt-auto pt-1 border-t border-white flex justify-between items-center">
+                   <span className="text-[9px] font-bold text-black">Res:</span>
+                   <span className="win95-sunken bg-white px-1 text-[10px] font-mono min-w-[50px] text-right block text-black">
+                      {formatNumber(node.calculatedValue)}
+                   </span>
+                </div>
+              )}
+            </div>
+
+            {node.type !== 'input' && (
+                <div 
+                    className="absolute -left-1.5 top-10 w-3 h-3 win95-raised bg-[#c0c0c0] flex items-center justify-center cursor-crosshair node-control hover:bg-white"
+                    onMouseUp={(e) => completeConnection(e, node.id)}
+                    title="Entrada"
+                >
+                    <div className="w-1 h-1 bg-black rounded-full" />
+                </div>
+            )}
+            {node.type !== 'result' && (
+                <div 
+                    className="absolute -right-1.5 top-10 w-3 h-3 win95-raised bg-[#c0c0c0] flex items-center justify-center cursor-crosshair node-control hover:bg-white"
+                    onMouseDown={(e) => startConnection(e, node.id)}
+                    title="Saída"
+                >
+                    <div className="w-1 h-1 bg-black rounded-full" />
+                </div>
+            )}
           </div>
         ))}
+      </div>
+      
+      {/* Template Modal */}
+      {isTemplatesOpen && (
+        <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-50">
+           <div className="w-80 win95-raised p-1 shadow-2xl">
+              <div className="bg-[#000080] text-white px-2 py-1 text-sm font-bold flex justify-between items-center mb-2">
+                 <span>{saveMode ? 'Salvar Modelo' : 'Carregar Modelo'}</span>
+                 <button onClick={() => setIsTemplatesOpen(false)} className="win95-raised w-5 h-5 flex items-center justify-center text-black text-xs font-bold leading-none bg-[#c0c0c0]">×</button>
+              </div>
+              <div className="p-2">
+                 {saveMode ? (
+                   <div className="space-y-3">
+                     <p className="text-xs">Nome do Modelo:</p>
+                     <input 
+                       className="w-full win95-sunken p-1 text-sm outline-none" 
+                       value={templateName} 
+                       onChange={e => setTemplateName(e.target.value)} 
+                       autoFocus
+                     />
+                     <div className="flex justify-end gap-2 pt-2">
+                       <Button onClick={saveTemplate}>Salvar</Button>
+                     </div>
+                   </div>
+                 ) : (
+                   <div className="space-y-2">
+                     <div className="win95-sunken bg-white h-48 overflow-y-auto p-1">
+                        {!data.templates || data.templates.length === 0 ? (
+                          <div className="text-xs text-gray-400 p-2 text-center">Nenhum modelo salvo.</div>
+                        ) : (
+                          data.templates.map(t => (
+                            <div key={t.id} className="flex justify-between items-center p-1 hover:bg-[#000080] hover:text-white group cursor-pointer">
+                               <span onClick={() => loadTemplate(t)} className="flex-1 text-xs truncate">{t.name}</span>
+                               <button onClick={() => deleteTemplate(t.id)} className="text-red-500 group-hover:text-white px-1 font-bold">×</button>
+                            </div>
+                          ))
+                        )}
+                     </div>
+                   </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Footer Status */}
+      <div className="bg-win95-bg border-t border-white p-1 flex justify-between items-center text-[10px]">
+          <span className="win95-sunken px-2 bg-win95-bg w-32 border-none text-black">Pronto</span>
+          <span className="win95-sunken px-2 bg-white w-20 text-right text-black">{data.nodes.length} Objetos</span>
       </div>
     </div>
   );

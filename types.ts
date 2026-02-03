@@ -20,7 +20,7 @@ export interface KanbanState {
 
 // Flowchart Types
 export type FlowNodeType = 'input' | 'op' | 'result';
-export type FlowOperation = '+' | '-' | '*' | '/';
+export type FlowOperation = '+' | '-' | '*' | '/' | 'AVG' | 'MAX' | 'MIN' | 'POW' | 'PCT';
 
 export interface FlowNode {
   id: string;
@@ -39,9 +39,17 @@ export interface FlowConnection {
   to: string;
 }
 
+export interface FlowTemplate {
+  id: string;
+  name: string;
+  nodes: FlowNode[];
+  connections: FlowConnection[];
+}
+
 export interface FlowState {
   nodes: FlowNode[];
   connections: FlowConnection[];
+  templates: FlowTemplate[];
 }
 
 // Email Types

@@ -4,23 +4,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>YSoffice - Sistema de Gestão Pessoal</title>
+    <title>YSoffice</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              primary: '#0064d2', // Professional Blue
-              secondary: '#556b82', // Steel Gray
-              background: '#f3f5f8', // Enterprise Gray
-              surface: '#ffffff',
-              border: '#dee2e6'
-            },
-            borderRadius: {
-              'md': '4px',
-              'lg': '6px',
-              'xl': '8px'
+              win95: {
+                bg: '#c0c0c0',
+                light: '#ffffff',
+                shadow: '#808080',
+                dark: '#000000',
+                blue: '#000080',
+                blueLight: '#1084d0'
+              }
             }
           }
         }
@@ -28,21 +26,55 @@
     </script>
     <style>
       body {
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        font-family: 'Tahoma', 'Verdana', sans-serif;
+        background-color: #c0c0c0; /* Standard Windows Gray */
+        color: black;
+        image-rendering: pixelated;
       }
+      
+      /* Efeito Relevo (Raised) */
+      .win95-raised {
+        border-top: 2px solid #ffffff;
+        border-left: 2px solid #ffffff;
+        border-right: 2px solid #808080;
+        border-bottom: 2px solid #808080;
+        box-shadow: inset 1px 1px 0px #ffffff, 1px 1px 0px #000000;
+        background-color: #c0c0c0;
+      }
+
+      /* Efeito Afundado (Sunken) */
+      .win95-sunken {
+        border-top: 2px solid #808080;
+        border-left: 2px solid #808080;
+        border-right: 2px solid #ffffff;
+        border-bottom: 2px solid #ffffff;
+        box-shadow: inset 1px 1px 0px #000000;
+        background-color: #ffffff;
+      }
+
+      /* Botão Ativo/Pressionado */
+      .win95-btn:active {
+        border-top: 2px solid #808080;
+        border-left: 2px solid #808080;
+        border-right: 2px solid #ffffff;
+        border-bottom: 2px solid #ffffff;
+        box-shadow: inset 1px 1px 0px #000000;
+        padding-top: 2px;
+        padding-left: 2px;
+      }
+
       ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+        width: 16px;
       }
       ::-webkit-scrollbar-track {
-        background: #f1f1f1; 
+        background: #c0c0c0;
       }
       ::-webkit-scrollbar-thumb {
-        background: #ccc; 
-        border-radius: 3px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #999; 
+        background: #c0c0c0;
+        border-top: 2px solid #ffffff;
+        border-left: 2px solid #ffffff;
+        border-right: 2px solid #808080;
+        border-bottom: 2px solid #808080;
       }
     </style>
   <script type="importmap">
@@ -57,7 +89,7 @@
 }
 </script>
 </head>
-  <body class="bg-background text-[#1c2d3d] h-screen overflow-hidden">
+  <body class="h-screen overflow-hidden select-none bg-[#c0c0c0]">
     <div id="root" class="h-full"></div>
   </body>
 </html>

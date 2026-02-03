@@ -2,6 +2,7 @@
 import React from 'react';
 import { Plus, Trash2, Palette, FileText, Calendar } from 'lucide-react';
 import { PostIt } from '../types';
+import { Button } from './ui/Button';
 
 interface StickyNotesWallProps {
   notes: PostIt[];
@@ -56,12 +57,9 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
           </h2>
           <p className="text-xs text-[#556b82] mt-1">Gestão de rascunhos e lembretes operacionais.</p>
         </div>
-        <button 
-          onClick={addNote}
-          className="flex items-center gap-2 bg-[#0064d2] hover:bg-[#0052ad] text-white px-4 py-2 rounded-md font-bold text-xs transition-colors shadow-sm uppercase tracking-wider"
-        >
-          <Plus size={16} /> Nova Entrada
-        </button>
+        <Button onClick={addNote} icon={<Plus size={14} />}>
+           NOVA ENTRADA
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-2">
