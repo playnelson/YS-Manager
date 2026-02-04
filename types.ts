@@ -105,6 +105,18 @@ export interface Extension {
   notes?: string;
 }
 
+// Important Notes Types
+export type NotePriority = 'normal' | 'urgent' | 'secret' | 'archived';
+
+export interface ImportantNote {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  priority: NotePriority;
+  updatedAt: string;
+}
+
 // Sticky Note Type
 export interface PostIt {
   id: string;
@@ -123,4 +135,5 @@ export interface AppData {
   links: ProfessionalLink[];
   extensions?: Extension[];
   postIts: PostIt[];
+  importantNotes?: ImportantNote[];
 }
