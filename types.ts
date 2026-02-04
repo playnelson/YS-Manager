@@ -6,10 +6,14 @@ export interface User {
 }
 
 // Kanban Types
+export type KanbanPriority = 'low' | 'medium' | 'high';
+
 export interface KanbanCard {
   id: string;
   title: string;
   description: string;
+  priority: KanbanPriority;
+  createdAt: string;
 }
 
 export interface KanbanState {
