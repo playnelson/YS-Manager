@@ -52,6 +52,18 @@ export interface FlowState {
   templates: FlowTemplate[];
 }
 
+// Calendar Types
+export interface Holiday {
+  date: string; // YYYY-MM-DD
+  name: string;
+  type: 'national' | 'state' | 'municipal' | 'optional';
+}
+
+export interface CalendarConfig {
+  uf: string;
+  city: string;
+}
+
 // Email Types
 export interface EmailTemplate {
   id: string;
@@ -83,6 +95,7 @@ export interface PostIt {
 export interface AppData {
   kanban: KanbanState;
   flow: FlowState;
+  calendarConfig?: CalendarConfig;
   emails: EmailTemplate[];
   links: ProfessionalLink[];
   postIts: PostIt[];

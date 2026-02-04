@@ -1,5 +1,7 @@
 {
   "name": "YSoffice",
   "description": "Um painel de produtividade moderno e completo com quadro Kanban, calculadora de fluxograma, gerenciador de modelos de e-mail e integração com WhatsApp.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }
