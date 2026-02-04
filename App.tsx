@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone } from 'lucide-react';
-import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension } from './types';
+import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarTool } from './components/CalendarTool';
@@ -25,6 +25,7 @@ const App: React.FC = () => {
   const [kanbanData, setKanbanData] = useState<KanbanState>(initialKanban);
   const [flowData, setFlowData] = useState<FlowState>(initialFlow);
   const [calendarConfig, setCalendarConfig] = useState<CalendarConfig>({ uf: 'SP', city: 'São Paulo' });
+  const [calendarEvents, setCalendarEvents] = useState<UserEvent[]>([]);
   const [emails, setEmails] = useState<EmailTemplate[]>([]);
   const [links, setLinks] = useState<ProfessionalLink[]>([]);
   const [extensions, setExtensions] = useState<Extension[]>([]);
@@ -37,15 +38,9 @@ const App: React.FC = () => {
   
   const [isInverted, setIsInverted] = useState(() => localStorage.getItem('ysoffice_inverted') === 'true');
 
-  // Helper for date string
   const getFullDate = () => {
     const date = new Date();
-    const formatted = date.toLocaleDateString('pt-BR', { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
-    });
+    const formatted = date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   };
 
@@ -87,6 +82,7 @@ const App: React.FC = () => {
             if (parsed.kanban) setKanbanData(parsed.kanban);
             if (parsed.flow) setFlowData({ ...initialFlow, ...parsed.flow });
             if (parsed.calendarConfig) setCalendarConfig(parsed.calendarConfig);
+            if (parsed.calendarEvents) setCalendarEvents(parsed.calendarEvents);
             if (parsed.emails) setEmails(parsed.emails);
             if (parsed.links) setLinks(parsed.links);
             if (parsed.extensions) setExtensions(parsed.extensions);
@@ -94,13 +90,12 @@ const App: React.FC = () => {
           }
         } else {
           const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
-          if (error) {
-             setSyncError('Erro ao carregar dados.');
-          } else if (data?.payload) {
+          if (!error && data?.payload) {
             const payload = data.payload as AppData;
             setKanbanData(payload.kanban || initialKanban);
             setFlowData({ ...initialFlow, ...(payload.flow || {}) });
             setCalendarConfig(payload.calendarConfig || { uf: 'SP', city: 'São Paulo' });
+            setCalendarEvents(payload.calendarEvents || []);
             setEmails(payload.emails || []);
             setLinks(payload.links || []);
             setExtensions(payload.extensions || []);
@@ -120,7 +115,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, emails, links, extensions, postIts };
+      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -136,7 +131,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2000);
     return () => clearTimeout(timeout);
-  }, [kanbanData, flowData, calendarConfig, emails, links, extensions, postIts, user, isDataLoaded]);
+  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, user, isDataLoaded]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await (supabase.auth as any).signOut();
@@ -162,11 +157,7 @@ const App: React.FC = () => {
     <div className="flex flex-col h-screen bg-[#c0c0c0] p-2 font-sans text-black">
       <div className="flex justify-between items-center px-1 mb-2">
         <div className="flex items-center gap-2">
-           <button 
-             onClick={() => setActiveTab('calendar')}
-             className="font-bold text-sm text-[#555] hover:text-win95-blue flex items-center gap-2 transition-colors cursor-pointer group"
-             title="Ver Calendário"
-           >
+           <button onClick={() => setActiveTab('calendar')} className="font-bold text-sm text-[#555] hover:text-win95-blue flex items-center gap-2 transition-colors cursor-pointer group">
              <div className="win95-sunken px-2 py-0.5 bg-white flex items-center gap-2 group-hover:bg-[#f0f0f0]">
                <CalendarIcon size={14} className="text-win95-blue" />
                <span>{getFullDate()}</span>
@@ -176,41 +167,25 @@ const App: React.FC = () => {
         </div>
         <div className="flex items-center gap-4 text-xs">
            <span>Usuário: <b>{user.nick}</b></span>
-           <Button onClick={() => setIsInverted(!isInverted)} size="sm" className="min-w-[30px]" title="Inverter Cores">
-             <Contrast size={14} />
-           </Button>
+           <Button onClick={() => setIsInverted(!isInverted)} size="sm" className="min-w-[30px]" title="Inverter Cores"><Contrast size={14} /></Button>
            <Button onClick={handleLogout} size="sm" className="min-w-[60px]">Sair</Button>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex gap-1 px-1 z-10">
-          {tabs.map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`
-                   relative px-4 py-1.5 flex items-center gap-2 text-xs font-bold rounded-t-sm transition-none
-                   border-t-2 border-l-2 border-r-2 outline-none
-                   ${isActive 
-                     ? 'bg-[#c0c0c0] border-white border-r-[#808080] pb-2 -mb-[2px] z-20' 
-                     : 'bg-[#c0c0c0] border-white border-r-[#808080] border-b-2 border-b-white text-[#555] mb-0 z-0 hover:text-black'}
-                `}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            )
-          })}
+          {tabs.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative px-4 py-1.5 flex items-center gap-2 text-xs font-bold rounded-t-sm border-t-2 border-l-2 border-r-2 outline-none ${activeTab === tab.id ? 'bg-[#c0c0c0] border-white border-r-[#808080] pb-2 -mb-[2px] z-20' : 'bg-[#c0c0c0] border-white border-r-[#808080] border-b-2 border-b-white text-[#555] mb-0 z-0 hover:text-black'}`}>
+              {tab.icon} {tab.label}
+            </button>
+          ))}
         </div>
 
         <div className="flex-1 win95-raised p-1 relative z-10 flex flex-col overflow-hidden">
              <div className="flex-1 win95-sunken bg-white overflow-hidden relative">
                 <div className="absolute inset-0 overflow-auto p-4">
                   {activeTab === 'mural' && <StickyNotesWall notes={postIts} onChange={setPostIts} />}
-                  {activeTab === 'calendar' && <CalendarTool config={calendarConfig} onChange={setCalendarConfig} />}
+                  {activeTab === 'calendar' && <CalendarTool config={calendarConfig} events={calendarEvents} onConfigChange={setCalendarConfig} onEventsChange={setCalendarEvents} />}
                   {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
                   {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
                   {activeTab === 'email' && <EmailManager emails={emails} onChange={setEmails} />}
@@ -223,7 +198,7 @@ const App: React.FC = () => {
       </div>
       
       <div className="mt-1 px-1 flex justify-between text-[10px] text-[#555]">
-         <span>YSoffice v1.0.3</span>
+         <span>YSoffice v1.0.4</span>
          <span>{isDataLoaded ? 'Dados Sincronizados' : 'Conectando...'}</span>
       </div>
     </div>

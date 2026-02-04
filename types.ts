@@ -63,6 +63,14 @@ export interface Holiday {
   type: 'national' | 'state' | 'municipal' | 'optional';
 }
 
+export interface UserEvent {
+  id: string;
+  date: string; // YYYY-MM-DD
+  title: string;
+  type: 'holiday' | 'meeting' | 'reminder' | 'birthday';
+  description?: string;
+}
+
 export interface CalendarConfig {
   uf: string;
   city: string;
@@ -110,6 +118,7 @@ export interface AppData {
   kanban: KanbanState;
   flow: FlowState;
   calendarConfig?: CalendarConfig;
+  calendarEvents?: UserEvent[];
   emails: EmailTemplate[];
   links: ProfessionalLink[];
   extensions?: Extension[];
