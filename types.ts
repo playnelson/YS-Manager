@@ -68,6 +68,7 @@ export interface CalendarConfig {
 export interface EmailTemplate {
   id: string;
   name: string;
+  category?: string;
   to: string;
   cc: string;
   subject: string;
