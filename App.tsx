@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon } from 'lucide-react';
-import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig } from './types';
+import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone } from 'lucide-react';
+import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarTool } from './components/CalendarTool';
 import { EmailManager } from './components/EmailManager';
 import { WhatsAppTool } from './components/WhatsAppTool';
 import { ProfessionalLinks } from './components/ProfessionalLinks';
+import { ExtensionsDirectory } from './components/ExtensionsDirectory';
 import { StickyNotesWall } from './components/StickyNotesWall';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
@@ -18,7 +19,7 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'mural' | 'calendar' | 'kanban' | 'flow' | 'email' | 'whatsapp' | 'links'>('mural');
+  const [activeTab, setActiveTab] = useState<'mural' | 'calendar' | 'kanban' | 'flow' | 'email' | 'whatsapp' | 'links' | 'ramais'>('mural');
   
   // Data States
   const [kanbanData, setKanbanData] = useState<KanbanState>(initialKanban);
@@ -26,6 +27,7 @@ const App: React.FC = () => {
   const [calendarConfig, setCalendarConfig] = useState<CalendarConfig>({ uf: 'SP', city: 'São Paulo' });
   const [emails, setEmails] = useState<EmailTemplate[]>([]);
   const [links, setLinks] = useState<ProfessionalLink[]>([]);
+  const [extensions, setExtensions] = useState<Extension[]>([]);
   const [postIts, setPostIts] = useState<PostIt[]>([]);
   
   // System States
@@ -87,6 +89,7 @@ const App: React.FC = () => {
             if (parsed.calendarConfig) setCalendarConfig(parsed.calendarConfig);
             if (parsed.emails) setEmails(parsed.emails);
             if (parsed.links) setLinks(parsed.links);
+            if (parsed.extensions) setExtensions(parsed.extensions);
             if (parsed.postIts) setPostIts(parsed.postIts);
           }
         } else {
@@ -100,6 +103,7 @@ const App: React.FC = () => {
             setCalendarConfig(payload.calendarConfig || { uf: 'SP', city: 'São Paulo' });
             setEmails(payload.emails || []);
             setLinks(payload.links || []);
+            setExtensions(payload.extensions || []);
             setPostIts(payload.postIts || []);
           }
         }
@@ -116,7 +120,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, emails, links, postIts };
+      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, emails, links, extensions, postIts };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -132,7 +136,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2000);
     return () => clearTimeout(timeout);
-  }, [kanbanData, flowData, calendarConfig, emails, links, postIts, user, isDataLoaded]);
+  }, [kanbanData, flowData, calendarConfig, emails, links, extensions, postIts, user, isDataLoaded]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await (supabase.auth as any).signOut();
@@ -146,6 +150,7 @@ const App: React.FC = () => {
   const tabs = [
     { id: 'mural', label: 'Notas', icon: <StickyNote size={14} /> },
     { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={14} /> },
+    { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
     { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
     { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
     { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
@@ -211,6 +216,7 @@ const App: React.FC = () => {
                   {activeTab === 'email' && <EmailManager emails={emails} onChange={setEmails} />}
                   {activeTab === 'links' && <ProfessionalLinks links={links} onChange={setLinks} />}
                   {activeTab === 'whatsapp' && <WhatsAppTool />}
+                  {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
                 </div>
              </div>
         </div>

@@ -84,6 +84,15 @@ export interface ProfessionalLink {
   category: string;
 }
 
+// Extension / Ramal Types
+export interface Extension {
+  id: string;
+  name: string;
+  department: string;
+  number: string;
+  notes?: string;
+}
+
 // Sticky Note Type
 export interface PostIt {
   id: string;
@@ -99,5 +108,6 @@ export interface AppData {
   calendarConfig?: CalendarConfig;
   emails: EmailTemplate[];
   links: ProfessionalLink[];
+  extensions?: Extension[];
   postIts: PostIt[];
 }
