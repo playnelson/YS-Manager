@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, X, Calculator, RefreshCw, Save, FolderOpen, Play, Undo, Redo, Square } from 'lucide-react';
+import { Plus, X, Calculator, RefreshCw, Save, FolderOpen, Play, Undo, Redo, Square, Copy, Clipboard } from 'lucide-react';
 import { FlowState, FlowNode, FlowNodeType, FlowOperation, FlowTemplate } from '../types';
 import { Button } from './ui/Button';
 
@@ -13,6 +13,8 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectSource, setConnectSource] = useState<string | null>(null);
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [clipboardNode, setClipboardNode] = useState<Partial<FlowNode> | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   
@@ -54,20 +56,56 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     onChange(next);
   }, [future, data, onChange]);
 
+  const copyNode = useCallback(() => {
+    if (!selectedNodeId) return;
+    const node = data.nodes.find(n => n.id === selectedNodeId);
+    if (node) {
+      setClipboardNode({ ...node });
+    }
+  }, [selectedNodeId, data.nodes]);
+
+  const pasteNode = useCallback(() => {
+    if (!clipboardNode) return;
+    saveHistory();
+    const newNode: FlowNode = {
+      ...(clipboardNode as FlowNode),
+      id: `node_${Date.now()}`,
+      x: (clipboardNode.x || 0) + 20,
+      y: (clipboardNode.y || 0) + 20,
+      calculatedValue: null
+    };
+    onChange({ ...data, nodes: [...data.nodes, newNode] });
+    setSelectedNodeId(newNode.id);
+  }, [clipboardNode, data, onChange]);
+
+  const copyToSystemClipboard = (val: number | undefined | null) => {
+    if (val === undefined || val === null) return;
+    navigator.clipboard.writeText(val.toString());
+    // Visual feedback could be added here
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent shortcut handling if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
         if (e.shiftKey) handleRedo(); else handleUndo();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
         e.preventDefault();
         handleRedo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        copyNode();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        pasteNode();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedNodeId) removeNode(selectedNodeId);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleUndo, handleRedo]);
+  }, [handleUndo, handleRedo, copyNode, pasteNode, selectedNodeId]);
 
   const formatNumber = (num: number | undefined | null) => {
     if (num === undefined || num === null || isNaN(num)) return '0,00';
@@ -87,6 +125,7 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
       calculatedValue: null
     };
     onChange({ ...data, nodes: [...data.nodes, newNode] });
+    setSelectedNodeId(newNode.id);
   };
 
   const updateNode = (id: string, updates: Partial<FlowNode>, saveToHistory = false) => {
@@ -100,6 +139,7 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     const newNodes = data.nodes.filter(n => n.id !== id);
     const newConnections = data.connections.filter(c => c.from !== id && c.to !== id);
     onChange({ ...data, nodes: newNodes, connections: newConnections });
+    if (selectedNodeId === id) setSelectedNodeId(null);
   };
 
   const saveTemplate = () => {
@@ -176,6 +216,7 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
   };
 
   const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    setSelectedNodeId(nodeId);
     if ((e.target as HTMLElement).closest('.node-control')) return;
     const node = data.nodes.find(n => n.id === nodeId);
     if (node) { saveHistory(); setDraggingNode(nodeId); setDragOffset({ x: e.clientX - node.x, y: e.clientY - node.y }); }
@@ -232,13 +273,21 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
         <Button size="sm" onClick={handleUndo} disabled={history.length === 0} title="Desfazer (Ctrl+Z)"><Undo size={12} className="mr-1"/></Button>
         <Button size="sm" onClick={handleRedo} disabled={future.length === 0} title="Refazer (Ctrl+Y)"><Redo size={12} className="mr-1"/></Button>
         <div className="w-0.5 h-5 bg-win95-shadow mx-1 border-r border-white"></div>
+        <Button size="sm" onClick={copyNode} disabled={!selectedNodeId} title="Copiar Nó (Ctrl+C)"><Copy size={12} /></Button>
+        <Button size="sm" onClick={pasteNode} disabled={!clipboardNode} title="Colar Nó (Ctrl+V)"><Clipboard size={12} /></Button>
+        <div className="w-0.5 h-5 bg-win95-shadow mx-1 border-r border-white"></div>
         <Button size="sm" onClick={() => { setSaveMode(true); setIsTemplatesOpen(true); }} title="Salvar Modelo"><Save size={12} /></Button>
         <Button size="sm" onClick={() => { setSaveMode(false); setIsTemplatesOpen(true); }} title="Abrir Modelo"><FolderOpen size={12} /></Button>
         <div className="flex-1"></div>
         <div className="text-[10px] text-[#808080] font-bold px-2 whitespace-nowrap">MODO EDIÇÃO</div>
       </div>
 
-      <div ref={containerRef} className="flex-1 relative overflow-hidden bg-white win95-sunken m-1" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '20px 20px', backgroundPosition: '10px 10px' }}>
+      <div 
+        ref={containerRef} 
+        className="flex-1 relative overflow-hidden bg-white win95-sunken m-1" 
+        style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '20px 20px', backgroundPosition: '10px 10px' }}
+        onMouseDown={() => setSelectedNodeId(null)}
+      >
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
           {data.connections.map(conn => {
             const from = data.nodes.find(n => n.id === conn.from);
@@ -249,13 +298,27 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
           {isConnecting && connectSource && renderConnection(data.nodes.find(n => n.id === connectSource)!.x + PORT_OFFSET_X, data.nodes.find(n => n.id === connectSource)!.y + PORT_OFFSET_Y, mousePos.x, mousePos.y, 'draft', true)}
         </svg>
         {data.nodes.map(node => (
-          <div key={node.id} onMouseDown={(e) => handleMouseDown(e, node.id)} className="absolute w-40 win95-raised flex flex-col group shadow-lg" style={{ left: node.x, top: node.y, zIndex: draggingNode === node.id ? 20 : 10 }}>
-            <div className={`px-1 py-0.5 flex justify-between items-center cursor-move border-b border-[#808080] ${node.id === draggingNode ? 'bg-[#000080] text-white' : 'bg-[#808080] text-[#c0c0c0]'}`}>
+          <div 
+            key={node.id} 
+            onMouseDown={(e) => handleMouseDown(e, node.id)} 
+            className={`absolute w-40 win95-raised flex flex-col group shadow-lg ${selectedNodeId === node.id ? 'outline outline-2 outline-win95-blue' : ''}`} 
+            style={{ left: node.x, top: node.y, zIndex: draggingNode === node.id ? 20 : 10 }}
+          >
+            <div className={`px-1 py-0.5 flex justify-between items-center cursor-move border-b border-[#808080] ${node.id === draggingNode || selectedNodeId === node.id ? 'bg-[#000080] text-white' : 'bg-[#808080] text-[#c0c0c0]'}`}>
               <div className="flex items-center gap-1 overflow-hidden">
                   <Square size={10} className="fill-white text-black" />
-                  <input className={`bg-transparent border-none outline-none w-full font-bold text-[10px] node-control truncate ${node.id === draggingNode ? 'text-white placeholder-white' : 'text-white'}`} value={node.label} onFocus={() => saveHistory()} onChange={(e) => updateNode(node.id, { label: e.target.value })} placeholder="Sem título" />
+                  <input className={`bg-transparent border-none outline-none w-full font-bold text-[10px] node-control truncate ${node.id === draggingNode || selectedNodeId === node.id ? 'text-white placeholder-white' : 'text-white'}`} value={node.label} onFocus={() => saveHistory()} onChange={(e) => updateNode(node.id, { label: e.target.value })} placeholder="Sem título" />
               </div>
-              <button onClick={(e) => { e.stopPropagation(); removeNode(node.id); }} className="win95-raised w-3.5 h-3.5 flex items-center justify-center bg-[#c0c0c0] node-control hover:bg-[#ff0000] group/btn"><X size={8} className="text-black group-hover/btn:text-white" /></button>
+              <div className="flex gap-0.5">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); copyNode(); }} 
+                  className="win95-raised w-3.5 h-3.5 flex items-center justify-center bg-[#c0c0c0] node-control hover:bg-[#0000d0] group/copy" 
+                  title="Copiar este nó"
+                >
+                  <Copy size={8} className="text-black group-hover/copy:text-white" />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); removeNode(node.id); }} className="win95-raised w-3.5 h-3.5 flex items-center justify-center bg-[#c0c0c0] node-control hover:bg-[#ff0000] group/btn"><X size={8} className="text-black group-hover/btn:text-white" /></button>
+              </div>
             </div>
             <div className="p-2 bg-win95-bg flex flex-col gap-2 min-h-[60px]">
               {node.type === 'input' && (
@@ -274,7 +337,19 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
                 </div>
               )}
               {node.type !== 'input' && (
-                <div className="mt-auto pt-1 border-t border-white flex justify-between items-center"><span className="text-[9px] font-bold text-black">Res:</span><span className="win95-sunken bg-white px-1 text-[10px] font-mono min-w-[50px] text-right block text-black font-bold">{formatNumber(node.calculatedValue)}</span></div>
+                <div className="mt-auto pt-1 border-t border-white flex justify-between items-center group/val">
+                  <span className="text-[9px] font-bold text-black">Res:</span>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); copyToSystemClipboard(node.calculatedValue); }}
+                      className="opacity-0 group-hover/val:opacity-100 p-0.5 hover:bg-white/50 rounded node-control"
+                      title="Copiar valor para área de transferência"
+                    >
+                      <Copy size={8} className="text-[#555]" />
+                    </button>
+                    <span className="win95-sunken bg-white px-1 text-[10px] font-mono min-w-[50px] text-right block text-black font-bold">{formatNumber(node.calculatedValue)}</span>
+                  </div>
+                </div>
               )}
             </div>
             {node.type !== 'input' && (
