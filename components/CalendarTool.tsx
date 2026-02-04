@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, Loader2, Info, Plus, Trash2, Calendar as CalendarIcon, Bell, Users, Cake } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Loader2, Info, Plus, Trash2, Calendar as CalendarIcon, Bell, Users, Cake, Target } from 'lucide-react';
 import { CalendarConfig, Holiday, UserEvent } from '../types';
 import { Button } from './ui/Button';
 
@@ -14,10 +14,9 @@ interface CalendarToolProps {
 const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 
 const STATE_HOLIDAYS_DB: Record<string, { day: number, month: number, name: string }[]> = {
-  'SP': [{ day: 9, month: 7, name: 'Revolução Constitucionalista' }, { day: 20, month: 11, name: 'Dia da Consciência Negra' }],
-  'RJ': [{ day: 23, month: 4, name: 'Dia de São Jorge' }, { day: 20, month: 11, name: 'Dia da Consciência Negra' }],
-  'MG': [{ day: 21, month: 4, name: 'Data Magna de MG' }],
-  // ... outros estados conforme necessário
+  'SP': [{ day: 9, month: 7, name: 'Rev. Constitucionalista' }, { day: 20, month: 11, name: 'Consciência Negra' }],
+  'RJ': [{ day: 23, month: 4, name: 'Dia de São Jorge' }, { day: 20, month: 11, name: 'Consciência Negra' }],
+  'MG': [{ day: 21, month: 4, name: 'Tiradentes (Data Magna)' }],
 };
 
 export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [], onConfigChange, onEventsChange }) => {
@@ -102,82 +101,101 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
     onEventsChange(events.filter(e => e.id !== id));
   };
 
-  const getDayEvents = (dateStr: string) => {
-    const hols = holidays.filter(h => h.date === dateStr);
-    const evs = events.filter(e => e.date === dateStr);
+  const selectedData = useMemo(() => {
+    const hols = holidays.filter(h => h.date === selectedDayStr);
+    const evs = events.filter(e => e.date === selectedDayStr);
     return { hols, evs };
-  };
+  }, [selectedDayStr, holidays, events]);
 
-  const selectedData = getDayEvents(selectedDayStr);
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
   const eventIcons = {
-    holiday: <CalendarIcon size={12} className="text-red-500" />,
-    meeting: <Users size={12} className="text-blue-500" />,
+    holiday: <Target size={12} className="text-red-600" />,
+    meeting: <Users size={12} className="text-blue-600" />,
     reminder: <Bell size={12} className="text-yellow-600" />,
-    birthday: <Cake size={12} className="text-pink-500" />
+    birthday: <Cake size={12} className="text-pink-600" />
   };
 
   return (
-    <div className="h-full flex flex-col gap-4">
-      {/* Top Bar */}
-      <div className="win95-raised p-2 flex flex-wrap items-center gap-4 bg-win95-bg">
-        <div className="flex items-center gap-2">
-          <MapPin size={16} className="text-win95-blue" />
-          <select className="win95-sunken px-1 py-0.5 text-xs outline-none bg-white text-black font-bold" value={config.uf} onChange={(e) => onConfigChange({ ...config, uf: e.target.value })}>
+    <div className="h-full flex flex-col gap-2 bg-win95-bg">
+      {/* Barra de Ferramentas Estilo Toolbar Clássica */}
+      <div className="win95-raised p-1.5 flex flex-wrap items-center gap-3 bg-win95-bg border-b-2 border-win95-shadow">
+        <div className="flex items-center gap-2 px-2 border-r border-win95-shadow">
+          <MapPin size={14} className="text-win95-blue" />
+          <select 
+            className="win95-sunken px-1 py-0.5 text-[11px] outline-none bg-white text-black font-bold h-6" 
+            value={config.uf} 
+            onChange={(e) => onConfigChange({ ...config, uf: e.target.value })}
+          >
             {UFS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
           </select>
           <input 
-            className="win95-sunken px-2 py-0.5 text-xs outline-none bg-white text-black min-w-[120px]" 
+            className="win95-sunken px-2 py-0.5 text-[11px] outline-none bg-white text-black w-32 h-6" 
             value={config.city} 
             onChange={(e) => onConfigChange({ ...config, city: e.target.value })} 
-            placeholder="Cidade..."
+            placeholder="Sua Cidade..."
           />
         </div>
-        <div className="flex-1"></div>
+
         <div className="flex items-center gap-1">
-          <Button size="sm" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}><ChevronLeft size={14} /></Button>
-          <div className="win95-sunken px-4 py-1 bg-white min-w-[150px] text-center font-bold text-xs text-black uppercase">
+          <Button size="sm" className="w-8 h-7" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}><ChevronLeft size={16} /></Button>
+          <div className="win95-sunken px-6 py-1 bg-white min-w-[140px] text-center font-black text-xs text-black uppercase tracking-tight h-7 flex items-center justify-center">
             {monthNames[month]} {year}
           </div>
-          <Button size="sm" onClick={() => setCurrentDate(new Date(year, month + 1, 1))}><ChevronRight size={14} /></Button>
+          <Button size="sm" className="w-8 h-7" onClick={() => setCurrentDate(new Date(year, month + 1, 1))}><ChevronRight size={16} /></Button>
+        </div>
+
+        <div className="flex-1"></div>
+        
+        <div className="flex items-center gap-2 px-2">
+           {isLoading ? (
+             <Loader2 size={16} className="animate-spin text-win95-blue" />
+           ) : (
+             <span className="text-[10px] font-bold text-win95-shadow uppercase tracking-widest">Sincronizado</span>
+           )}
         </div>
       </div>
 
-      <div className="flex-1 flex gap-4 overflow-hidden">
-        {/* Calendar Grid */}
-        <div className="flex-1 win95-sunken bg-white p-1 flex flex-col">
-          <div className="grid grid-cols-7 gap-px bg-win95-shadow border border-win95-shadow">
+      <div className="flex-1 flex gap-2 overflow-hidden p-1">
+        {/* Grade do Calendário */}
+        <div className="flex-1 win95-sunken bg-[#808080] p-[2px] flex flex-col shadow-inner">
+          <div className="grid grid-cols-7 gap-[2px] flex-1 bg-[#808080]">
             {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'].map(d => (
-              <div key={d} className="bg-win95-bg text-center text-[9px] font-bold py-1 border-b border-win95-shadow uppercase text-black">{d}</div>
+              <div key={d} className="bg-win95-bg text-center text-[10px] font-black py-1 border-b-2 border-win95-shadow uppercase text-black shadow-sm">{d}</div>
             ))}
             {daysInMonth.map((dayObj, i) => {
-              if (!dayObj) return <div key={`empty-${i}`} className="bg-[#e0e0e0]" />;
+              if (!dayObj) return <div key={`empty-${i}`} className="bg-win95-bg/50" />;
               const isToday = new Date().toDateString() === new Date(year, month, dayObj.day).toDateString();
               const isSelected = selectedDayStr === dayObj.date;
               const hasItems = dayObj.holidays.length > 0 || dayObj.userEvents.length > 0;
+              const isWeekend = [0, 6].includes(i % 7);
               
               return (
                 <div 
                   key={dayObj.date} 
                   onClick={() => setSelectedDayStr(dayObj.date)}
-                  className={`relative min-h-[60px] p-1 text-xs cursor-pointer group transition-colors 
-                    ${isSelected ? 'bg-blue-50 ring-2 ring-inset ring-win95-blue z-10' : 'bg-white hover:bg-gray-50'}
-                    ${isToday ? 'bg-yellow-50' : ''}`}
+                  className={`relative flex flex-col p-1 cursor-pointer transition-all select-none
+                    ${isSelected ? 'win95-sunken bg-white ring-1 ring-inset ring-win95-blue' : 'win95-raised bg-win95-bg hover:bg-[#e0e0e0]'}
+                    ${isToday ? 'bg-yellow-50 font-bold' : ''}`}
                 >
-                  <span className={`font-bold text-[10px] ${[0, 6].includes(i % 7) ? 'text-red-600' : 'text-black'} ${isToday ? 'underline' : ''}`}>
-                    {dayObj.day}
-                  </span>
-                  <div className="mt-1 flex flex-col gap-0.5">
+                  <div className="flex justify-between items-start">
+                    <span className={`text-[11px] font-black leading-none ${isWeekend ? 'text-red-700' : 'text-black'} ${isToday ? 'bg-win95-blue text-white px-1' : ''}`}>
+                      {dayObj.day}
+                    </span>
+                    {hasItems && <div className="w-1.5 h-1.5 rounded-full bg-win95-blue shadow-sm animate-pulse" />}
+                  </div>
+
+                  <div className="mt-1 space-y-[1px] overflow-hidden">
                     {dayObj.holidays.slice(0, 1).map((h, idx) => (
-                      <div key={idx} className="bg-red-600 text-white text-[7px] px-1 truncate uppercase font-bold">{h.name}</div>
+                      <div key={idx} className="bg-red-700 text-white text-[7px] px-1 truncate uppercase font-black tracking-tighter shadow-sm border border-red-900">
+                        {h.name}
+                      </div>
                     ))}
-                    {dayObj.userEvents.slice(0, 2).map((e, idx) => (
-                      <div key={idx} className="bg-win95-blue text-white text-[7px] px-1 truncate font-bold uppercase">{e.title}</div>
+                    {dayObj.userEvents.slice(0, 1).map((e, idx) => (
+                      <div key={idx} className="bg-win95-blue text-white text-[7px] px-1 truncate font-black uppercase tracking-tighter shadow-sm border border-blue-900">
+                        {e.title}
+                      </div>
                     ))}
-                    {(dayObj.userEvents.length + dayObj.holidays.length) > 3 && (
-                      <div className="text-[7px] text-center font-bold text-win95-shadow">...</div>
-                    )}
                   </div>
                 </div>
               );
@@ -185,79 +203,123 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
           </div>
         </div>
 
-        {/* Sidebar Agenda */}
-        <div className="w-80 flex flex-col gap-2">
-          <div className="win95-raised p-3 bg-win95-bg flex-1 flex flex-col">
-            <div className="flex justify-between items-center border-b border-win95-shadow pb-2 mb-3">
-              <h3 className="text-xs font-bold text-black uppercase flex items-center gap-2">
-                <CalendarIcon size={14} /> Agenda: {new Date(selectedDayStr + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-              </h3>
-              <Button size="sm" onClick={() => setIsAddModalOpen(true)} className="px-2"><Plus size={12} /></Button>
+        {/* Sidebar de Agenda Estilo Fichário */}
+        <div className="w-72 flex flex-col gap-2">
+          <div className="win95-raised p-0 bg-win95-bg flex-1 flex flex-col overflow-hidden">
+            <div className="bg-win95-blue text-white px-2 py-1 text-[11px] font-black uppercase flex justify-between items-center shadow-md">
+              <div className="flex items-center gap-2">
+                <CalendarIcon size={12} />
+                <span>Agenda do Dia</span>
+              </div>
+              <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="win95-raised bg-win95-bg text-black p-0.5 hover:bg-white active:shadow-none"
+              >
+                <Plus size={12} />
+              </button>
             </div>
-
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {selectedData.hols.length === 0 && selectedData.evs.length === 0 && (
-                <div className="text-center py-8 text-[10px] text-win95-shadow italic opacity-60">Nenhum evento para este dia.</div>
-              )}
-              
-              {selectedData.hols.map((h, i) => (
-                <div key={i} className="win95-sunken bg-white p-2 border-l-4 border-l-red-600">
-                  <div className="text-[10px] font-bold text-red-700 uppercase">Feriado {h.type === 'national' ? 'Nacional' : 'Estadual'}</div>
-                  <div className="text-xs font-bold text-black">{h.name}</div>
+            
+            <div className="p-3 bg-white flex-1 win95-sunken m-1 overflow-y-auto custom-scrollbar">
+              <div className="mb-4 pb-2 border-b-2 border-dotted border-win95-shadow">
+                <div className="text-[10px] font-bold text-win95-shadow uppercase tracking-widest mb-1">Data Selecionada</div>
+                <div className="text-sm font-black text-black">
+                  {new Date(selectedDayStr + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
                 </div>
-              ))}
+              </div>
 
-              {selectedData.evs.map((e) => (
-                <div key={e.id} className="win95-raised bg-white p-2 group relative">
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="flex items-center gap-1">
-                      {eventIcons[e.type]}
-                      <span className="text-[9px] font-bold uppercase text-win95-shadow">{e.type}</span>
-                    </div>
-                    <button onClick={() => deleteEvent(e.id)} className="opacity-0 group-hover:opacity-100 text-red-600 hover:scale-110 transition-all"><Trash2 size={12} /></button>
+              <div className="space-y-3">
+                {selectedData.hols.length === 0 && selectedData.evs.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-10 opacity-30 grayscale">
+                    <Info size={32} />
+                    <span className="text-[9px] font-bold uppercase mt-2">Sem compromissos</span>
                   </div>
-                  <div className="text-xs font-bold text-black">{e.title}</div>
-                  {e.description && <div className="text-[10px] text-[#555] mt-1 italic">{e.description}</div>}
-                </div>
-              ))}
+                )}
+                
+                {selectedData.hols.map((h, i) => (
+                  <div key={i} className="win95-raised bg-[#fff5f5] p-2 border-l-[6px] border-l-red-700 shadow-sm">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Target size={10} className="text-red-700" />
+                      <span className="text-[9px] font-black text-red-800 uppercase">Feriado {h.type === 'national' ? 'Nacional' : 'Estadual'}</span>
+                    </div>
+                    <div className="text-[11px] font-black text-black leading-tight uppercase">{h.name}</div>
+                  </div>
+                ))}
+
+                {selectedData.evs.map((e) => (
+                  <div key={e.id} className="win95-raised bg-white p-2 border-l-[6px] border-l-win95-blue group relative hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="flex items-center gap-1">
+                        {eventIcons[e.type]}
+                        <span className="text-[9px] font-black uppercase text-win95-shadow">{e.type}</span>
+                      </div>
+                      <button 
+                        onClick={() => deleteEvent(e.id)} 
+                        className="win95-raised bg-win95-bg p-0.5 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                    <div className="text-[11px] font-black text-black leading-tight uppercase mb-1">{e.title}</div>
+                    {e.description && <div className="text-[9px] text-[#444] leading-relaxed border-t border-win95-bg pt-1">{e.description}</div>}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-          
-          <div className="win95-raised p-2 bg-win95-bg text-[9px] font-bold text-win95-shadow uppercase">
-            Total do Mês: {events.filter(e => e.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)).length} Compromissos
+            
+            <div className="p-2 bg-win95-bg border-t border-white text-[10px] font-bold text-win95-shadow flex justify-between uppercase italic">
+              <span>YS-Agendador v2.0</span>
+              <span>{events.length} Totais</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Add Event Modal */}
+      {/* Modal Estilo Caixa de Diálogo Clássica */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4">
-          <div className="bg-win95-bg w-full max-w-xs win95-raised p-1">
-            <div className="bg-win95-blue text-white px-2 py-1 text-sm font-bold flex justify-between items-center mb-2">
-              <span>Novo Evento</span>
-              <button onClick={() => setIsAddModalOpen(false)} className="win95-raised bg-win95-bg text-black w-5 h-5 flex items-center justify-center text-xs">×</button>
+        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-[1px]">
+          <div className="bg-win95-bg w-full max-w-xs win95-raised p-1 shadow-2xl">
+            <div className="bg-win95-blue text-white px-2 py-1 text-xs font-bold flex justify-between items-center mb-4 shadow-sm">
+              <span className="flex items-center gap-2"><Plus size={12} /> Novo Compromisso</span>
+              <button onClick={() => setIsAddModalOpen(false)} className="win95-raised bg-win95-bg text-black w-5 h-5 flex items-center justify-center text-xs font-black">×</button>
             </div>
-            <form onSubmit={handleAddEvent} className="p-4 space-y-3">
-              <div>
-                <label className="text-[10px] font-bold uppercase block mb-1">Título do Evento</label>
-                <input required className="w-full px-2 py-1 win95-sunken text-sm outline-none bg-white text-black font-bold" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} autoFocus />
+            <form onSubmit={handleAddEvent} className="px-3 pb-4 space-y-4">
+              <div className="win95-sunken bg-white/50 p-3 space-y-3 border-none">
+                <div>
+                  <label className="text-[10px] font-black uppercase block mb-1 text-win95-blue">Título do Evento:</label>
+                  <input 
+                    required 
+                    className="w-full px-2 py-1 win95-sunken text-xs outline-none bg-white text-black font-bold uppercase" 
+                    value={newEvent.title} 
+                    onChange={e => setNewEvent({...newEvent, title: e.target.value})} 
+                    autoFocus 
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase block mb-1 text-win95-blue">Classificação:</label>
+                  <select 
+                    className="w-full px-2 py-1 win95-sunken text-xs outline-none bg-white text-black font-bold" 
+                    value={newEvent.type} 
+                    onChange={e => setNewEvent({...newEvent, type: e.target.value as any})}
+                  >
+                    <option value="reminder">Lembrete</option>
+                    <option value="meeting">Reunião / Trabalho</option>
+                    <option value="holiday">Feriado Especial</option>
+                    <option value="birthday">Aniversário</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase block mb-1 text-win95-blue">Observações:</label>
+                  <textarea 
+                    className="w-full px-2 py-1 win95-sunken text-[11px] outline-none bg-white text-black resize-none" 
+                    rows={2} 
+                    value={newEvent.description} 
+                    onChange={e => setNewEvent({...newEvent, description: e.target.value})} 
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase block mb-1">Tipo</label>
-                <select className="w-full px-2 py-1 win95-sunken text-sm outline-none bg-white text-black" value={newEvent.type} onChange={e => setNewEvent({...newEvent, type: e.target.value as any})}>
-                  <option value="reminder">Lembrete</option>
-                  <option value="meeting">Reunião / Trabalho</option>
-                  <option value="holiday">Feriado Local</option>
-                  <option value="birthday">Aniversário</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase block mb-1">Notas (Opcional)</label>
-                <textarea className="w-full px-2 py-1 win95-sunken text-xs outline-none bg-white text-black resize-none" rows={2} value={newEvent.description} onChange={e => setNewEvent({...newEvent, description: e.target.value})} />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1">CANCELAR</Button>
-                <Button type="submit" className="flex-1 bg-win95-blue text-white">ADICIONAR</Button>
+              <div className="flex gap-2 justify-end">
+                <Button type="button" onClick={() => setIsAddModalOpen(false)} className="min-w-[80px]">CANCELAR</Button>
+                <Button type="submit" className="min-w-[80px] bg-win95-blue text-white">GRAVAR</Button>
               </div>
             </form>
           </div>
