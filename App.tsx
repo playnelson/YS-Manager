@@ -20,7 +20,7 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'kanban' | 'flow' | 'email' | 'whatsapp' | 'links' | 'ramais'>('notes');
+  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'kanban' | 'flow' | 'email' | 'whatsapp' | 'links' | 'ramais'>('postits');
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR'));
   
   // Data States
@@ -155,13 +155,13 @@ const App: React.FC = () => {
   if (!user) return <Auth onLogin={setUser} />;
 
   const tabs = [
+    { id: 'postits', label: 'Post-its', icon: <StickyNote size={14} /> },
     { id: 'notes', label: 'Anotações', icon: <FileText size={14} /> },
     { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={14} /> },
     { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
-    { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
     { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
-    { id: 'postits', label: 'Post-its', icon: <StickyNote size={14} /> },
     { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
+    { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
     { id: 'links', label: 'Diretório', icon: <Globe size={14} /> },
     { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={14} /> },
   ];
@@ -212,7 +212,7 @@ const App: React.FC = () => {
       </div>
       
       <div className="mt-1 px-1 flex justify-between items-center text-[10px] text-[#555] font-bold">
-         <span className="flex-1 text-left">YSoffice v1.0.6</span>
+         <span className="flex-1 text-left">YSoffice v1.0.7</span>
          <span className="flex-1 text-center flex items-center justify-center gap-1">
            <ClockIcon size={10} /> {currentTime}
          </span>
