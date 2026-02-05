@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon } from 'lucide-react';
+import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
@@ -11,6 +11,7 @@ import { ProfessionalLinks } from './components/ProfessionalLinks';
 import { ExtensionsDirectory } from './components/ExtensionsDirectory';
 import { StickyNotesWall } from './components/StickyNotesWall';
 import { ImportantNotes } from './components/ImportantNotes';
+import { PdfManager } from './components/PdfManager';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
 import { Button } from './components/ui/Button';
@@ -20,7 +21,7 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'kanban' | 'flow' | 'email' | 'whatsapp' | 'links' | 'ramais'>('postits');
+  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'kanban' | 'email' | 'flow' | 'ramais' | 'links' | 'whatsapp' | 'pdf'>('postits');
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR'));
   
   // Data States
@@ -161,6 +162,7 @@ const App: React.FC = () => {
     { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
     { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
     { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
+    { id: 'pdf', label: 'PDF', icon: <FileSearch size={14} /> },
     { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
     { id: 'links', label: 'Diretório', icon: <Globe size={14} /> },
     { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={14} /> },
@@ -206,13 +208,14 @@ const App: React.FC = () => {
                   {activeTab === 'links' && <ProfessionalLinks links={links} onChange={setLinks} />}
                   {activeTab === 'whatsapp' && <WhatsAppTool />}
                   {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
+                  {activeTab === 'pdf' && <PdfManager />}
                 </div>
              </div>
         </div>
       </div>
       
       <div className="mt-1 px-1 flex justify-between items-center text-[10px] text-[#555] font-bold">
-         <span className="flex-1 text-left">YSoffice v1.0.7</span>
+         <span className="flex-1 text-left">YSoffice v1.0.8</span>
          <span className="flex-1 text-center flex items-center justify-center gap-1">
            <ClockIcon size={10} /> {currentTime}
          </span>
