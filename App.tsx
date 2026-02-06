@@ -221,7 +221,7 @@ const App: React.FC = () => {
       </div>
       
       <div className="mt-1 px-1 flex justify-between items-center text-[10px] text-[#555] font-bold">
-         <span className="flex-1 text-left">YSoffice v1.0.9</span>
+         <span className="flex-1 text-left">YSoffice v1.0.10</span>
          <span className="flex-1 text-center flex items-center justify-center gap-1">
            <ClockIcon size={10} /> {currentTime}
          </span>
