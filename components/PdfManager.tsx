@@ -1,8 +1,13 @@
 
 import React, { useState, useRef } from 'react';
+/* Fix: Removed non-existent FileWord from lucide-react imports */
 import { FileUp, Scissors, Combine, Download, Trash2, ArrowUp, ArrowDown, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/Button';
 import { PDFDocument } from 'pdf-lib';
+import * as pdfjs from 'pdfjs-dist';
+
+// Configuração do worker do PDF.js via CDN
+pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@${pdfjs.version}/build/pdf.worker.mjs`;
 
 interface PdfFile {
   id: string;
@@ -12,7 +17,7 @@ interface PdfFile {
 }
 
 export const PdfManager: React.FC = () => {
-  const [mode, setMode] = useState<'merge' | 'split'>('merge');
+  const [mode, setMode] = useState<'merge' | 'split' | 'word'>('merge');
   const [files, setFiles] = useState<PdfFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [splitRange, setSplitRange] = useState('');
@@ -21,17 +26,15 @@ export const PdfManager: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Fix: Explicitly cast selectedFiles to File[] to avoid 'unknown' type errors when accessing file properties
     const selectedFiles = Array.from(e.target.files || []) as File[];
     if (selectedFiles.length === 0) return;
 
-    if (mode === 'split') {
-      // No modo split, só aceitamos um arquivo
+    if (mode === 'split' || mode === 'word') {
+      // No modo split ou word, só aceitamos um arquivo
       const file = selectedFiles[0];
       const pdfFile = { id: `pdf_${Date.now()}`, file, name: file.name, size: file.size };
       setFiles([pdfFile]);
       
-      // Carrega o PDF para contar páginas
       try {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await PDFDocument.load(arrayBuffer);
@@ -56,7 +59,7 @@ export const PdfManager: React.FC = () => {
 
   const removeFile = (id: string) => {
     setFiles(prev => prev.filter(f => f.id !== id));
-    if (mode === 'split') setSplitTotalPages(null);
+    if (mode !== 'merge') setSplitTotalPages(null);
   };
 
   const moveFile = (index: number, direction: 'up' | 'down') => {
@@ -80,7 +83,7 @@ export const PdfManager: React.FC = () => {
         copiedPages.forEach((page) => mergedPdf.addPage(page));
       }
       const pdfBytes = await mergedPdf.save();
-      downloadBlob(pdfBytes, "documento_mesclado.pdf");
+      downloadBlob(pdfBytes, "documento_mesclado.pdf", 'application/pdf');
     } catch (err) {
       console.error(err);
       alert("Falha ao mesclar os arquivos.");
@@ -102,14 +105,63 @@ export const PdfManager: React.FC = () => {
       if (pagesToKeep.length === 0) throw new Error("Intervalo inválido.");
 
       const splitPdf = await PDFDocument.create();
-      // As páginas em pdf-lib são baseadas em 0
       const copiedPages = await splitPdf.copyPages(pdf, pagesToKeep.map(p => p - 1));
       copiedPages.forEach((page) => splitPdf.addPage(page));
       
       const pdfBytes = await splitPdf.save();
-      downloadBlob(pdfBytes, `extraido_${sourcePdfItem.name}`);
+      downloadBlob(pdfBytes, `extraido_${sourcePdfItem.name}`, 'application/pdf');
     } catch (err: any) {
       alert(err.message || "Erro ao dividir PDF.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleToWord = async () => {
+    if (files.length === 0) return alert("Selecione um arquivo para converter.");
+    setIsProcessing(true);
+    try {
+      const sourcePdfItem = files[0];
+      const arrayBuffer = await sourcePdfItem.file.arrayBuffer();
+      
+      // Carrega o PDF usando PDF.js para extração de texto
+      const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      let fullText = "";
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(" ");
+        fullText += `<p>${pageText}</p>`;
+      }
+
+      // Cria um conteúdo HTML compatível com o Word
+      const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+            "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+            "xmlns='http://www.w3.org/TR/REC-html40'>" +
+            "<head><meta charset='utf-8'><title>Conversão YSoffice</title></head><body>";
+      const footer = "</body></html>";
+      const sourceHTML = header + fullText + footer;
+      
+      const blob = new Blob(['\ufeff', sourceHTML], {
+        type: 'application/msword'
+      });
+      
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = sourcePdfItem.name.replace(/\.[^/.]+$/, "") + ".doc";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+    } catch (err) {
+      console.error(err);
+      alert("Falha ao converter para Word. Certifique-se de que o PDF contém camadas de texto.");
     } finally {
       setIsProcessing(false);
     }
@@ -137,8 +189,8 @@ export const PdfManager: React.FC = () => {
     return Array.from(pages).sort((a, b) => a - b);
   };
 
-  const downloadBlob = (bytes: Uint8Array, filename: string) => {
-    const blob = new Blob([bytes], { type: 'application/pdf' });
+  const downloadBlob = (bytes: Uint8Array, filename: string, type: string) => {
+    const blob = new Blob([bytes], { type });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -156,7 +208,7 @@ export const PdfManager: React.FC = () => {
   return (
     <div className="h-full flex flex-col bg-win95-bg p-2 gap-4">
       {/* Barra de Seleção de Modo */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 shrink-0">
         <Button 
           onClick={() => { setMode('merge'); setFiles([]); setSplitTotalPages(null); }}
           className={`flex-1 h-10 ${mode === 'merge' ? 'bg-white win95-sunken' : ''}`}
@@ -171,13 +223,24 @@ export const PdfManager: React.FC = () => {
         >
           DIVIDIR (EXTRAIR)
         </Button>
+        <Button 
+          onClick={() => { setMode('word'); setFiles([]); setSplitTotalPages(null); }}
+          className={`flex-1 h-10 ${mode === 'word' ? 'bg-white win95-sunken' : ''}`}
+          /* Fix: Replaced non-existent FileWord with FileText */
+          icon={<FileText size={16} />}
+        >
+          PARA WORD (.DOC)
+        </Button>
       </div>
 
       <div className="flex-1 flex gap-4 overflow-hidden">
         {/* Lado Esquerdo: Área de Upload e Lista */}
-        <div className="flex-1 flex flex-col win95-raised p-2">
-          <div className="bg-win95-blue text-white px-2 py-1 text-xs font-bold uppercase flex justify-between items-center mb-2">
-             <span className="flex items-center gap-2"><FileUp size={14} /> {mode === 'merge' ? 'Fila de Arquivos' : 'Arquivo de Origem'}</span>
+        <div className="flex-1 flex flex-col win95-raised p-2 overflow-hidden">
+          <div className="bg-win95-blue text-white px-2 py-1 text-xs font-bold uppercase flex justify-between items-center mb-2 shrink-0">
+             <span className="flex items-center gap-2">
+               <FileUp size={14} /> 
+               {mode === 'merge' ? 'Fila de Arquivos' : 'Arquivo de Origem'}
+             </span>
              <input 
                type="file" 
                accept=".pdf" 
@@ -220,10 +283,10 @@ export const PdfManager: React.FC = () => {
         </div>
 
         {/* Lado Direito: Controles e Ação */}
-        <div className="w-80 flex flex-col win95-raised p-4 bg-[#d0d0d0]">
+        <div className="w-80 flex flex-col win95-raised p-4 bg-[#d0d0d0] shrink-0">
           <h3 className="text-xs font-black uppercase mb-4 border-b border-win95-shadow pb-2">Configurações de Saída</h3>
           
-          <div className="flex-1 space-y-6">
+          <div className="flex-1 space-y-6 overflow-y-auto pr-1 custom-scrollbar">
             {mode === 'split' && (
               <div className="space-y-3">
                 <div className="win95-sunken p-2 bg-yellow-50 flex items-center gap-2">
@@ -256,6 +319,21 @@ export const PdfManager: React.FC = () => {
               </div>
             )}
 
+            {mode === 'word' && (
+              <div className="text-[10px] space-y-3">
+                <p className="font-bold text-win95-blue uppercase">Transformação Inteligente:</p>
+                <ul className="list-disc pl-4 space-y-1 italic">
+                  <li>O sistema extrai as camadas de texto do PDF.</li>
+                  <li>Imagens e tabelas complexas podem não ser mantidas.</li>
+                  <li>Ideal para documentos de texto, relatórios e ofícios.</li>
+                </ul>
+                <div className="win95-sunken p-2 bg-blue-50 border-none">
+                   <div className="text-[9px] font-bold uppercase text-win95-blue">Compatibilidade:</div>
+                   <div className="text-[8px]">Microsoft Word, Google Docs e LibreOffice.</div>
+                </div>
+              </div>
+            )}
+
             <div className="win95-sunken p-3 bg-white space-y-2">
                <div className="text-[9px] font-bold text-win95-shadow uppercase">Estado do Processador</div>
                <div className="flex items-center gap-2">
@@ -275,18 +353,18 @@ export const PdfManager: React.FC = () => {
           </div>
 
           <Button 
-            onClick={mode === 'merge' ? handleMerge : handleSplit}
+            onClick={mode === 'merge' ? handleMerge : (mode === 'split' ? handleSplit : handleToWord)}
             disabled={isProcessing || files.length === 0}
-            className={`w-full h-12 text-sm font-black ${isProcessing ? 'opacity-50' : 'bg-win95-blue text-white'}`}
+            className={`w-full h-12 text-sm font-black mt-4 ${isProcessing ? 'opacity-50' : 'bg-win95-blue text-white'}`}
             icon={<Download size={18} />}
           >
-            {mode === 'merge' ? 'MESCLAR E BAIXAR' : 'EXTRAIR E BAIXAR'}
+            {mode === 'merge' ? 'MESCLAR E BAIXAR' : (mode === 'split' ? 'EXTRAIR E BAIXAR' : 'CONVERTER E BAIXAR')}
           </Button>
         </div>
       </div>
 
-      <div className="bg-win95-bg border-t border-white p-1 text-[10px] font-bold text-win95-shadow uppercase flex justify-between italic">
-         <span>YS-PDF-ENGINE v1.0</span>
+      <div className="bg-win95-bg border-t border-white p-1 text-[10px] font-bold text-win95-shadow uppercase flex justify-between italic shrink-0">
+         <span>YS-PDF-ENGINE v1.1</span>
          <span>Privacidade Total: Processamento Local</span>
       </div>
 
