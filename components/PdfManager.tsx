@@ -21,7 +21,8 @@ export const PdfManager: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
+    // Fix: Explicitly cast selectedFiles to File[] to avoid 'unknown' type errors when accessing file properties
+    const selectedFiles = Array.from(e.target.files || []) as File[];
     if (selectedFiles.length === 0) return;
 
     if (mode === 'split') {

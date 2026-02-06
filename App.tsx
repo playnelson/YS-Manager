@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch } from 'lucide-react';
-import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote } from './types';
+import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch, Repeat } from 'lucide-react';
+import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarTool } from './components/CalendarTool';
@@ -12,6 +12,7 @@ import { ExtensionsDirectory } from './components/ExtensionsDirectory';
 import { StickyNotesWall } from './components/StickyNotesWall';
 import { ImportantNotes } from './components/ImportantNotes';
 import { PdfManager } from './components/PdfManager';
+import { ShiftManager } from './components/ShiftManager';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
 import { Button } from './components/ui/Button';
@@ -21,7 +22,7 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'kanban' | 'email' | 'flow' | 'ramais' | 'links' | 'whatsapp' | 'pdf'>('postits');
+  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'shifts' | 'kanban' | 'email' | 'flow' | 'pdf' | 'ramais' | 'links' | 'whatsapp'>('postits');
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR'));
   
   // Data States
@@ -34,6 +35,7 @@ const App: React.FC = () => {
   const [extensions, setExtensions] = useState<Extension[]>([]);
   const [postIts, setPostIts] = useState<PostIt[]>([]);
   const [importantNotes, setImportantNotes] = useState<ImportantNote[]>([]);
+  const [shiftConfig, setShiftConfig] = useState<ShiftConfig | undefined>(undefined);
   
   // System States
   const [isSyncing, setIsSyncing] = useState(false);
@@ -99,6 +101,7 @@ const App: React.FC = () => {
             if (parsed.extensions) setExtensions(parsed.extensions);
             if (parsed.postIts) setPostIts(parsed.postIts);
             if (parsed.importantNotes) setImportantNotes(parsed.importantNotes);
+            if (parsed.shiftConfig) setShiftConfig(parsed.shiftConfig);
           }
         } else {
           const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
@@ -113,6 +116,7 @@ const App: React.FC = () => {
             setExtensions(payload.extensions || []);
             setPostIts(payload.postIts || []);
             setImportantNotes(payload.importantNotes || []);
+            setShiftConfig(payload.shiftConfig);
           }
         }
       } catch (err) {
@@ -128,7 +132,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes };
+      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftConfig };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -144,7 +148,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2000);
     return () => clearTimeout(timeout);
-  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, user, isDataLoaded]);
+  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftConfig, user, isDataLoaded]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await (supabase.auth as any).signOut();
@@ -159,6 +163,7 @@ const App: React.FC = () => {
     { id: 'postits', label: 'Post-its', icon: <StickyNote size={14} /> },
     { id: 'notes', label: 'Anotações', icon: <FileText size={14} /> },
     { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={14} /> },
+    { id: 'shifts', label: 'Escalas', icon: <Repeat size={14} /> },
     { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
     { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
     { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
@@ -188,9 +193,9 @@ const App: React.FC = () => {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex gap-1 px-1 z-10">
+        <div className="flex gap-1 px-1 z-10 overflow-x-auto no-scrollbar">
           {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative px-4 py-1.5 flex items-center gap-2 text-xs font-bold rounded-t-sm border-t-2 border-l-2 border-r-2 outline-none ${activeTab === tab.id ? 'bg-[#c0c0c0] border-white border-r-[#808080] pb-2 -mb-[2px] z-20' : 'bg-[#c0c0c0] border-white border-r-[#808080] border-b-2 border-b-white text-[#555] mb-0 z-0 hover:text-black'}`}>
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative shrink-0 px-4 py-1.5 flex items-center gap-2 text-xs font-bold rounded-t-sm border-t-2 border-l-2 border-r-2 outline-none ${activeTab === tab.id ? 'bg-[#c0c0c0] border-white border-r-[#808080] pb-2 -mb-[2px] z-20' : 'bg-[#c0c0c0] border-white border-r-[#808080] border-b-2 border-b-white text-[#555] mb-0 z-0 hover:text-black'}`}>
               {tab.icon} {tab.label}
             </button>
           ))}
@@ -202,6 +207,7 @@ const App: React.FC = () => {
                   {activeTab === 'postits' && <StickyNotesWall notes={postIts} onChange={setPostIts} />}
                   {activeTab === 'notes' && <ImportantNotes notes={importantNotes} onChange={setImportantNotes} />}
                   {activeTab === 'calendar' && <CalendarTool config={calendarConfig} events={calendarEvents} onConfigChange={setCalendarConfig} onEventsChange={setCalendarEvents} />}
+                  {activeTab === 'shifts' && <ShiftManager config={shiftConfig} onChange={setShiftConfig} />}
                   {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
                   {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
                   {activeTab === 'email' && <EmailManager emails={emails} onChange={setEmails} />}
@@ -215,7 +221,7 @@ const App: React.FC = () => {
       </div>
       
       <div className="mt-1 px-1 flex justify-between items-center text-[10px] text-[#555] font-bold">
-         <span className="flex-1 text-left">YSoffice v1.0.8</span>
+         <span className="flex-1 text-left">YSoffice v1.0.9</span>
          <span className="flex-1 text-center flex items-center justify-center gap-1">
            <ClockIcon size={10} /> {currentTime}
          </span>

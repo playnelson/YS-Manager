@@ -125,6 +125,20 @@ export interface PostIt {
   rotation: number;
 }
 
+// Shift Manager Types
+export interface ShiftSegment {
+  id: string;
+  days: number;
+  type: 'work' | 'off';
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface ShiftConfig {
+  startDate: string; // Data de início do ciclo
+  segments: ShiftSegment[];
+}
+
 // Global App Data
 export interface AppData {
   kanban: KanbanState;
@@ -136,4 +150,5 @@ export interface AppData {
   extensions?: Extension[];
   postIts: PostIt[];
   importantNotes?: ImportantNote[];
+  shiftConfig?: ShiftConfig;
 }
