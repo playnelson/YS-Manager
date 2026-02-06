@@ -1,6 +1,10 @@
 
-import React, { useState, useMemo } from 'react';
-import { Folder, FileText, Plus, Search, Trash2, Save, AlertTriangle, Lock, Archive, Clock, Hash } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { 
+  Folder, FileText, Plus, Search, Trash2, Save, AlertTriangle, 
+  Lock, Archive, Clock, Hash, Bold, Italic, Underline, 
+  AlignLeft, AlignCenter, AlignRight, List, ListOrdered 
+} from 'lucide-react';
 import { ImportantNote, NotePriority } from '../types';
 import { Button } from './ui/Button';
 
@@ -13,6 +17,7 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('Todas');
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
@@ -55,6 +60,20 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
       if (selectedId === id) setSelectedId(null);
     }
   };
+
+  const execCommand = (command: string, value: string | undefined = undefined) => {
+    document.execCommand(command, false, value);
+    if (editorRef.current) {
+      updateNote(selectedId!, { content: editorRef.current.innerHTML });
+    }
+  };
+
+  // Sincroniza o editor quando a nota selecionada muda
+  useEffect(() => {
+    if (editorRef.current && selectedNote && editorRef.current.innerHTML !== selectedNote.content) {
+      editorRef.current.innerHTML = selectedNote.content;
+    }
+  }, [selectedId]);
 
   const priorityMeta: Record<NotePriority, { icon: React.ReactNode, color: string, label: string }> = {
     normal: { icon: <FileText size={12} />, color: 'text-black', label: 'Normal' },
@@ -133,7 +152,7 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
           <>
             <div className="bg-[#808080] text-white px-2 py-1 text-[11px] font-bold flex justify-between items-center mb-1">
               <div className="flex items-center gap-3">
-                <span className="uppercase tracking-widest">Editando: {selectedNote.title}.txt</span>
+                <span className="uppercase tracking-widest">Editando: {selectedNote.title}.doc</span>
                 <div className="flex gap-1">
                   <select 
                     className="bg-win95-bg text-black text-[9px] px-1 outline-none border border-black/20 font-black uppercase"
@@ -179,33 +198,63 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
                   </div>
                </div>
 
+               {/* Toolbar de Formatação */}
+               <div className="flex items-center gap-1 p-1 bg-win95-bg win95-raised shrink-0 select-none">
+                  <button onClick={() => execCommand('bold')} className="win95-raised p-1 hover:bg-white" title="Negrito"><Bold size={14} /></button>
+                  <button onClick={() => execCommand('italic')} className="win95-raised p-1 hover:bg-white" title="Itálico"><Italic size={14} /></button>
+                  <button onClick={() => execCommand('underline')} className="win95-raised p-1 hover:bg-white" title="Sublinhado"><Underline size={14} /></button>
+                  
+                  <div className="w-px h-4 bg-win95-shadow mx-1" />
+                  
+                  <button onClick={() => execCommand('justifyLeft')} className="win95-raised p-1 hover:bg-white" title="Alinhar à Esquerda"><AlignLeft size={14} /></button>
+                  <button onClick={() => execCommand('justifyCenter')} className="win95-raised p-1 hover:bg-white" title="Centralizar"><AlignCenter size={14} /></button>
+                  <button onClick={() => execCommand('justifyRight')} className="win95-raised p-1 hover:bg-white" title="Alinhar à Direita"><AlignRight size={14} /></button>
+                  
+                  <div className="w-px h-4 bg-win95-shadow mx-1" />
+
+                  <button onClick={() => execCommand('insertUnorderedList')} className="win95-raised p-1 hover:bg-white" title="Lista com Marcadores"><List size={14} /></button>
+                  <button onClick={() => execCommand('insertOrderedList')} className="win95-raised p-1 hover:bg-white" title="Lista Numerada"><ListOrdered size={14} /></button>
+               </div>
+
                <div className="flex-1 flex flex-col min-h-0">
                   <label className="text-[10px] font-black uppercase block mb-1">Conteúdo da Anotação:</label>
-                  <textarea 
-                    className="flex-1 w-full p-4 win95-sunken bg-white outline-none resize-none font-mono text-xs leading-relaxed text-black custom-scrollbar"
-                    value={selectedNote.content}
-                    onChange={e => updateNote(selectedNote.id, { content: e.target.value })}
-                    placeholder="Comece a digitar aqui seu relatório ou anotação importante..."
+                  <div 
+                    ref={editorRef}
+                    contentEditable
+                    className="flex-1 w-full p-4 win95-sunken bg-white outline-none overflow-y-auto font-sans text-sm leading-relaxed text-black custom-scrollbar"
+                    onInput={(e) => updateNote(selectedNote.id, { content: e.currentTarget.innerHTML })}
+                    onBlur={(e) => updateNote(selectedNote.id, { content: e.currentTarget.innerHTML })}
+                    style={{ minHeight: '100px' }}
                   />
                </div>
 
                <div className="win95-sunken bg-win95-bg border-none p-1 px-3 flex justify-between items-center text-[9px] font-bold text-[#555] uppercase italic">
                   <div className="flex items-center gap-4">
                     <span className="flex items-center gap-1"><Clock size={10} /> Atualizado: {new Date(selectedNote.updatedAt).toLocaleString('pt-BR')}</span>
-                    <span>Modo: Texto Estruturado</span>
+                    <span>Formato: Rich Text (HTML)</span>
                   </div>
-                  <div>Caracteres: {selectedNote.content.length}</div>
+                  <div>Conteúdo: {selectedNote.content.length} bytes</div>
                </div>
             </div>
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center opacity-30 grayscale p-10 text-center">
              <FileText size={64} className="mb-4" />
-             <h3 className="text-sm font-black uppercase tracking-widest mb-2">Arquivo de Documentos v1.0</h3>
+             <h3 className="text-sm font-black uppercase tracking-widest mb-2">Editor de Documentos Pro v2.0</h3>
              <p className="text-[10px] max-w-xs font-bold leading-tight">SELECIONE UM DOCUMENTO NA ÁRVORE AO LADO OU CLIQUE NO BOTÃO "+" PARA CRIAR UM NOVO REGISTRO.</p>
           </div>
         )}
       </div>
+
+      <style>{`
+        [contenteditable]:empty:before {
+          content: "Comece a digitar aqui seu relatório ou anotação importante...";
+          color: #808080;
+          font-style: italic;
+        }
+        [contenteditable] ul { list-style-type: disc; padding-left: 2rem; }
+        [contenteditable] ol { list-style-type: decimal; padding-left: 2rem; }
+      `}</style>
     </div>
   );
 };
