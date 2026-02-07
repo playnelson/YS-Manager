@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch, Repeat } from 'lucide-react';
+import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch2, Repeat } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
@@ -167,7 +167,7 @@ const App: React.FC = () => {
     { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
     { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
     { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
-    { id: 'pdf', label: 'PDF', icon: <FileSearch size={14} /> },
+    { id: 'pdf', label: 'PDF', icon: <FileSearch2 size={14} /> },
     { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
     { id: 'links', label: 'Diretório', icon: <Globe size={14} /> },
     { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={14} /> },
@@ -221,7 +221,7 @@ const App: React.FC = () => {
       </div>
       
       <div className="mt-1 px-1 flex justify-between items-center text-[10px] text-[#555] font-bold">
-         <span className="flex-1 text-left">YSoffice v1.0.10</span>
+         <span className="flex-1 text-left">YSoffice v1.1.0</span>
          <span className="flex-1 text-center flex items-center justify-center gap-1">
            <ClockIcon size={10} /> {currentTime}
          </span>
