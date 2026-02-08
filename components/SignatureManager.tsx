@@ -4,10 +4,10 @@ import { PenTool, Upload, Eraser, Save, FileCheck, Trash2, Download, MousePointe
 import { Button } from './ui/Button';
 import { Signature, UserEvent } from '../types';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { GlobalWorkerOptions, getDocument, version } from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist';
 
 // Configuração do worker com importação nomeada
-GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@${version}/build/pdf.worker.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.mjs`;
 
 interface SignatureManagerProps {
   signatures: Signature[];
@@ -255,7 +255,7 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
     if (!file) return;
     setPdfFile(file);
     const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = getDocument({ data: arrayBuffer });
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
     setPdfDoc(pdf);
     setNumPages(pdf.numPages);
