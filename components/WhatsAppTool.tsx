@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
-import { MessageCircle, Smartphone } from 'lucide-react';
+import { MessageCircle, Smartphone, Globe, Monitor, Zap } from 'lucide-react';
 import { Button } from './ui/Button';
 
 export const WhatsAppTool: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
+  const [openMethod, setOpenMethod] = useState<'api' | 'web' | 'app'>('api');
 
   const handleLaunch = () => {
     if (!phone) return;
@@ -26,7 +27,22 @@ export const WhatsAppTool: React.FC = () => {
       // Para o Brasil o padrão é 55 + DDD (2) + Número (8 ou 9) = 12 ou 13 dígitos.
     }
 
-    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    const textParam = encodeURIComponent(message);
+    let url = '';
+
+    switch (openMethod) {
+      case 'web':
+        url = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${textParam}`;
+        break;
+      case 'app':
+        url = `whatsapp://send?phone=${cleanPhone}&text=${textParam}`;
+        break;
+      case 'api':
+      default:
+        url = `https://wa.me/${cleanPhone}?text=${textParam}`;
+        break;
+    }
+
     window.open(url, '_blank');
   };
 
@@ -54,6 +70,36 @@ export const WhatsAppTool: React.FC = () => {
               />
             </div>
             <p className="text-[9px] text-[#556b82]/60 italic">O código do país (+55) é adicionado automaticamente.</p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase text-[#556b82]">Modo de Abertura</label>
+            <div className="grid grid-cols-3 gap-2">
+              <button 
+                onClick={() => setOpenMethod('api')}
+                className={`flex flex-col items-center justify-center p-2 border rounded text-[10px] font-bold gap-1 transition-all ${openMethod === 'api' ? 'bg-[#e7f5ff] border-[#0064d2] text-[#0064d2]' : 'bg-white border-[#dee2e6] text-[#556b82] hover:bg-gray-50'}`}
+                title="Deixa o sistema decidir (wa.me)"
+              >
+                <Zap size={14} />
+                <span>Automático</span>
+              </button>
+              <button 
+                onClick={() => setOpenMethod('web')}
+                className={`flex flex-col items-center justify-center p-2 border rounded text-[10px] font-bold gap-1 transition-all ${openMethod === 'web' ? 'bg-[#e7f5ff] border-[#0064d2] text-[#0064d2]' : 'bg-white border-[#dee2e6] text-[#556b82] hover:bg-gray-50'}`}
+                title="Força abrir no WhatsApp Web"
+              >
+                <Globe size={14} />
+                <span>Navegador</span>
+              </button>
+              <button 
+                onClick={() => setOpenMethod('app')}
+                className={`flex flex-col items-center justify-center p-2 border rounded text-[10px] font-bold gap-1 transition-all ${openMethod === 'app' ? 'bg-[#e7f5ff] border-[#0064d2] text-[#0064d2]' : 'bg-white border-[#dee2e6] text-[#556b82] hover:bg-gray-50'}`}
+                title="Tenta abrir o App Desktop Instalado"
+              >
+                <Monitor size={14} />
+                <span>App Desktop</span>
+              </button>
+            </div>
           </div>
 
           <div className="space-y-1">

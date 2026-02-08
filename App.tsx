@@ -223,7 +223,7 @@ const App: React.FC = () => {
                   {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
                   {activeTab === 'pdf' && <PdfManager />}
                   {activeTab === 'brtools' && <BrasilTools />}
-                  {activeTab === 'signatures' && <SignatureManager signatures={signatures} onChange={setSignatures} />}
+                  {activeTab === 'signatures' && <SignatureManager signatures={signatures} onChange={setSignatures} onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])} />}
                 </div>
              </div>
         </div>

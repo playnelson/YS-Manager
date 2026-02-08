@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { PenTool, Upload, Eraser, Save, FileCheck, Trash2, Download, MousePointer2, Move, ZoomIn, ZoomOut, Loader2, Sliders } from 'lucide-react';
+import { PenTool, Upload, Eraser, Save, FileCheck, Trash2, Download, MousePointer2, Move, ZoomIn, ZoomOut, Loader2, Sliders, Calendar, Type } from 'lucide-react';
 import { Button } from './ui/Button';
-import { Signature } from '../types';
-import { PDFDocument } from 'pdf-lib';
+import { Signature, UserEvent } from '../types';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
 
 // Configuração do worker (mesma do PdfManager)
@@ -12,9 +12,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@${pdfjs.version
 interface SignatureManagerProps {
   signatures: Signature[];
   onChange: (signatures: Signature[]) => void;
+  onAddEvent: (event: UserEvent) => void;
 }
 
-export const SignatureManager: React.FC<SignatureManagerProps> = ({ signatures = [], onChange }) => {
+export const SignatureManager: React.FC<SignatureManagerProps> = ({ signatures = [], onChange, onAddEvent }) => {
   const [activeTab, setActiveTab] = useState<'manage' | 'sign'>('manage');
 
   return (
@@ -37,8 +38,8 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({ signatures =
       </div>
 
       <div className="flex-1 win95-raised p-2 bg-[#d0d0d0] overflow-hidden">
-        {activeTab === 'manage' && <SignatureCreator signatures={signatures} onChange={onChange} />}
-        {activeTab === 'sign' && <DocumentSigner signatures={signatures} />}
+        {activeTab === 'manage' && <SignatureCreator signatures={signatures} onChange={onChange} onAddEvent={onAddEvent} />}
+        {activeTab === 'sign' && <DocumentSigner signatures={signatures} onAddEvent={onAddEvent} />}
       </div>
     </div>
   );
@@ -94,21 +95,13 @@ const SignatureCreator: React.FC<SignatureManagerProps> = ({ signatures, onChang
         const b = data[i + 2];
         
         // Calcula luminância (percepção de brilho humana)
-        // 0.299R + 0.587G + 0.114B
         const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
 
         if (luminance > threshold) {
           // Se for claro (papel), torna transparente
           data[i + 3] = 0; 
         } else {
-          // Se for escuro (tinta), mantém opaco
-          // Aplica contraste para escurecer a tinta (remover cinzas claros)
-          // Fórmula simples de contraste: NewColor = (Color - 128) * Contrast + 128
-          // Mas aqui queremos apenas escurecer, então multiplicamos por um fator < 1 para escurecer
-          // ou usamos o valor inverso da luminância.
-          
           // Abordagem "Ink Booster":
-          // Se é tinta, forçamos para ser mais escura para ficar nítida no PDF
           const booster = contrast; 
           data[i] = Math.max(0, r / booster);     // R
           data[i + 1] = Math.max(0, g / booster); // G
@@ -248,20 +241,27 @@ const SignatureCreator: React.FC<SignatureManagerProps> = ({ signatures, onChang
 };
 
 // --- SUB-COMPONENTE: ASSINADOR DE PDF ---
-const DocumentSigner: React.FC<{ signatures: Signature[] }> = ({ signatures }) => {
+const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: UserEvent) => void }> = ({ signatures, onAddEvent }) => {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null); // PDFJS Document Proxy
   const [currentPage, setCurrentPage] = useState(1);
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1.0);
   
+  // Estado da Assinatura (Imagem)
   const [selectedSig, setSelectedSig] = useState<Signature | null>(null);
-  const [sigAspectRatio, setSigAspectRatio] = useState(1); // Ratio Width/Height
-
-  // Posição visual da assinatura sobre o canvas
+  const [sigAspectRatio, setSigAspectRatio] = useState(1); 
   const [sigPos, setSigPos] = useState({ x: 50, y: 50 });
-  const [sigWidth, setSigWidth] = useState(150); // Controlamos apenas a largura, altura é calculada pelo ratio
-  const [isDragging, setIsDragging] = useState(false);
+  const [sigWidth, setSigWidth] = useState(150);
+  
+  // Estado da Data/Hora (Texto)
+  const [addDate, setAddDate] = useState(false);
+  const [dateText, setDateText] = useState(new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}));
+  const [datePos, setDatePos] = useState({ x: 50, y: 150 });
+  const [dateFontSize, setDateFontSize] = useState(12);
+
+  // Controle de Dragging
+  const [dragTarget, setDragTarget] = useState<'sig' | 'date' | null>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -279,13 +279,12 @@ const DocumentSigner: React.FC<{ signatures: Signature[] }> = ({ signatures }) =
     setCurrentPage(1);
   };
 
-  // Quando seleciona uma assinatura, calcula o aspect ratio dela
   const handleSelectSig = (sig: Signature) => {
     setSelectedSig(sig);
     const img = new Image();
     img.onload = () => {
       setSigAspectRatio(img.width / img.height);
-      setSigWidth(150); // Reset width to default
+      setSigWidth(150);
     };
     img.src = sig.dataUrl;
   };
@@ -308,61 +307,92 @@ const DocumentSigner: React.FC<{ signatures: Signature[] }> = ({ signatures }) =
     renderPage();
   }, [pdfDoc, currentPage, scale]);
 
-  // Drag and Drop Logic Simples
-  const handleDragStart = (e: React.MouseEvent) => {
-    setIsDragging(true);
+  // Drag Logic Unificada
+  const handleDragStart = (e: React.MouseEvent, target: 'sig' | 'date') => {
+    e.stopPropagation();
+    setDragTarget(target);
   };
 
   const handleDragMove = (e: React.MouseEvent) => {
-    if (!isDragging || !containerRef.current) return;
+    if (!dragTarget || !containerRef.current) return;
+    
     const rect = containerRef.current.getBoundingClientRect();
-    const currentHeight = sigWidth / sigAspectRatio;
-    const x = e.clientX - rect.left - (sigWidth / 2); // Centraliza no mouse
-    const y = e.clientY - rect.top - (currentHeight / 2);
-    setSigPos({ x, y });
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (dragTarget === 'sig') {
+       const h = sigWidth / sigAspectRatio;
+       setSigPos({ x: x - (sigWidth/2), y: y - (h/2) });
+    } else {
+       // Para texto, tentamos centralizar visualmente
+       setDatePos({ x: x - 40, y: y - 10 }); 
+    }
   };
 
   const handleDragEnd = () => {
-    setIsDragging(false);
+    setDragTarget(null);
   };
 
   const saveSignedPdf = async () => {
-    if (!pdfFile || !selectedSig) return;
+    if (!pdfFile || (!selectedSig && !addDate)) return alert("Adicione uma assinatura ou data.");
 
     try {
       const arrayBuffer = await pdfFile.arrayBuffer();
       const pdfDocLib = await PDFDocument.load(arrayBuffer);
-      
-      // Embed assinatura
-      const sigImageBytes = await fetch(selectedSig.dataUrl).then(res => res.arrayBuffer());
-      const sigImage = await pdfDocLib.embedPng(sigImageBytes);
-      
-      // Get page
       const page = pdfDocLib.getPage(currentPage - 1);
       const { width, height } = page.getSize();
       
-      // Converter coordenadas do Canvas para PDF
-      const currentSigHeight = sigWidth / sigAspectRatio;
-
-      const xPercent = sigPos.x / canvasRef.current!.width;
-      const yPercent = sigPos.y / canvasRef.current!.height;
-      const wPercent = sigWidth / canvasRef.current!.width;
-      const hPercent = currentSigHeight / canvasRef.current!.height;
-
-      // PDF Lib Coordinates: (0,0) is bottom left
-      const x = xPercent * width;
-      // Invert Y axis
-      const y = height - (yPercent * height) - (hPercent * height);
+      // Fatores de conversão (Canvas Visual -> PDF Real)
+      const pdfW = width;
+      const pdfH = height;
+      const canvasW = canvasRef.current!.width;
+      const canvasH = canvasRef.current!.height;
       
-      const sigW = wPercent * width;
-      const sigH = hPercent * height;
+      const scaleX = pdfW / canvasW;
+      const scaleY = pdfH / canvasH;
 
-      page.drawImage(sigImage, {
-        x,
-        y,
-        width: sigW,
-        height: sigH,
-      });
+      // 1. Gravar Assinatura
+      if (selectedSig) {
+        const sigImageBytes = await fetch(selectedSig.dataUrl).then(res => res.arrayBuffer());
+        const sigImage = await pdfDocLib.embedPng(sigImageBytes);
+        
+        const currentSigHeight = sigWidth / sigAspectRatio;
+
+        // Converter posição
+        // No PDF-Lib: (0,0) é Bottom-Left. No Canvas HTML: (0,0) é Top-Left.
+        // X é simples escala.
+        const x = sigPos.x * scaleX;
+        // Y precisa inverter: altura total - posição y - altura do objeto
+        const y = pdfH - (sigPos.y * scaleY) - (currentSigHeight * scaleY);
+        
+        page.drawImage(sigImage, {
+          x,
+          y,
+          width: sigWidth * scaleX,
+          height: currentSigHeight * scaleY,
+        });
+      }
+
+      // 2. Gravar Data
+      if (addDate) {
+         const helveticaFont = await pdfDocLib.embedFont(StandardFonts.Helvetica);
+         
+         const x = datePos.x * scaleX;
+         // Ajuste fino para texto: texto desenha da baseline para cima
+         // fontSize * scaleY nos dá o tamanho da fonte no mundo PDF
+         const fontSizePdf = dateFontSize * scaleY;
+         
+         // Inversão Y: AlturaTotal - Yvisual - (um pouco de margem para alinhar visualmente com o topo)
+         const y = pdfH - (datePos.y * scaleY) - (fontSizePdf * 0.8);
+
+         page.drawText(dateText, {
+            x,
+            y,
+            size: fontSizePdf,
+            font: helveticaFont,
+            color: rgb(0, 0, 0),
+         });
+      }
 
       const pdfBytes = await pdfDocLib.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -370,6 +400,18 @@ const DocumentSigner: React.FC<{ signatures: Signature[] }> = ({ signatures }) =
       link.href = URL.createObjectURL(blob);
       link.download = `assinado_${pdfFile.name}`;
       link.click();
+
+      // --- REGISTRAR NO CALENDÁRIO ---
+      const now = new Date();
+      onAddEvent({
+        id: `sign_${Date.now()}`,
+        date: now.toISOString().split('T')[0],
+        title: `Assinou: ${pdfFile.name}`,
+        type: 'meeting',
+        description: `Documento assinado digitalmente às ${now.toLocaleTimeString()}`
+      });
+
+      alert("Documento salvo e registrado no calendário com sucesso!");
 
     } catch (e) {
       console.error(e);
@@ -380,7 +422,7 @@ const DocumentSigner: React.FC<{ signatures: Signature[] }> = ({ signatures }) =
   return (
     <div className="h-full flex gap-4">
       {/* Esquerda: Controles */}
-      <div className="w-64 flex flex-col gap-4">
+      <div className="w-72 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
         {!pdfFile ? (
            <div className="win95-raised p-4 bg-white text-center">
               <Upload size={32} className="mx-auto mb-2 text-gray-400"/>
@@ -389,6 +431,7 @@ const DocumentSigner: React.FC<{ signatures: Signature[] }> = ({ signatures }) =
            </div>
         ) : (
           <>
+            {/* PAGINAÇÃO E ZOOM */}
             <div className="win95-raised p-2 bg-win95-bg">
                <h3 className="text-[10px] font-bold uppercase mb-2">Navegação</h3>
                <div className="flex justify-between items-center mb-2">
@@ -403,9 +446,13 @@ const DocumentSigner: React.FC<{ signatures: Signature[] }> = ({ signatures }) =
                </div>
             </div>
 
-            <div className="win95-raised p-2 bg-win95-bg flex-1 flex flex-col">
-               <h3 className="text-[10px] font-bold uppercase mb-2">1. Escolha a Assinatura</h3>
-               <div className="flex-1 overflow-y-auto win95-sunken bg-white p-1 space-y-2 max-h-48 mb-2">
+            {/* SELEÇÃO DE ASSINATURA */}
+            <div className="win95-raised p-2 bg-win95-bg flex flex-col">
+               <h3 className="text-[10px] font-bold uppercase mb-2 flex items-center gap-1">
+                 <PenTool size={12}/> 1. Escolha a Assinatura
+               </h3>
+               <div className="flex-1 overflow-y-auto win95-sunken bg-white p-1 space-y-2 max-h-32 mb-2">
+                 {signatures.length === 0 && <div className="text-[10px] text-gray-400 text-center p-2">Sem assinaturas salvas</div>}
                  {signatures.map(sig => (
                    <div 
                       key={sig.id} 
@@ -417,22 +464,51 @@ const DocumentSigner: React.FC<{ signatures: Signature[] }> = ({ signatures }) =
                  ))}
                </div>
                
-               <h3 className="text-[10px] font-bold uppercase mb-2 mt-2 flex justify-between">
-                 <span>2. Ajuste o Tamanho</span>
-                 <span>{sigWidth}px</span>
-               </h3>
-               <input 
-                 type="range" min="50" max="800" 
-                 value={sigWidth} 
-                 onChange={(e) => setSigWidth(Number(e.target.value))} 
-                 className="w-full"
-               />
-
-               <div className="mt-auto pt-4">
-                 <Button onClick={saveSignedPdf} disabled={!selectedSig} className="w-full h-10 font-bold" icon={<Download size={16}/>}>
-                    BAIXAR PDF ASSINADO
-                 </Button>
+               <div className="flex justify-between items-center">
+                 <span className="text-[9px] font-bold uppercase">Tamanho: {sigWidth}px</span>
+                 <input 
+                   type="range" min="50" max="600" 
+                   value={sigWidth} 
+                   onChange={(e) => setSigWidth(Number(e.target.value))} 
+                   className="w-24 h-4"
+                 />
                </div>
+            </div>
+
+            {/* SELEÇÃO DE DATA */}
+            <div className="win95-raised p-2 bg-win95-bg flex flex-col">
+               <div className="flex items-center gap-2 mb-2 border-b border-white pb-1">
+                 <input type="checkbox" checked={addDate} onChange={e => setAddDate(e.target.checked)} id="chkDate" />
+                 <label htmlFor="chkDate" className="text-[10px] font-bold uppercase flex items-center gap-1 cursor-pointer">
+                   <Calendar size={12}/> 2. Incluir Data/Hora
+                 </label>
+               </div>
+               
+               {addDate && (
+                 <div className="space-y-2 animate-in slide-in-from-top-2">
+                    <input 
+                      type="text" 
+                      className="w-full win95-sunken px-1 py-0.5 text-xs"
+                      value={dateText}
+                      onChange={e => setDateText(e.target.value)}
+                    />
+                    <div className="flex justify-between items-center">
+                       <span className="text-[9px] font-bold uppercase flex items-center gap-1"><Type size={10}/> Tamanho: {dateFontSize}</span>
+                       <input 
+                         type="range" min="8" max="40" 
+                         value={dateFontSize} 
+                         onChange={(e) => setDateFontSize(Number(e.target.value))} 
+                         className="w-24 h-4"
+                       />
+                    </div>
+                 </div>
+               )}
+            </div>
+
+            <div className="mt-auto">
+                 <Button onClick={saveSignedPdf} disabled={!selectedSig && !addDate} className="w-full h-12 font-bold" icon={<Download size={16}/>}>
+                    BAIXAR PDF
+                 </Button>
             </div>
           </>
         )}
@@ -452,22 +528,48 @@ const DocumentSigner: React.FC<{ signatures: Signature[] }> = ({ signatures }) =
            >
              <canvas ref={canvasRef} className="block bg-white" />
              
+             {/* Render Assinatura */}
              {selectedSig && (
                <div 
-                 onMouseDown={handleDragStart}
+                 onMouseDown={(e) => handleDragStart(e, 'sig')}
                  style={{ 
                    position: 'absolute', 
                    left: sigPos.x, 
                    top: sigPos.y,
                    width: sigWidth,
-                   height: sigWidth / sigAspectRatio, // Mantém proporção
-                   cursor: isDragging ? 'grabbing' : 'grab',
+                   height: sigWidth / sigAspectRatio,
+                   cursor: dragTarget === 'sig' ? 'grabbing' : 'grab',
                    border: '1px dashed blue'
                  }}
                  className="group"
                >
                  <img src={selectedSig.dataUrl} className="w-full h-full object-fill pointer-events-none" />
                  <div className="absolute -top-3 -right-3 bg-blue-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <Move size={10} />
+                 </div>
+               </div>
+             )}
+
+             {/* Render Data */}
+             {addDate && (
+               <div 
+                 onMouseDown={(e) => handleDragStart(e, 'date')}
+                 style={{
+                   position: 'absolute',
+                   left: datePos.x,
+                   top: datePos.y,
+                   fontSize: `${dateFontSize}px`,
+                   fontFamily: 'Helvetica, Arial, sans-serif',
+                   cursor: dragTarget === 'date' ? 'grabbing' : 'grab',
+                   border: '1px dashed red',
+                   padding: '2px',
+                   lineHeight: 1,
+                   whiteSpace: 'nowrap'
+                 }}
+                 className="group bg-transparent hover:bg-white/30"
+               >
+                 {dateText}
+                 <div className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                    <Move size={10} />
                  </div>
                </div>
