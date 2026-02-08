@@ -122,11 +122,11 @@ export const WhatsAppTool: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex gap-4 bg-[#c0c0c0] p-1 overflow-hidden">
-      {/* Esquerda: Formulário de Envio */}
-      <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
-        <div className="bg-white border border-[#808080] win95-sunken w-full shadow-sm overflow-hidden">
-          <div className="bg-[#000080] text-white p-2 flex items-center gap-2 text-xs font-bold uppercase">
+    <div className="h-full flex gap-2 bg-[#c0c0c0] p-1 overflow-hidden">
+      {/* Esquerda: Formulário de Envio (Centralizado e Limitado) */}
+      <div className="flex-1 flex flex-col items-center pt-6 overflow-y-auto bg-[#808080]/5">
+        <div className="win95-raised bg-win95-bg border border-white p-1 w-full max-w-[400px] shadow-xl">
+          <div className="bg-[#000080] text-white p-2 flex items-center gap-2 text-xs font-bold uppercase mb-1 select-none">
             <Smartphone size={14} />
             <span>Nova Mensagem</span>
           </div>
@@ -134,14 +134,14 @@ export const WhatsAppTool: React.FC = () => {
           <div className="p-4 space-y-4">
             
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-[#555]">Identificação (Nome do Contato)</label>
+              <label className="text-[10px] font-bold uppercase text-[#444]">Identificação (Nome do Contato)</label>
               <div className="flex items-center gap-2">
-                <div className="win95-sunken bg-gray-100 p-2 border border-gray-300">
+                <div className="win95-sunken bg-gray-100 p-1.5 border border-gray-400">
                   <User size={14} className="text-gray-500" />
                 </div>
                 <input 
                   type="text"
-                  className="flex-1 px-3 py-1.5 border border-[#808080] win95-sunken bg-white text-sm outline-none focus:bg-yellow-50"
+                  className="flex-1 px-3 py-1.5 border border-gray-400 win95-sunken bg-white text-sm outline-none focus:bg-yellow-50"
                   placeholder="Ex: João Silva (Cliente)"
                   value={name}
                   onChange={e => setName(e.target.value)}
@@ -150,14 +150,14 @@ export const WhatsAppTool: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-[#555]">Número (Automático)</label>
+              <label className="text-[10px] font-bold uppercase text-[#444]">Número (Automático)</label>
               <div className="flex gap-2">
-                <div className="win95-sunken bg-gray-100 px-3 py-2 text-sm text-gray-500 font-bold flex items-center border border-[#808080]">
+                <div className="win95-sunken bg-gray-100 px-3 py-2 text-sm text-gray-500 font-bold flex items-center border border-gray-400 select-none">
                   +55
                 </div>
                 <input 
                   type="tel"
-                  className="flex-1 px-3 py-2 border border-[#808080] win95-sunken bg-white text-lg font-mono font-bold outline-none focus:bg-yellow-50"
+                  className="flex-1 px-3 py-2 border border-gray-400 win95-sunken bg-white text-lg font-mono font-bold outline-none focus:bg-yellow-50"
                   placeholder="(00) 00000-0000"
                   value={phone}
                   onChange={handlePhoneChange}
@@ -167,25 +167,25 @@ export const WhatsAppTool: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-[#555]">Método de Envio</label>
+              <label className="text-[10px] font-bold uppercase text-[#444]">Método de Envio</label>
               <div className="grid grid-cols-3 gap-2">
                 <button 
                   onClick={() => setOpenMethod('api')}
-                  className={`flex flex-col items-center justify-center p-2 border win95-raised text-[9px] font-bold gap-1 active:border-b-white active:border-r-white active:border-t-gray-500 active:border-l-gray-500 active:shadow-inner ${openMethod === 'api' ? 'bg-blue-100 text-blue-800' : 'bg-[#c0c0c0] text-black'}`}
+                  className={`flex flex-col items-center justify-center p-2 border-2 text-[9px] font-bold gap-1 active:translate-x-[1px] active:translate-y-[1px] ${openMethod === 'api' ? 'win95-sunken bg-white border-gray-400 text-blue-800' : 'win95-raised bg-win95-bg border-white text-black'}`}
                 >
                   <Zap size={12} />
                   <span>Automático</span>
                 </button>
                 <button 
                   onClick={() => setOpenMethod('web')}
-                  className={`flex flex-col items-center justify-center p-2 border win95-raised text-[9px] font-bold gap-1 active:border-b-white active:border-r-white active:border-t-gray-500 active:border-l-gray-500 active:shadow-inner ${openMethod === 'web' ? 'bg-blue-100 text-blue-800' : 'bg-[#c0c0c0] text-black'}`}
+                  className={`flex flex-col items-center justify-center p-2 border-2 text-[9px] font-bold gap-1 active:translate-x-[1px] active:translate-y-[1px] ${openMethod === 'web' ? 'win95-sunken bg-white border-gray-400 text-green-800' : 'win95-raised bg-win95-bg border-white text-black'}`}
                 >
                   <Globe size={12} />
                   <span>Web</span>
                 </button>
                 <button 
                   onClick={() => setOpenMethod('app')}
-                  className={`flex flex-col items-center justify-center p-2 border win95-raised text-[9px] font-bold gap-1 active:border-b-white active:border-r-white active:border-t-gray-500 active:border-l-gray-500 active:shadow-inner ${openMethod === 'app' ? 'bg-blue-100 text-blue-800' : 'bg-[#c0c0c0] text-black'}`}
+                  className={`flex flex-col items-center justify-center p-2 border-2 text-[9px] font-bold gap-1 active:translate-x-[1px] active:translate-y-[1px] ${openMethod === 'app' ? 'win95-sunken bg-white border-gray-400 text-purple-800' : 'win95-raised bg-win95-bg border-white text-black'}`}
                 >
                   <Monitor size={12} />
                   <span>App</span>
@@ -194,9 +194,9 @@ export const WhatsAppTool: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-[#555]">Mensagem</label>
+              <label className="text-[10px] font-bold uppercase text-[#444]">Mensagem</label>
               <textarea 
-                className="w-full px-3 py-2 border border-[#808080] win95-sunken bg-white text-sm outline-none resize-none focus:bg-yellow-50"
+                className="w-full px-3 py-2 border border-gray-400 win95-sunken bg-white text-sm outline-none resize-none focus:bg-yellow-50"
                 rows={4}
                 placeholder="Digite aqui..."
                 value={message}
@@ -216,12 +216,12 @@ export const WhatsAppTool: React.FC = () => {
       </div>
 
       {/* Direita: Histórico */}
-      <div className="w-72 flex flex-col bg-win95-bg win95-raised p-1">
-        <div className="flex items-center justify-between bg-gray-200 border-b border-white p-1 mb-1">
-           <div className="flex items-center gap-1 text-[10px] font-bold uppercase text-[#555]">
+      <div className="w-72 flex flex-col bg-win95-bg win95-raised p-1 h-full">
+        <div className="flex items-center justify-between bg-[#000080] text-white p-1 mb-1 px-2">
+           <div className="flex items-center gap-1 text-[10px] font-bold uppercase">
              <History size={12} /> Histórico Recente
            </div>
-           <button onClick={clearHistory} className="text-red-600 hover:bg-red-100 p-0.5 rounded" title="Limpar Histórico">
+           <button onClick={clearHistory} className="text-white hover:bg-red-600 p-0.5 rounded" title="Limpar Histórico">
              <Trash2 size={12} />
            </button>
         </div>
