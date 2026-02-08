@@ -66,6 +66,9 @@ export const CnpjQuery: React.FC = () => {
     // Feedback visual poderia ser adicionado aqui
   };
 
+  // Helper para verificar se está ativa (Code 2 é padrão para Ativa na RFB)
+  const isAtiva = (status: number) => status === 2;
+
   return (
     <div className="h-full flex gap-4 bg-win95-bg p-2 overflow-hidden">
       {/* Sidebar: Busca e Histórico */}
@@ -148,11 +151,11 @@ export const CnpjQuery: React.FC = () => {
               <div className="win95-raised bg-win95-bg p-3 relative">
                 <div className="absolute top-2 right-2">
                   <span className={`px-2 py-1 border font-bold text-[10px] uppercase shadow-sm ${
-                    data.situacao_cadastral === 2 || data.situacao_cadastral.toString() === 'ATIV' || data.situacao_cadastral.toString() === '2' // API retorna number 2 para Ativa as vezes
+                    isAtiva(data.situacao_cadastral)
                       ? 'bg-green-600 text-white border-green-800' 
                       : 'bg-red-600 text-white border-red-800'
                   }`}>
-                    {data.situacao_cadastral === 2 ? 'ATIVA' : 'INATIVA/BAIXADA'}
+                    {isAtiva(data.situacao_cadastral) ? 'ATIVA' : 'INATIVA/BAIXADA'}
                   </span>
                 </div>
 

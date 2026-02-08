@@ -144,7 +144,7 @@ export interface CnpjData {
   cnpj: string;
   razao_social: string;
   nome_fantasia: string;
-  situacao_cadastral: string;
+  situacao_cadastral: number;
   data_inicio_atividade: string;
   cnae_fiscal_descricao: string;
   logradouro: string;
