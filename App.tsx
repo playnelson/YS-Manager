@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch2, Repeat } from 'lucide-react';
+import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch2, Repeat, Building2 } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
@@ -13,6 +13,7 @@ import { StickyNotesWall } from './components/StickyNotesWall';
 import { ImportantNotes } from './components/ImportantNotes';
 import { PdfManager } from './components/PdfManager';
 import { ShiftManager } from './components/ShiftManager';
+import { CnpjQuery } from './components/CnpjQuery';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
 import { Button } from './components/ui/Button';
@@ -22,7 +23,7 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'shifts' | 'kanban' | 'email' | 'flow' | 'pdf' | 'ramais' | 'links' | 'whatsapp'>('postits');
+  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'shifts' | 'kanban' | 'email' | 'flow' | 'pdf' | 'ramais' | 'links' | 'whatsapp' | 'cnpj'>('postits');
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR'));
   
   // Data States
@@ -168,6 +169,7 @@ const App: React.FC = () => {
     { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
     { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
     { id: 'pdf', label: 'PDF', icon: <FileSearch2 size={14} /> },
+    { id: 'cnpj', label: 'CNPJ', icon: <Building2 size={14} /> },
     { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
     { id: 'links', label: 'Diretório', icon: <Globe size={14} /> },
     { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={14} /> },
@@ -215,6 +217,7 @@ const App: React.FC = () => {
                   {activeTab === 'whatsapp' && <WhatsAppTool />}
                   {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
                   {activeTab === 'pdf' && <PdfManager />}
+                  {activeTab === 'cnpj' && <CnpjQuery />}
                 </div>
              </div>
         </div>

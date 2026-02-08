@@ -17,6 +17,7 @@ const STATE_HOLIDAYS_DB: Record<string, { day: number, month: number, name: stri
   'SP': [{ day: 9, month: 7, name: 'Rev. Constitucionalista' }, { day: 20, month: 11, name: 'Consciência Negra' }],
   'RJ': [{ day: 23, month: 4, name: 'Dia de São Jorge' }, { day: 20, month: 11, name: 'Consciência Negra' }],
   'MG': [{ day: 21, month: 4, name: 'Tiradentes (Data Magna)' }],
+  'RS': [{ day: 20, month: 9, name: 'Revolução Farroupilha' }],
 };
 
 export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [], onConfigChange, onEventsChange }) => {
@@ -47,17 +48,56 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
   const fetchHolidays = async () => {
     setIsLoading(true);
     try {
-      const nationalRes = await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`);
-      const nationalData = await nationalRes.json();
-      let combined: Holiday[] = Array.isArray(nationalData) ? nationalData.map((h: any) => ({
-        date: h.date, name: h.name, type: 'national'
-      })) : [];
-      (STATE_HOLIDAYS_DB[config.uf] || []).forEach(sh => {
-        combined.push({ date: `${year}-${String(sh.month).padStart(2, '0')}-${String(sh.day).padStart(2, '0')}`, name: sh.name, type: 'state' });
+      // Busca Feriados Nacionais via BrasilAPI
+      const response = await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`);
+      let apiHolidays: Holiday[] = [];
+      
+      if (response.ok) {
+        const apiData = await response.json();
+        apiHolidays = Array.isArray(apiData) 
+          ? apiData.map((h: any) => ({ date: h.date, name: h.name, type: 'national' })) 
+          : [];
+      }
+
+      // Feriados Estaduais (Base Local)
+      const stateHolidaysRaw = STATE_HOLIDAYS_DB[config.uf] || [];
+      const stateHolidays: Holiday[] = stateHolidaysRaw.map(sh => ({
+        date: `${year}-${String(sh.month).padStart(2, '0')}-${String(sh.day).padStart(2, '0')}`,
+        name: sh.name,
+        type: 'state'
+      }));
+
+      // Feriados Dinâmicos (Cálculo Matemático)
+      const dynamicHolidays = calculateDynamicDates(year);
+
+      // Lista final mesclada
+      const finalHolidays: Holiday[] = [...apiHolidays];
+
+      // Adiciona estaduais se não houver colisão de data com nacionais
+      stateHolidays.forEach(sh => {
+        if (!finalHolidays.some(fh => fh.date === sh.date)) {
+          finalHolidays.push(sh);
+        }
       });
-      setHolidays([...combined, ...calculateDynamicDates(year)]);
+
+      // Adiciona dinâmicos (Páscoa, etc) se não estiverem na API (evita duplicação)
+      dynamicHolidays.forEach(dh => {
+        // Verifica colisão por data OU por nome similar (ex: "Carnaval" vs "Carnaval")
+        const exists = finalHolidays.some(fh => 
+          fh.date === dh.date || 
+          fh.name.toLowerCase().includes(dh.name.toLowerCase())
+        );
+        if (!exists) {
+          finalHolidays.push(dh);
+        }
+      });
+
+      setHolidays(finalHolidays);
+
     } catch (e) {
-      console.error(e);
+      console.error("Erro ao carregar feriados:", e);
+      // Fallback em caso de erro na API
+      setHolidays(calculateDynamicDates(year));
     } finally {
       setIsLoading(false);
     }
@@ -149,9 +189,14 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
         
         <div className="flex items-center gap-2 px-2">
            {isLoading ? (
-             <Loader2 size={16} className="animate-spin text-win95-blue" />
+             <div className="flex items-center gap-1">
+               <Loader2 size={14} className="animate-spin text-win95-blue" />
+               <span className="text-[9px] font-bold text-win95-blue">Buscando Feriados...</span>
+             </div>
            ) : (
-             <span className="text-[10px] font-bold text-win95-shadow uppercase tracking-widest">Sincronizado</span>
+             <span className="text-[10px] font-bold text-green-700 uppercase tracking-widest flex items-center gap-1">
+               <div className="w-1.5 h-1.5 rounded-full bg-green-600"></div> Online
+             </span>
            )}
         </div>
       </div>

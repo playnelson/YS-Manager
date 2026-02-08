@@ -139,6 +139,27 @@ export interface ShiftConfig {
   segments: ShiftSegment[];
 }
 
+// CNPJ Data Type (BrasilAPI)
+export interface CnpjData {
+  cnpj: string;
+  razao_social: string;
+  nome_fantasia: string;
+  situacao_cadastral: string;
+  data_inicio_atividade: string;
+  cnae_fiscal_descricao: string;
+  logradouro: string;
+  numero: string;
+  bairro: string;
+  municipio: string;
+  uf: string;
+  cep: string;
+  ddd_telefone_1: string;
+  qsa: Array<{
+    nome_socio: string;
+    qualificacao_socio: string;
+  }>;
+}
+
 // Global App Data
 export interface AppData {
   kanban: KanbanState;
