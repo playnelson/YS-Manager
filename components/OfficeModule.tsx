@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
-import { Mail, PenTool, FileSearch2, FileText } from 'lucide-react';
+import { Mail, PenTool, FileSearch2, FileText, Languages } from 'lucide-react';
 import { EmailTemplate, Signature, UserEvent } from '../types';
 import { EmailManager } from './EmailManager';
 import { SignatureManager } from './SignatureManager';
 import { PdfManager } from './PdfManager';
 import { DocumentGenerator } from './DocumentGenerator';
+import { TranslatorTool } from './TranslatorTool';
 import { Button } from './ui/Button';
 
 interface OfficeModuleProps {
@@ -23,7 +24,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   onSignatureChange,
   onAddEvent
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'email' | 'signatures' | 'pdf' | 'docs'>('email');
+  const [activeSubTab, setActiveSubTab] = useState<'email' | 'signatures' | 'pdf' | 'docs' | 'translate'>('email');
 
   return (
     <div className="h-full flex flex-col gap-2">
@@ -42,6 +43,13 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
           icon={<FileText size={14} />}
         >
           Criador de Docs
+        </Button>
+        <Button 
+          onClick={() => setActiveSubTab('translate')} 
+          className={activeSubTab === 'translate' ? 'bg-white win95-sunken' : ''}
+          icon={<Languages size={14} />}
+        >
+          Tradutor
         </Button>
         <Button 
           onClick={() => setActiveSubTab('signatures')} 
@@ -67,6 +75,9 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
             )}
             {activeSubTab === 'docs' && (
                 <DocumentGenerator />
+            )}
+            {activeSubTab === 'translate' && (
+                <TranslatorTool />
             )}
             {activeSubTab === 'signatures' && (
                 <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />
