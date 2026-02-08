@@ -157,6 +157,16 @@ export interface ShiftHandoff {
   pendingItems: string;
 }
 
+// Document Generator Types
+export interface DocTemplate {
+  id: string;
+  name: string;
+  category: 'Financeiro' | 'Jurídico' | 'RH' | 'Pessoal' | 'IA';
+  description: string;
+  fields: string[]; // Nomes dos campos para preencher (ex: ['Nome', 'Valor'])
+  contentPattern: string; // Texto com placeholders {{Nome}}
+}
+
 // CNPJ Data Type (BrasilAPI Completo)
 export interface Cnae {
   codigo: number;

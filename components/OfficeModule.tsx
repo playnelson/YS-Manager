@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { Mail, PenTool, FileSearch2 } from 'lucide-react';
+import { Mail, PenTool, FileSearch2, FileText } from 'lucide-react';
 import { EmailTemplate, Signature, UserEvent } from '../types';
 import { EmailManager } from './EmailManager';
 import { SignatureManager } from './SignatureManager';
 import { PdfManager } from './PdfManager';
+import { DocumentGenerator } from './DocumentGenerator';
 import { Button } from './ui/Button';
 
 interface OfficeModuleProps {
@@ -22,7 +23,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   onSignatureChange,
   onAddEvent
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'email' | 'signatures' | 'pdf'>('email');
+  const [activeSubTab, setActiveSubTab] = useState<'email' | 'signatures' | 'pdf' | 'docs'>('email');
 
   return (
     <div className="h-full flex flex-col gap-2">
@@ -34,6 +35,13 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
           icon={<Mail size={14} />}
         >
           E-mails
+        </Button>
+        <Button 
+          onClick={() => setActiveSubTab('docs')} 
+          className={activeSubTab === 'docs' ? 'bg-white win95-sunken' : ''}
+          icon={<FileText size={14} />}
+        >
+          Criador de Docs
         </Button>
         <Button 
           onClick={() => setActiveSubTab('signatures')} 
@@ -56,6 +64,9 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
         <div className="h-full w-full bg-win95-bg">
             {activeSubTab === 'email' && (
                 <EmailManager emails={emails} onChange={onEmailChange} />
+            )}
+            {activeSubTab === 'docs' && (
+                <DocumentGenerator />
             )}
             {activeSubTab === 'signatures' && (
                 <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />
