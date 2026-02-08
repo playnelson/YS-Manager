@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { PenTool, Upload, Eraser, Save, FileCheck, Trash2, Download, MousePointer2, Move, ZoomIn, ZoomOut, Loader2, Sliders, Calendar, Type } from 'lucide-react';
+import { PenTool, Upload, Eraser, Save, FileCheck, Trash2, Download, MousePointer2, Move, ZoomIn, ZoomOut, Loader2, Sliders, Calendar, Type, Stamp } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Signature, UserEvent } from '../types';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -248,20 +248,17 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1.0);
   
-  // Estado da Assinatura (Imagem)
+  // Estado da Assinatura
   const [selectedSig, setSelectedSig] = useState<Signature | null>(null);
   const [sigAspectRatio, setSigAspectRatio] = useState(1); 
   const [sigPos, setSigPos] = useState({ x: 50, y: 50 });
   const [sigWidth, setSigWidth] = useState(150);
   
-  // Estado da Data/Hora (Texto)
+  // Estado do Carimbo (Acoplado)
   const [addDate, setAddDate] = useState(false);
   const [dateText, setDateText] = useState(new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}));
-  const [datePos, setDatePos] = useState({ x: 50, y: 150 });
-  const [dateFontSize, setDateFontSize] = useState(12);
-
-  // Controle de Dragging
-  const [dragTarget, setDragTarget] = useState<'sig' | 'date' | null>(null);
+  
+  const [isDragging, setIsDragging] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -307,34 +304,29 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
     renderPage();
   }, [pdfDoc, currentPage, scale]);
 
-  // Drag Logic Unificada
-  const handleDragStart = (e: React.MouseEvent, target: 'sig' | 'date') => {
+  const handleDragStart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setDragTarget(target);
+    setIsDragging(true);
   };
 
   const handleDragMove = (e: React.MouseEvent) => {
-    if (!dragTarget || !containerRef.current) return;
+    if (!isDragging || !containerRef.current) return;
     
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    if (dragTarget === 'sig') {
-       const h = sigWidth / sigAspectRatio;
-       setSigPos({ x: x - (sigWidth/2), y: y - (h/2) });
-    } else {
-       // Para texto, tentamos centralizar visualmente
-       setDatePos({ x: x - 40, y: y - 10 }); 
-    }
+    const h = sigWidth / sigAspectRatio;
+    // Centraliza o cursor no objeto
+    setSigPos({ x: x - (sigWidth/2), y: y - (h/2) });
   };
 
   const handleDragEnd = () => {
-    setDragTarget(null);
+    setIsDragging(false);
   };
 
   const saveSignedPdf = async () => {
-    if (!pdfFile || (!selectedSig && !addDate)) return alert("Adicione uma assinatura ou data.");
+    if (!pdfFile || !selectedSig) return alert("Selecione uma assinatura.");
 
     try {
       const arrayBuffer = await pdfFile.arrayBuffer();
@@ -351,46 +343,47 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
       const scaleX = pdfW / canvasW;
       const scaleY = pdfH / canvasH;
 
-      // 1. Gravar Assinatura
-      if (selectedSig) {
-        const sigImageBytes = await fetch(selectedSig.dataUrl).then(res => res.arrayBuffer());
-        const sigImage = await pdfDocLib.embedPng(sigImageBytes);
-        
-        const currentSigHeight = sigWidth / sigAspectRatio;
+      // 1. Gravar Assinatura (Imagem)
+      const sigImageBytes = await fetch(selectedSig.dataUrl).then(res => res.arrayBuffer());
+      const sigImage = await pdfDocLib.embedPng(sigImageBytes);
+      
+      const currentSigHeight = sigWidth / sigAspectRatio;
 
-        // Converter posição
-        // No PDF-Lib: (0,0) é Bottom-Left. No Canvas HTML: (0,0) é Top-Left.
-        // X é simples escala.
-        const x = sigPos.x * scaleX;
-        // Y precisa inverter: altura total - posição y - altura do objeto
-        const y = pdfH - (sigPos.y * scaleY) - (currentSigHeight * scaleY);
-        
-        page.drawImage(sigImage, {
-          x,
-          y,
-          width: sigWidth * scaleX,
-          height: currentSigHeight * scaleY,
-        });
-      }
+      const x = sigPos.x * scaleX;
+      // No PDF-Lib, Y=0 é o rodapé. Y da imagem é o canto inferior esquerdo dela.
+      const yImage = pdfH - (sigPos.y * scaleY) - (currentSigHeight * scaleY);
+      
+      page.drawImage(sigImage, {
+        x,
+        y: yImage,
+        width: sigWidth * scaleX,
+        height: currentSigHeight * scaleY,
+      });
 
-      // 2. Gravar Data
+      // 2. Gravar Carimbo Digital (Texto)
       if (addDate) {
-         const helveticaFont = await pdfDocLib.embedFont(StandardFonts.Helvetica);
+         // Usamos Courier para parecer um carimbo/hash técnico
+         const courierFont = await pdfDocLib.embedFont(StandardFonts.Courier);
          
-         const x = datePos.x * scaleX;
-         // Ajuste fino para texto: texto desenha da baseline para cima
-         // fontSize * scaleY nos dá o tamanho da fonte no mundo PDF
-         const fontSizePdf = dateFontSize * scaleY;
+         const fontSizePdf = 10 * scaleY; // Tamanho fixo relativo
+         const lineHeight = fontSizePdf * 1.2;
          
-         // Inversão Y: AlturaTotal - Yvisual - (um pouco de margem para alinhar visualmente com o topo)
-         const y = pdfH - (datePos.y * scaleY) - (fontSizePdf * 0.8);
+         // Posiciona logo abaixo da imagem
+         const yTextStart = yImage - lineHeight - (2 * scaleY); 
+         
+         const textLines = [
+            `Assinado digitalmente por: ${selectedSig.name.toUpperCase()}`,
+            `Data: ${dateText}`
+         ];
 
-         page.drawText(dateText, {
-            x,
-            y,
-            size: fontSizePdf,
-            font: helveticaFont,
-            color: rgb(0, 0, 0),
+         textLines.forEach((line, index) => {
+            page.drawText(line, {
+                x: x, // Alinhado à esquerda da assinatura
+                y: yTextStart - (index * lineHeight),
+                size: fontSizePdf,
+                font: courierFont,
+                color: rgb(0.3, 0.3, 0.3), // Cinza escuro
+            });
          });
       }
 
@@ -408,10 +401,10 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
         date: now.toISOString().split('T')[0],
         title: `Assinou: ${pdfFile.name}`,
         type: 'meeting',
-        description: `Documento assinado digitalmente às ${now.toLocaleTimeString()}`
+        description: `Documento assinado digitalmente às ${now.toLocaleTimeString()} com identificação: ${selectedSig.name}`
       });
 
-      alert("Documento salvo e registrado no calendário com sucesso!");
+      alert("Documento assinado e carimbado com sucesso!");
 
     } catch (e) {
       console.error(e);
@@ -475,38 +468,31 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
                </div>
             </div>
 
-            {/* SELEÇÃO DE DATA */}
+            {/* SELEÇÃO DE DATA (NOVO LAYOUT) */}
             <div className="win95-raised p-2 bg-win95-bg flex flex-col">
                <div className="flex items-center gap-2 mb-2 border-b border-white pb-1">
                  <input type="checkbox" checked={addDate} onChange={e => setAddDate(e.target.checked)} id="chkDate" />
                  <label htmlFor="chkDate" className="text-[10px] font-bold uppercase flex items-center gap-1 cursor-pointer">
-                   <Calendar size={12}/> 2. Incluir Data/Hora
+                   <Stamp size={12}/> 2. Adicionar Carimbo Digital
                  </label>
                </div>
                
                {addDate && (
                  <div className="space-y-2 animate-in slide-in-from-top-2">
+                    <div className="text-[9px] text-gray-500 italic mb-1">O carimbo será acoplado automaticamente abaixo da assinatura.</div>
+                    <label className="text-[9px] font-bold block">Texto da Data:</label>
                     <input 
                       type="text" 
-                      className="w-full win95-sunken px-1 py-0.5 text-xs"
+                      className="w-full win95-sunken px-1 py-0.5 text-xs font-mono"
                       value={dateText}
                       onChange={e => setDateText(e.target.value)}
                     />
-                    <div className="flex justify-between items-center">
-                       <span className="text-[9px] font-bold uppercase flex items-center gap-1"><Type size={10}/> Tamanho: {dateFontSize}</span>
-                       <input 
-                         type="range" min="8" max="40" 
-                         value={dateFontSize} 
-                         onChange={(e) => setDateFontSize(Number(e.target.value))} 
-                         className="w-24 h-4"
-                       />
-                    </div>
                  </div>
                )}
             </div>
 
             <div className="mt-auto">
-                 <Button onClick={saveSignedPdf} disabled={!selectedSig && !addDate} className="w-full h-12 font-bold" icon={<Download size={16}/>}>
+                 <Button onClick={saveSignedPdf} disabled={!selectedSig} className="w-full h-12 font-bold" icon={<Download size={16}/>}>
                     BAIXAR PDF
                  </Button>
             </div>
@@ -528,48 +514,42 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
            >
              <canvas ref={canvasRef} className="block bg-white" />
              
-             {/* Render Assinatura */}
+             {/* Render Assinatura + Carimbo (Unificados) */}
              {selectedSig && (
                <div 
-                 onMouseDown={(e) => handleDragStart(e, 'sig')}
+                 onMouseDown={handleDragStart}
                  style={{ 
                    position: 'absolute', 
                    left: sigPos.x, 
                    top: sigPos.y,
                    width: sigWidth,
-                   height: sigWidth / sigAspectRatio,
-                   cursor: dragTarget === 'sig' ? 'grabbing' : 'grab',
-                   border: '1px dashed blue'
+                   cursor: isDragging ? 'grabbing' : 'grab',
+                   // Borda tracejada apenas para indicar a área de "Hitbox" do conjunto
+                   border: '1px dashed rgba(0,0,255,0.3)'
                  }}
-                 className="group"
+                 className="group flex flex-col"
                >
-                 <img src={selectedSig.dataUrl} className="w-full h-full object-fill pointer-events-none" />
-                 <div className="absolute -top-3 -right-3 bg-blue-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <Move size={10} />
-                 </div>
-               </div>
-             )}
+                 {/* A Imagem */}
+                 <img 
+                   src={selectedSig.dataUrl} 
+                   style={{ 
+                     width: '100%', 
+                     height: sigWidth / sigAspectRatio,
+                     pointerEvents: 'none'
+                   }} 
+                 />
 
-             {/* Render Data */}
-             {addDate && (
-               <div 
-                 onMouseDown={(e) => handleDragStart(e, 'date')}
-                 style={{
-                   position: 'absolute',
-                   left: datePos.x,
-                   top: datePos.y,
-                   fontSize: `${dateFontSize}px`,
-                   fontFamily: 'Helvetica, Arial, sans-serif',
-                   cursor: dragTarget === 'date' ? 'grabbing' : 'grab',
-                   border: '1px dashed red',
-                   padding: '2px',
-                   lineHeight: 1,
-                   whiteSpace: 'nowrap'
-                 }}
-                 className="group bg-transparent hover:bg-white/30"
-               >
-                 {dateText}
-                 <div className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                 {/* O Carimbo Acoplado */}
+                 {addDate && (
+                   <div className="mt-1 font-mono text-[10px] text-gray-600 leading-tight border-t border-gray-400 pt-1 select-none pointer-events-none">
+                      <div className="font-bold">Assinado digitalmente por:</div>
+                      <div className="uppercase">{selectedSig.name}</div>
+                      <div>Data: {dateText}</div>
+                   </div>
+                 )}
+
+                 {/* Ícone de Move (Feedback Visual) */}
+                 <div className="absolute -top-3 -right-3 bg-blue-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                    <Move size={10} />
                  </div>
                </div>

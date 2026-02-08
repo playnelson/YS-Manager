@@ -1,30 +1,79 @@
 
-import React, { useState } from 'react';
-import { MessageCircle, Smartphone, Globe, Monitor, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MessageCircle, Smartphone, Globe, Monitor, Zap, User, History, Clock, Trash2, RotateCcw } from 'lucide-react';
 import { Button } from './ui/Button';
+
+interface HistoryItem {
+  id: string;
+  name: string;
+  phone: string;
+  message: string;
+  timestamp: string;
+  method: 'api' | 'web' | 'app';
+}
 
 export const WhatsAppTool: React.FC = () => {
   const [phone, setPhone] = useState('');
+  const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [openMethod, setOpenMethod] = useState<'api' | 'web' | 'app'>('api');
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    const saved = localStorage.getItem('ysoffice_whatsapp_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Salvar histórico no localStorage sempre que mudar
+  useEffect(() => {
+    localStorage.setItem('ysoffice_whatsapp_history', JSON.stringify(history));
+  }, [history]);
+
+  // Formatação Automática de Telefone
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, ''); // Remove não números
+    
+    // Limita a 11 dígitos (DDD + 9 + 8 dígitos)
+    if (value.length > 11) value = value.slice(0, 11);
+
+    // Aplica máscara (XX) XXXXX-XXXX
+    if (value.length > 2) {
+      value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+    }
+    if (value.length > 10) {
+      value = `${value.slice(0, 10)}-${value.slice(10)}`;
+    } else if (value.length > 9 && value.length <= 10) {
+      // Ajuste para números fixos ou incompletos se necessário, mas foca no celular
+      // Formato (XX) XXXX-XXXX para fixo seria outra lógica, mas aqui assumimos celular principal
+      // Para manter simples e funcional para celular:
+    }
+
+    setPhone(value);
+
+    // Tenta encontrar identificação no histórico
+    const rawNum = value.replace(/\D/g, '');
+    if (rawNum.length >= 10) {
+      const found = history.find(h => h.phone.replace(/\D/g, '') === rawNum);
+      if (found && found.name && !name) {
+        setName(found.name);
+      }
+    }
+  };
 
   const handleLaunch = () => {
     if (!phone) return;
     
-    // Remove tudo que não é dígito
-    let cleanPhone = phone.replace(/\D/g, '');
+    const cleanPhone = phone.replace(/\D/g, '');
     
-    /**
-     * Lógica para garantir o +55 (Brasil):
-     * Se o número tiver 10 ou 11 dígitos (DDD + Número), adicionamos 55.
-     * Se o usuário já tiver colocado 12 ou 13 dígitos começando com 55, mantemos.
-     */
-    if (cleanPhone.length <= 11) {
-      cleanPhone = '55' + cleanPhone;
-    } else if (cleanPhone.length > 11 && !cleanPhone.startsWith('55')) {
-      // Se tiver muitos dígitos mas não começar com 55, assumimos que o usuário errou ou usou outro DDI
-      // Mas a regra pede SEMPRE +55, então vamos garantir que o prefixo final seja 55
-      // Para o Brasil o padrão é 55 + DDD (2) + Número (8 ou 9) = 12 ou 13 dígitos.
+    // Validação básica
+    if (cleanPhone.length < 10) {
+      alert("Número inválido. Digite DDD + Número.");
+      return;
+    }
+
+    let finalPhone = cleanPhone;
+    if (finalPhone.length <= 11) {
+      finalPhone = '55' + finalPhone;
+    } else if (finalPhone.length > 11 && !finalPhone.startsWith('55')) {
+      // Já tem DDI mas não é 55? Mantém. Se não, assume 55.
     }
 
     const textParam = encodeURIComponent(message);
@@ -32,97 +81,182 @@ export const WhatsAppTool: React.FC = () => {
 
     switch (openMethod) {
       case 'web':
-        url = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${textParam}`;
+        url = `https://web.whatsapp.com/send?phone=${finalPhone}&text=${textParam}`;
         break;
       case 'app':
-        url = `whatsapp://send?phone=${cleanPhone}&text=${textParam}`;
+        url = `whatsapp://send?phone=${finalPhone}&text=${textParam}`;
         break;
       case 'api':
       default:
-        url = `https://wa.me/${cleanPhone}?text=${textParam}`;
+        url = `https://wa.me/${finalPhone}?text=${textParam}`;
         break;
     }
+
+    // Adicionar ao Histórico
+    const newItem: HistoryItem = {
+      id: Date.now().toString(),
+      name: name || 'Sem identificação',
+      phone: phone, // Salva formatado
+      message,
+      timestamp: new Date().toISOString(),
+      method: openMethod
+    };
+
+    // Remove duplicatas exatas recentes para não poluir, ou apenas adiciona no topo
+    setHistory(prev => [newItem, ...prev].slice(0, 50)); // Mantém os últimos 50
 
     window.open(url, '_blank');
   };
 
+  const loadFromHistory = (item: HistoryItem) => {
+    setPhone(item.phone);
+    setName(item.name);
+    setMessage(item.message);
+    setOpenMethod(item.method);
+  };
+
+  const clearHistory = () => {
+    if(confirm('Limpar todo o histórico?')) {
+      setHistory([]);
+    }
+  };
+
   return (
-    <div className="h-full flex items-center justify-center bg-[#f8f9fa]">
-      <div className="bg-white border border-[#dee2e6] rounded shadow-sm w-full max-w-md overflow-hidden">
-        <div className="bg-[#f1f4f6] p-4 border-b border-[#dee2e6] flex items-center gap-3 text-[#556b82]">
-          <Smartphone size={20} />
-          <h2 className="text-sm font-bold uppercase tracking-wide">Comunicação Direta (WhatsApp)</h2>
-        </div>
-        
-        <div className="p-6 space-y-4">
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-[#556b82]">Número de Destino (Com DDD)</label>
-            <div className="flex gap-2">
-              <div className="win95-sunken bg-gray-100 px-3 py-2 text-sm text-gray-500 font-bold flex items-center border border-[#dee2e6]">
-                +55
+    <div className="h-full flex gap-4 bg-[#c0c0c0] p-1 overflow-hidden">
+      {/* Esquerda: Formulário de Envio */}
+      <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
+        <div className="bg-white border border-[#808080] win95-sunken w-full shadow-sm overflow-hidden">
+          <div className="bg-[#000080] text-white p-2 flex items-center gap-2 text-xs font-bold uppercase">
+            <Smartphone size={14} />
+            <span>Nova Mensagem</span>
+          </div>
+          
+          <div className="p-4 space-y-4">
+            
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-[#555]">Identificação (Nome do Contato)</label>
+              <div className="flex items-center gap-2">
+                <div className="win95-sunken bg-gray-100 p-2 border border-gray-300">
+                  <User size={14} className="text-gray-500" />
+                </div>
+                <input 
+                  type="text"
+                  className="flex-1 px-3 py-1.5 border border-[#808080] win95-sunken bg-white text-sm outline-none focus:bg-yellow-50"
+                  placeholder="Ex: João Silva (Cliente)"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                />
               </div>
-              <input 
-                type="tel"
-                className="flex-1 px-3 py-2 border border-[#dee2e6] rounded bg-white text-sm outline-none focus:border-[#0064d2]"
-                placeholder="Ex: 11 99999-9999"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-[#555]">Número (Automático)</label>
+              <div className="flex gap-2">
+                <div className="win95-sunken bg-gray-100 px-3 py-2 text-sm text-gray-500 font-bold flex items-center border border-[#808080]">
+                  +55
+                </div>
+                <input 
+                  type="tel"
+                  className="flex-1 px-3 py-2 border border-[#808080] win95-sunken bg-white text-lg font-mono font-bold outline-none focus:bg-yellow-50"
+                  placeholder="(00) 00000-0000"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  maxLength={15}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-[#555]">Método de Envio</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button 
+                  onClick={() => setOpenMethod('api')}
+                  className={`flex flex-col items-center justify-center p-2 border win95-raised text-[9px] font-bold gap-1 active:border-b-white active:border-r-white active:border-t-gray-500 active:border-l-gray-500 active:shadow-inner ${openMethod === 'api' ? 'bg-blue-100 text-blue-800' : 'bg-[#c0c0c0] text-black'}`}
+                >
+                  <Zap size={12} />
+                  <span>Automático</span>
+                </button>
+                <button 
+                  onClick={() => setOpenMethod('web')}
+                  className={`flex flex-col items-center justify-center p-2 border win95-raised text-[9px] font-bold gap-1 active:border-b-white active:border-r-white active:border-t-gray-500 active:border-l-gray-500 active:shadow-inner ${openMethod === 'web' ? 'bg-blue-100 text-blue-800' : 'bg-[#c0c0c0] text-black'}`}
+                >
+                  <Globe size={12} />
+                  <span>Web</span>
+                </button>
+                <button 
+                  onClick={() => setOpenMethod('app')}
+                  className={`flex flex-col items-center justify-center p-2 border win95-raised text-[9px] font-bold gap-1 active:border-b-white active:border-r-white active:border-t-gray-500 active:border-l-gray-500 active:shadow-inner ${openMethod === 'app' ? 'bg-blue-100 text-blue-800' : 'bg-[#c0c0c0] text-black'}`}
+                >
+                  <Monitor size={12} />
+                  <span>App</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-[#555]">Mensagem</label>
+              <textarea 
+                className="w-full px-3 py-2 border border-[#808080] win95-sunken bg-white text-sm outline-none resize-none focus:bg-yellow-50"
+                rows={4}
+                placeholder="Digite aqui..."
+                value={message}
+                onChange={e => setMessage(e.target.value)}
               />
             </div>
-            <p className="text-[9px] text-[#556b82]/60 italic">O código do país (+55) é adicionado automaticamente.</p>
-          </div>
 
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-[#556b82]">Modo de Abertura</label>
-            <div className="grid grid-cols-3 gap-2">
-              <button 
-                onClick={() => setOpenMethod('api')}
-                className={`flex flex-col items-center justify-center p-2 border rounded text-[10px] font-bold gap-1 transition-all ${openMethod === 'api' ? 'bg-[#e7f5ff] border-[#0064d2] text-[#0064d2]' : 'bg-white border-[#dee2e6] text-[#556b82] hover:bg-gray-50'}`}
-                title="Deixa o sistema decidir (wa.me)"
-              >
-                <Zap size={14} />
-                <span>Automático</span>
-              </button>
-              <button 
-                onClick={() => setOpenMethod('web')}
-                className={`flex flex-col items-center justify-center p-2 border rounded text-[10px] font-bold gap-1 transition-all ${openMethod === 'web' ? 'bg-[#e7f5ff] border-[#0064d2] text-[#0064d2]' : 'bg-white border-[#dee2e6] text-[#556b82] hover:bg-gray-50'}`}
-                title="Força abrir no WhatsApp Web"
-              >
-                <Globe size={14} />
-                <span>Navegador</span>
-              </button>
-              <button 
-                onClick={() => setOpenMethod('app')}
-                className={`flex flex-col items-center justify-center p-2 border rounded text-[10px] font-bold gap-1 transition-all ${openMethod === 'app' ? 'bg-[#e7f5ff] border-[#0064d2] text-[#0064d2]' : 'bg-white border-[#dee2e6] text-[#556b82] hover:bg-gray-50'}`}
-                title="Tenta abrir o App Desktop Instalado"
-              >
-                <Monitor size={14} />
-                <span>App Desktop</span>
-              </button>
-            </div>
+            <Button 
+              onClick={handleLaunch}
+              className="w-full h-10"
+              icon={<MessageCircle size={16} />}
+            >
+              ENVIAR MENSAGEM
+            </Button>
           </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase text-[#556b82]">Corpo da Mensagem (Opcional)</label>
-            <textarea 
-              className="w-full px-3 py-2 border border-[#dee2e6] rounded bg-white text-sm outline-none focus:border-[#0064d2] resize-none"
-              rows={4}
-              placeholder="Digite o texto padrão..."
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-            />
-          </div>
-
-          <Button 
-            onClick={handleLaunch}
-            className="w-full"
-            icon={<MessageCircle size={16} />}
-          >
-            DISPARAR MENSAGEM
-          </Button>
         </div>
-        <div className="p-3 bg-[#f8f9fa] border-t border-[#dee2e6] text-center">
-          <p className="text-[9px] font-bold text-[#556b82] uppercase opacity-50">Otimizado para conexões brasileiras</p>
+      </div>
+
+      {/* Direita: Histórico */}
+      <div className="w-72 flex flex-col bg-win95-bg win95-raised p-1">
+        <div className="flex items-center justify-between bg-gray-200 border-b border-white p-1 mb-1">
+           <div className="flex items-center gap-1 text-[10px] font-bold uppercase text-[#555]">
+             <History size={12} /> Histórico Recente
+           </div>
+           <button onClick={clearHistory} className="text-red-600 hover:bg-red-100 p-0.5 rounded" title="Limpar Histórico">
+             <Trash2 size={12} />
+           </button>
+        </div>
+        
+        <div className="flex-1 win95-sunken bg-white overflow-y-auto custom-scrollbar p-1 space-y-2">
+          {history.length === 0 ? (
+            <div className="text-center p-4 text-[#808080] text-[10px] italic">
+              Nenhuma mensagem enviada.
+            </div>
+          ) : (
+            history.map(item => (
+              <div key={item.id} className="border border-dotted border-gray-300 p-2 hover:bg-blue-50 group relative bg-gray-50">
+                <div className="flex justify-between items-start mb-1">
+                  <div className="font-bold text-xs text-blue-800 truncate max-w-[140px]">{item.name}</div>
+                  <div className="text-[9px] text-gray-500 flex items-center gap-0.5">
+                    <Clock size={8} /> {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </div>
+                </div>
+                <div className="text-[10px] font-mono font-bold text-black mb-1">{item.phone}</div>
+                {item.message && (
+                  <div className="text-[9px] text-gray-600 italic truncate border-t border-gray-200 pt-1">
+                    "{item.message}"
+                  </div>
+                )}
+                
+                <button 
+                  onClick={() => loadFromHistory(item)}
+                  className="absolute bottom-1 right-1 p-1 bg-white border border-gray-300 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100"
+                  title="Reutilizar dados"
+                >
+                  <RotateCcw size={12} className="text-blue-600"/>
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
