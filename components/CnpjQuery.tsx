@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
-import { Search, Building2, MapPin, Users, AlertTriangle, Briefcase, Copy, Loader2, History, Info, Printer, DollarSign, FileText, CheckCircle2, XCircle, Check, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Building2, MapPin, Users, AlertTriangle, Briefcase, Copy, Loader2, History, Info, Printer, DollarSign, FileText, CheckCircle2, XCircle, Check, ExternalLink, Car, User, Truck, Key, ShieldCheck } from 'lucide-react';
 import { Button } from './ui/Button';
-import { CnpjData } from '../types';
+import { CnpjData, FipeBrand, FipeModel, FipeYear, FipeResult } from '../types';
 
-// Mapeamento completo dos Sintegra/Cadastro Centralizado de Contribuintes (CCC) por Estado
+// URLs dos Sintegra Estaduais
 const SINTEGRA_URLS: Record<string, string> = {
   'AC': 'http://www.sefaz.ac.gov.br/sefaz/sintegra',
   'AL': 'http://sintegra.sefaz.al.gov.br/',
@@ -34,11 +34,333 @@ const SINTEGRA_URLS: Record<string, string> = {
   'SE': 'http://www.sefaz.se.gov.br/Site/Sintegra.aspx',
   'TO': 'http://sintegra.sefaz.to.gov.br/',
 };
-
-// URL genérica para fallback
 const CCC_GERAL = 'https://dfe-portal.svrs.rs.gov.br/NFE/CCC';
 
+type ModuleType = 'cpf' | 'veiculos' | 'cnpj';
+
 export const CnpjQuery: React.FC = () => {
+  const [activeModule, setActiveModule] = useState<ModuleType>('cnpj');
+
+  return (
+    <div className="h-full flex gap-2 overflow-hidden">
+      {/* Menu Lateral de Módulos */}
+      <div className="w-16 flex flex-col gap-2 win95-raised bg-win95-bg p-2 items-center shrink-0">
+        <button 
+          onClick={() => setActiveModule('cpf')}
+          className={`w-full aspect-square flex flex-col items-center justify-center gap-1 p-1 border-2 ${activeModule === 'cpf' ? 'border-black bg-white shadow-inner' : 'border-transparent hover:border-white hover:shadow-sm'}`}
+        >
+          <User size={24} className={activeModule === 'cpf' ? 'text-blue-600' : 'text-[#555]'} />
+          <span className="text-[8px] font-bold uppercase text-center leading-none">Motorista</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveModule('veiculos')}
+          className={`w-full aspect-square flex flex-col items-center justify-center gap-1 p-1 border-2 ${activeModule === 'veiculos' ? 'border-black bg-white shadow-inner' : 'border-transparent hover:border-white hover:shadow-sm'}`}
+        >
+          <Car size={24} className={activeModule === 'veiculos' ? 'text-blue-600' : 'text-[#555]'} />
+          <span className="text-[8px] font-bold uppercase text-center leading-none">Veículos</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveModule('cnpj')}
+          className={`w-full aspect-square flex flex-col items-center justify-center gap-1 p-1 border-2 ${activeModule === 'cnpj' ? 'border-black bg-white shadow-inner' : 'border-transparent hover:border-white hover:shadow-sm'}`}
+        >
+          <Building2 size={24} className={activeModule === 'cnpj' ? 'text-blue-600' : 'text-[#555]'} />
+          <span className="text-[8px] font-bold uppercase text-center leading-none">Empresas</span>
+        </button>
+      </div>
+
+      {/* Área de Conteúdo */}
+      <div className="flex-1 overflow-hidden h-full">
+        {activeModule === 'cpf' && <CpfModule />}
+        {activeModule === 'veiculos' && <VehicleModule />}
+        {activeModule === 'cnpj' && <CnpjModule />}
+      </div>
+    </div>
+  );
+};
+
+// --------------------------------------------------------------------------------
+// MÓDULO 1: CONSULTA DE MOTORISTA (CPF)
+// --------------------------------------------------------------------------------
+const CpfModule: React.FC = () => {
+  const [cpf, setCpf] = useState('');
+  const [status, setStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+  const [region, setRegion] = useState('');
+
+  const formatCPF = (val: string) => {
+    return val
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
+
+  const getRegion = (cpfClean: string) => {
+    const regionDigit = parseInt(cpfClean.charAt(8));
+    const regions = [
+      'Rio Grande do Sul',
+      'Distrito Federal, Goiás, Mato Grosso, Mato Grosso do Sul e Tocantins',
+      'Amazonas, Pará, Roraima, Amapá, Acre e Rondônia',
+      'Ceará, Maranhão e Piauí',
+      'Paraíba, Pernambuco, Alagoas e Rio Grande do Norte',
+      'Bahia e Sergipe',
+      'Minas Gerais',
+      'Rio de Janeiro e Espírito Santo',
+      'São Paulo',
+      'Paraná e Santa Catarina'
+    ];
+    return regions[regionDigit] || 'Desconhecida';
+  };
+
+  const validateCPF = () => {
+    const strCPF = cpf.replace(/\D/g, '');
+    if (strCPF.length !== 11 || /^(\d)\1+$/.test(strCPF)) {
+      setStatus('invalid');
+      setRegion('');
+      return;
+    }
+
+    let soma = 0;
+    let resto;
+    for (let i = 1; i <= 9; i++) soma = soma + parseInt(strCPF.substring(i - 1, i)) * (11 - i);
+    resto = (soma * 10) % 11;
+    if ((resto === 10) || (resto === 11)) resto = 0;
+    if (resto !== parseInt(strCPF.substring(9, 10))) {
+      setStatus('invalid');
+      return;
+    }
+
+    soma = 0;
+    for (let i = 1; i <= 10; i++) soma = soma + parseInt(strCPF.substring(i - 1, i)) * (12 - i);
+    resto = (soma * 10) % 11;
+    if ((resto === 10) || (resto === 11)) resto = 0;
+    if (resto !== parseInt(strCPF.substring(10, 11))) {
+      setStatus('invalid');
+      return;
+    }
+
+    setStatus('valid');
+    setRegion(getRegion(strCPF));
+  };
+
+  return (
+    <div className="h-full flex flex-col gap-4 bg-win95-bg p-4 win95-raised">
+      <div className="bg-[#000080] text-white px-2 py-1 text-sm font-bold flex items-center gap-2">
+        <User size={16} /> Consulta e Validação de Motorista
+      </div>
+
+      <div className="flex gap-4">
+        <div className="w-1/2 space-y-4">
+          <div className="win95-raised p-4 bg-[#d4d0c8]">
+            <label className="text-xs font-bold uppercase mb-2 block">CPF do Motorista:</label>
+            <div className="flex gap-2">
+              <input 
+                className="flex-1 win95-sunken px-2 py-1 text-lg font-mono font-bold"
+                placeholder="000.000.000-00"
+                value={cpf}
+                onChange={e => { setCpf(formatCPF(e.target.value)); setStatus('idle'); }}
+              />
+              <Button onClick={validateCPF} icon={<Check size={16} />}>VERIFICAR</Button>
+            </div>
+            <p className="text-[10px] text-gray-600 mt-2 italic">
+              * Apenas validação algorítmica e regional. Dados pessoais (Nome, Nascimento) são protegidos pela LGPD e não são retornados em APIs públicas.
+            </p>
+          </div>
+
+          {status !== 'idle' && (
+             <div className={`win95-sunken p-4 border-2 ${status === 'valid' ? 'bg-green-100 border-green-500' : 'bg-red-100 border-red-500'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  {status === 'valid' ? <ShieldCheck size={24} className="text-green-700"/> : <AlertTriangle size={24} className="text-red-700"/>}
+                  <span className={`text-lg font-black uppercase ${status === 'valid' ? 'text-green-800' : 'text-red-800'}`}>
+                    {status === 'valid' ? 'CPF Válido' : 'CPF Inválido'}
+                  </span>
+                </div>
+                {status === 'valid' && (
+                  <div className="space-y-2 mt-2 border-t border-green-300 pt-2">
+                    <div>
+                      <span className="text-xs font-bold text-green-800 uppercase block">Região Fiscal de Origem:</span>
+                      <span className="text-sm font-mono font-bold text-black">{region}</span>
+                    </div>
+                    <div>
+                       <span className="text-xs font-bold text-green-800 uppercase block">Formato:</span>
+                       <span className="text-sm font-mono text-black">{cpf}</span>
+                    </div>
+                  </div>
+                )}
+             </div>
+          )}
+        </div>
+
+        <div className="w-1/2 win95-sunken bg-white p-4 text-xs font-mono space-y-2">
+           <h4 className="font-bold border-b border-gray-300 mb-2">LOG DO SISTEMA</h4>
+           <p className="text-gray-500">Aguardando entrada de dados...</p>
+           {status === 'valid' && (
+             <>
+               <p className="text-blue-700">{`> Cálculo dos dígitos verificadores: OK`}</p>
+               <p className="text-blue-700">{`> Verificação de duplicidade: OK`}</p>
+               <p className="text-blue-700">{`> Identificação de 9º dígito: OK`}</p>
+               <p className="text-green-700 font-bold">{`> STATUS: REGULAR (Matematicamente)`}</p>
+             </>
+           )}
+           {status === 'invalid' && (
+             <p className="text-red-600 font-bold">{`> ERRO: Dígitos verificadores não conferem.`}</p>
+           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --------------------------------------------------------------------------------
+// MÓDULO 2: CONSULTA DE VEÍCULOS (FIPE)
+// --------------------------------------------------------------------------------
+const VehicleModule: React.FC = () => {
+  const [type, setType] = useState<'carros' | 'motos' | 'caminhoes'>('carros');
+  const [brands, setBrands] = useState<FipeBrand[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [models, setModels] = useState<FipeModel[]>([]);
+  const [selectedModel, setSelectedModel] = useState('');
+  const [years, setYears] = useState<FipeYear[]>([]);
+  const [selectedYear, setSelectedYear] = useState('');
+  const [result, setResult] = useState<FipeResult | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Carregar marcas ao mudar tipo
+  useEffect(() => {
+    setLoading(true);
+    setBrands([]); setSelectedBrand(''); setModels([]); setSelectedModel(''); setYears([]); setSelectedYear(''); setResult(null);
+    fetch(`https://parallelum.com.br/fipe/api/v1/${type}/marcas`)
+      .then(r => r.json())
+      .then(data => setBrands(data))
+      .catch(e => console.error(e))
+      .finally(() => setLoading(false));
+  }, [type]);
+
+  // Carregar modelos ao selecionar marca
+  useEffect(() => {
+    if (!selectedBrand) return;
+    setLoading(true);
+    fetch(`https://parallelum.com.br/fipe/api/v1/${type}/marcas/${selectedBrand}/modelos`)
+      .then(r => r.json())
+      .then(data => setModels(data.modelos))
+      .catch(e => console.error(e))
+      .finally(() => setLoading(false));
+  }, [selectedBrand, type]);
+
+  // Carregar anos ao selecionar modelo
+  useEffect(() => {
+    if (!selectedModel) return;
+    setLoading(true);
+    fetch(`https://parallelum.com.br/fipe/api/v1/${type}/marcas/${selectedBrand}/modelos/${selectedModel}/anos`)
+      .then(r => r.json())
+      .then(data => setYears(data))
+      .catch(e => console.error(e))
+      .finally(() => setLoading(false));
+  }, [selectedModel, selectedBrand, type]);
+
+  // Carregar resultado final
+  useEffect(() => {
+    if (!selectedYear) return;
+    setLoading(true);
+    fetch(`https://parallelum.com.br/fipe/api/v1/${type}/marcas/${selectedBrand}/modelos/${selectedModel}/anos/${selectedYear}`)
+      .then(r => r.json())
+      .then(data => setResult(data))
+      .catch(e => console.error(e))
+      .finally(() => setLoading(false));
+  }, [selectedYear, selectedModel, selectedBrand, type]);
+
+  return (
+    <div className="h-full flex flex-col gap-4 bg-win95-bg p-4 win95-raised">
+      <div className="bg-[#000080] text-white px-2 py-1 text-sm font-bold flex items-center gap-2">
+        <Car size={16} /> Consulta de Tabela FIPE
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
+        {/* Tipo */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold uppercase block">Tipo de Veículo</label>
+          <div className="flex flex-col gap-1">
+             <button onClick={() => setType('carros')} className={`text-left px-2 py-1 border-2 text-xs font-bold uppercase flex items-center gap-2 ${type === 'carros' ? 'win95-sunken bg-blue-100 border-blue-500' : 'win95-raised'}`}><Car size={14}/> Carros</button>
+             <button onClick={() => setType('motos')} className={`text-left px-2 py-1 border-2 text-xs font-bold uppercase flex items-center gap-2 ${type === 'motos' ? 'win95-sunken bg-blue-100 border-blue-500' : 'win95-raised'}`}><Key size={14}/> Motos</button>
+             <button onClick={() => setType('caminhoes')} className={`text-left px-2 py-1 border-2 text-xs font-bold uppercase flex items-center gap-2 ${type === 'caminhoes' ? 'win95-sunken bg-blue-100 border-blue-500' : 'win95-raised'}`}><Truck size={14}/> Caminhões</button>
+          </div>
+        </div>
+
+        {/* Marca */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold uppercase block">1. Marca</label>
+          <select 
+            className="w-full h-48 win95-sunken bg-white text-xs outline-none" 
+            multiple 
+            value={[selectedBrand]} 
+            onChange={e => setSelectedBrand(e.target.value)}
+          >
+            {brands.map(b => <option key={b.codigo} value={b.codigo}>{b.nome}</option>)}
+          </select>
+        </div>
+
+        {/* Modelo */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold uppercase block">2. Modelo</label>
+          <select 
+            className="w-full h-48 win95-sunken bg-white text-xs outline-none" 
+            multiple 
+            value={[selectedModel]} 
+            onChange={e => setSelectedModel(e.target.value)}
+            disabled={!selectedBrand}
+          >
+            {models.map(m => <option key={m.codigo} value={m.codigo}>{m.nome}</option>)}
+          </select>
+        </div>
+
+        {/* Ano */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold uppercase block">3. Ano</label>
+          <select 
+            className="w-full h-48 win95-sunken bg-white text-xs outline-none" 
+            multiple 
+            value={[selectedYear]} 
+            onChange={e => setSelectedYear(e.target.value)}
+            disabled={!selectedModel}
+          >
+            {years.map(y => <option key={y.codigo} value={y.codigo}>{y.nome}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Resultado */}
+      <div className="mt-auto win95-sunken bg-white p-4 h-32 flex items-center justify-center relative">
+        {loading && <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10"><Loader2 className="animate-spin text-blue-600"/></div>}
+        
+        {result ? (
+          <div className="w-full flex justify-between items-center px-8">
+             <div>
+                <div className="text-[10px] text-gray-500 font-bold uppercase mb-1">Veículo Selecionado</div>
+                <div className="text-lg font-black text-black">{result.Marca} {result.Modelo}</div>
+                <div className="text-sm font-bold text-gray-700">{result.AnoModelo} - {result.Combustivel}</div>
+             </div>
+             <div className="text-right">
+                <div className="text-[10px] text-gray-500 font-bold uppercase mb-1">Preço Médio (FIPE)</div>
+                <div className="text-3xl font-black text-green-700 bg-green-50 px-4 py-1 border border-green-200 shadow-inner inline-block">
+                  {result.Valor}
+                </div>
+                <div className="text-[9px] text-gray-400 mt-1">Cód. Fipe: {result.CodigoFipe} | Ref: {result.MesReferencia}</div>
+             </div>
+          </div>
+        ) : (
+          <div className="text-gray-300 font-black text-xl uppercase">Selecione os dados acima para consultar</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --------------------------------------------------------------------------------
+// MÓDULO 3: CONSULTA DE EMPRESAS (CNPJ - Lógica Original)
+// --------------------------------------------------------------------------------
+const CnpjModule: React.FC = () => {
   const [cnpjInput, setCnpjInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CnpjData | null>(null);
@@ -123,7 +445,6 @@ export const CnpjQuery: React.FC = () => {
     window.open(url, '_blank');
   };
 
-  // Componente interno para campo com cópia
   const DataField = ({ label, value, isMono = false, highlight = false, full = false }: { label: string, value: string | number | null | undefined, isMono?: boolean, highlight?: boolean, full?: boolean }) => {
     const [copied, setCopied] = useState(false);
     

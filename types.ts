@@ -197,6 +197,34 @@ export interface CnpjData {
   inscricao_estadual?: string; // Campo opcional, geralmente não retornado pela API federal
 }
 
+// Vehicle FIPE Types
+export interface FipeBrand {
+  codigo: string;
+  nome: string;
+}
+
+export interface FipeModel {
+  codigo: number;
+  nome: string;
+}
+
+export interface FipeYear {
+  codigo: string;
+  nome: string;
+}
+
+export interface FipeResult {
+  TipoVeiculo: number;
+  Valor: string;
+  Marca: string;
+  Modelo: string;
+  AnoModelo: number;
+  Combustivel: string;
+  CodigoFipe: string;
+  MesReferencia: string;
+  SiglaCombustivel: string;
+}
+
 // Brasil Tools Types
 export interface CepData {
   cep: string;
