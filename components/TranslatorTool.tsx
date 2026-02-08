@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Languages, ArrowRightLeft, Copy, Check, Sparkles, Loader2, Eraser } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -56,8 +55,9 @@ export const TranslatorTool: React.FC = () => {
         contents: prompt,
       });
 
-      if (response.response.text) {
-        setOutputText(response.response.text());
+      // CORREÇÃO: Acesso direto à propriedade .text conforme nova versão do SDK
+      if (response.text) {
+        setOutputText(response.text);
       }
     } catch (error) {
       console.error(error);

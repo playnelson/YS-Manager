@@ -161,7 +161,8 @@ export const DocumentGenerator: React.FC = () => {
         contents: systemPrompt,
       });
 
-      let text = response.response.text();
+      // CORREÇÃO: Acesso direto à propriedade .text
+      let text = response.text || '';
       // Limpeza básica se a IA retornar markdown code block
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();
       
@@ -213,8 +214,9 @@ export const DocumentGenerator: React.FC = () => {
         contents: generationPrompt,
       });
 
-      if (response.response.text) {
-        setGeneratedContent(response.response.text());
+      // CORREÇÃO: Acesso direto à propriedade .text
+      if (response.text) {
+        setGeneratedContent(response.text);
       }
     } catch (error) {
       console.error(error);
