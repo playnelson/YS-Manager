@@ -139,25 +139,92 @@ export interface ShiftConfig {
   segments: ShiftSegment[];
 }
 
-// CNPJ Data Type (BrasilAPI)
+// CNPJ Data Type (BrasilAPI Completo)
+export interface Cnae {
+  codigo: number;
+  descricao: string;
+}
+
+export interface Socio {
+  nome_socio: string;
+  cnpj_cpf_do_socio: string;
+  codigo_qualificacao_socio: number;
+  qualificacao_socio: string;
+  data_entrada_sociedade: string;
+  faixa_etaria?: string;
+}
+
 export interface CnpjData {
   cnpj: string;
+  identificador_matriz_filial: number;
+  descricao_matriz_filial: string;
   razao_social: string;
   nome_fantasia: string;
   situacao_cadastral: number;
+  descricao_situacao_cadastral: string;
+  data_situacao_cadastral: string;
+  motivo_situacao_cadastral: number;
+  nome_cidade_exterior: string | null;
+  codigo_natureza_juridica: number;
   data_inicio_atividade: string;
+  cnae_fiscal: number;
   cnae_fiscal_descricao: string;
+  descricao_tipo_de_logradouro: string;
   logradouro: string;
   numero: string;
+  complemento: string;
   bairro: string;
-  municipio: string;
-  uf: string;
   cep: string;
+  uf: string;
+  codigo_municipio: number;
+  municipio: string;
   ddd_telefone_1: string;
-  qsa: Array<{
-    nome_socio: string;
-    qualificacao_socio: string;
-  }>;
+  ddd_telefone_2: string;
+  ddd_fax: string;
+  email: string | null;
+  qualificacao_do_responsavel: number;
+  capital_social: number;
+  porte: number;
+  descricao_porte: string;
+  opcao_pelo_simples: boolean | null;
+  data_opcao_pelo_simples: string | null;
+  data_exclusao_do_simples: string | null;
+  opcao_pelo_mei: boolean | null;
+  situacao_especial: string | null;
+  data_situacao_especial: string | null;
+  cnaes_secundarios: Cnae[];
+  qsa: Socio[];
+}
+
+// Brasil Tools Types
+export interface CepData {
+  cep: string;
+  state: string;
+  city: string;
+  neighborhood: string;
+  street: string;
+  service: string;
+}
+
+export interface BankData {
+  ispb: string;
+  name: string;
+  code: number | null;
+  fullName: string;
+}
+
+export interface CurrencyQuote {
+  code: string;
+  codein: string;
+  name: string;
+  high: string;
+  low: string;
+  varBid: string;
+  pctChange: string;
+  bid: string;
+  ask: string;
+  timestamp: string;
+  create_date: string;
 }
 
 // Global App Data
