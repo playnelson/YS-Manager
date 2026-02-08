@@ -1,11 +1,10 @@
 
 import React, { useState } from 'react';
-import { Mail, PenTool, FileSearch2, Globe } from 'lucide-react';
-import { EmailTemplate, Signature, UserEvent, ProfessionalLink } from '../types';
+import { Mail, PenTool, FileSearch2 } from 'lucide-react';
+import { EmailTemplate, Signature, UserEvent } from '../types';
 import { EmailManager } from './EmailManager';
 import { SignatureManager } from './SignatureManager';
 import { PdfManager } from './PdfManager';
-import { ProfessionalLinks } from './ProfessionalLinks';
 import { Button } from './ui/Button';
 
 interface OfficeModuleProps {
@@ -14,8 +13,6 @@ interface OfficeModuleProps {
   signatures: Signature[];
   onSignatureChange: (signatures: Signature[]) => void;
   onAddEvent: (event: UserEvent) => void;
-  links: ProfessionalLink[];
-  onLinkChange: (links: ProfessionalLink[]) => void;
 }
 
 export const OfficeModule: React.FC<OfficeModuleProps> = ({
@@ -23,11 +20,9 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   onEmailChange,
   signatures,
   onSignatureChange,
-  onAddEvent,
-  links,
-  onLinkChange
+  onAddEvent
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'email' | 'signatures' | 'pdf' | 'links'>('email');
+  const [activeSubTab, setActiveSubTab] = useState<'email' | 'signatures' | 'pdf'>('email');
 
   return (
     <div className="h-full flex flex-col gap-2">
@@ -54,13 +49,6 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
         >
           Utilitários PDF
         </Button>
-        <Button 
-          onClick={() => setActiveSubTab('links')} 
-          className={activeSubTab === 'links' ? 'bg-white win95-sunken' : ''}
-          icon={<Globe size={14} />}
-        >
-          Diretório Web
-        </Button>
       </div>
 
       {/* Área de Conteúdo */}
@@ -74,9 +62,6 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
             )}
             {activeSubTab === 'pdf' && (
                 <PdfManager />
-            )}
-            {activeSubTab === 'links' && (
-                <ProfessionalLinks links={links} onChange={onLinkChange} />
             )}
         </div>
       </div>

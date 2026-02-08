@@ -94,6 +94,7 @@ export interface ProfessionalLink {
   title: string;
   url: string;
   category: string;
+  customIcon?: string; // Base64 ou URL customizada
 }
 
 // Extension / Ramal Types

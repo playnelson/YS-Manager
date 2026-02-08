@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Search } from 'lucide-react';
+import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Search, Globe } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
@@ -10,6 +10,7 @@ import { ConsultationModule } from './components/ConsultationModule';
 import { WhatsAppTool } from './components/WhatsAppTool';
 import { ExtensionsDirectory } from './components/ExtensionsDirectory';
 import { NotesModule } from './components/NotesModule';
+import { ProfessionalLinks } from './components/ProfessionalLinks';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
 import { Button } from './components/ui/Button';
@@ -22,6 +23,7 @@ const DEFAULT_TABS = [
   { id: 'notes_combined', label: 'Anotações', icon: <StickyNote size={14} /> },
   { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={14} /> },
   { id: 'office', label: 'Escritório', icon: <Briefcase size={14} /> },
+  { id: 'directory', label: 'Diretório', icon: <Globe size={14} /> },
   { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
   { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
   { id: 'consultas', label: 'Consultas', icon: <Search size={14} /> },
@@ -296,8 +298,14 @@ const App: React.FC = () => {
                       signatures={signatures}
                       onSignatureChange={setSignatures}
                       onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
-                      links={links}
-                      onLinkChange={setLinks}
+                    />
+                  )}
+
+                  {/* Módulo de Diretório Web (Grid de Ícones) */}
+                  {activeTab === 'directory' && (
+                    <ProfessionalLinks 
+                       links={links}
+                       onChange={setLinks}
                     />
                   )}
                   
@@ -314,7 +322,7 @@ const App: React.FC = () => {
       </div>
       
       <div className="mt-1 px-1 flex justify-between items-center text-[10px] text-[#555] font-bold">
-         <span className="flex-1 text-left">YSoffice v1.4.0</span>
+         <span className="flex-1 text-left">YSoffice v1.5.0</span>
          <span className="flex-1 text-center flex items-center justify-center gap-1">
            <ClockIcon size={10} /> {currentTime}
          </span>
