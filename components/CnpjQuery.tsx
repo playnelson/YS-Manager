@@ -4,20 +4,39 @@ import { Search, Building2, MapPin, Users, AlertTriangle, Briefcase, Copy, Loade
 import { Button } from './ui/Button';
 import { CnpjData } from '../types';
 
-// URLs dos Sintegra Estaduais
+// Mapeamento completo dos Sintegra/Cadastro Centralizado de Contribuintes (CCC) por Estado
 const SINTEGRA_URLS: Record<string, string> = {
-  'SP': 'https://pf.sintegra.sp.gov.br/consultaSintegra/consultar.do',
-  'RJ': 'http://www4.fazenda.rj.gov.br/sincad-web/index.jsf',
-  'MG': 'http://consultasintegra.fazenda.mg.gov.br/sintegra/',
-  'ES': 'http://www.sintegra.es.gov.br/',
+  'AC': 'http://www.sefaz.ac.gov.br/sefaz/sintegra',
+  'AL': 'http://sintegra.sefaz.al.gov.br/',
+  'AP': 'http://www.sefaz.ap.gov.br/sate/seg/SEGf_AcessarFuncao.jsp?cdFuncao=OA3C',
+  'AM': 'https://online.sefaz.am.gov.br/silt/Normas/Sintegra/Sintegra.asp',
   'BA': 'http://www.sefaz.ba.gov.br/scripts/cadastro/cadastroBa/consultaBa.asp',
-  'PR': 'http://www.sintegra.pr.gov.br/',
-  'SC': 'http://sistemas3.sef.sc.gov.br/sintegra/consulta_empresa_pesquisa.aspx',
-  'RS': 'https://www.sefaz.rs.gov.br/NFE/NFE-CCC.aspx',
-  'PE': 'http://www.sefaz.pe.gov.br/Publicacoes/Sintegra/Paginas/Consultas.aspx',
+  'CE': 'https://servicos.sefaz.ce.gov.br/internet/Sintegra/Sintegra.asp',
+  'DF': 'https://ww1.receita.fazenda.df.gov.br/consultar-situacao-fiscal',
+  'ES': 'http://www.sintegra.es.gov.br/',
   'GO': 'http://www.sefaz.go.gov.br/Sintegra/Consultar/Consultar.asp',
-  // Fallback genérico para outros estados ou links diretos
+  'MA': 'http://sistemas.sefaz.ma.gov.br/sintegra/jsp/consultaSintegra/consultaSintegra.jsf',
+  'MT': 'http://www.sefaz.mt.gov.br/acesso-web/sintegra/consultar',
+  'MS': 'http://www.sintegra.ms.gov.br/',
+  'MG': 'http://consultasintegra.fazenda.mg.gov.br/sintegra/',
+  'PA': 'https://app.sefa.pa.gov.br/Sintegra/',
+  'PB': 'https://www.sefaz.pb.gov.br/sintegra',
+  'PR': 'http://www.sintegra.pr.gov.br/',
+  'PE': 'http://www.sefaz.pe.gov.br/Publicacoes/Sintegra/Paginas/Consultas.aspx',
+  'PI': 'http://webas.sefaz.pi.gov.br/sintegra/',
+  'RJ': 'http://www4.fazenda.rj.gov.br/sincad-web/index.jsf',
+  'RN': 'https://uvt.set.rn.gov.br/#/home',
+  'RS': 'https://www.sefaz.rs.gov.br/NFE/NFE-CCC.aspx',
+  'RO': 'https://portalcontribuinte.sefin.ro.gov.br/Publico/ParametroPublica.jsp',
+  'RR': 'https://www.sefaz.rr.gov.br/',
+  'SC': 'http://sistemas3.sef.sc.gov.br/sintegra/consulta_empresa_pesquisa.aspx',
+  'SP': 'https://pf.sintegra.sp.gov.br/consultaSintegra/consultar.do',
+  'SE': 'http://www.sefaz.se.gov.br/Site/Sintegra.aspx',
+  'TO': 'http://sintegra.sefaz.to.gov.br/',
 };
+
+// URL genérica para fallback
+const CCC_GERAL = 'https://dfe-portal.svrs.rs.gov.br/NFE/CCC';
 
 export const CnpjQuery: React.FC = () => {
   const [cnpjInput, setCnpjInput] = useState('');
@@ -100,7 +119,7 @@ export const CnpjQuery: React.FC = () => {
 
   const openSintegra = () => {
     if (!data) return;
-    const url = SINTEGRA_URLS[data.uf] || 'http://www.sintegra.gov.br/';
+    const url = SINTEGRA_URLS[data.uf] || CCC_GERAL;
     window.open(url, '_blank');
   };
 
@@ -259,7 +278,7 @@ export const CnpjQuery: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Seção Inscrição Estadual */}
+                  {/* Seção Inscrição Estadual (Sintegra) */}
                   <div className="border-t border-gray-200 pt-4">
                     <div className="bg-blue-50 p-3 border border-blue-100 flex justify-between items-center">
                        <div>
@@ -267,11 +286,11 @@ export const CnpjQuery: React.FC = () => {
                            <Info size={14} /> Inscrição Estadual (IE)
                          </h3>
                          <p className="text-[10px] text-gray-600 mt-1 max-w-md">
-                           A Inscrição Estadual é um dado governado pelas Secretarias da Fazenda (SEFAZ) de cada estado e não consta na base federal da Receita.
+                           A Inscrição Estadual é um dado gerido pelas SEFAZ estaduais e não consta na base aberta federal. Utilize o atalho ao lado para consultar no sistema do estado <b>{data.uf}</b>.
                          </p>
                        </div>
-                       <Button onClick={openSintegra} icon={<ExternalLink size={14} />} className="shrink-0">
-                         CONSULTAR NO SINTEGRA / {data.uf}
+                       <Button onClick={openSintegra} icon={<ExternalLink size={14} />} className="shrink-0 bg-white border-blue-200 text-blue-800 hover:bg-blue-100">
+                         ACESSAR SINTEGRA / {data.uf}
                        </Button>
                     </div>
                   </div>
