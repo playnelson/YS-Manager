@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Landmark, DollarSign, Search, Loader2, ArrowUp, ArrowDown, Copy, ExternalLink, RefreshCw, Building2 } from 'lucide-react';
+import { MapPin, Landmark, DollarSign, Search, Loader2, ArrowUp, ArrowDown, Copy, ExternalLink, RefreshCw, Building2, Users, Phone, Mail, FileText, Briefcase, CheckCircle2, XCircle, Info, Check } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CepData, BankData, CurrencyQuote, CnpjData } from '../types';
 
@@ -147,12 +147,13 @@ const CepTool: React.FC = () => {
   );
 };
 
-// --- Sub-componente: CNPJ ---
+// --- Sub-componente: CNPJ Completo ---
 const CnpjTool: React.FC = () => {
   const [cnpj, setCnpj] = useState('');
   const [data, setData] = useState<CnpjData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resultTab, setResultTab] = useState<'resumo' | 'contato' | 'socios' | 'cnaes'>('resumo');
 
   const formatCnpj = (val: string) => {
     return val
@@ -163,6 +164,9 @@ const CnpjTool: React.FC = () => {
       .replace(/(\d{4})(\d)/, '$1-$2')
       .substring(0, 18);
   };
+
+  const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  const formatDate = (val: string | null) => val ? new Date(val).toLocaleDateString('pt-BR') : '-';
 
   const handleSearch = async () => {
     const cleanCnpj = cnpj.replace(/\D/g, '');
@@ -183,6 +187,7 @@ const CnpjTool: React.FC = () => {
       }
       const json = await res.json();
       setData(json);
+      setResultTab('resumo');
     } catch (err: any) {
       setError(err.message || 'Erro na conexão.');
     } finally {
@@ -192,90 +197,249 @@ const CnpjTool: React.FC = () => {
 
   const isAtiva = data?.descricao_situacao_cadastral === 'ATIVA';
 
+  // Componente de Campo de Dados Copiável
+  const DataField = ({ label, value, full = false, isMono = false, highlight = false }: { label: string, value: string | number | null, full?: boolean, isMono?: boolean, highlight?: boolean }) => {
+    const [copied, setCopied] = useState(false);
+    
+    if (!value && value !== 0) return null;
+    const displayValue = String(value);
+
+    const handleCopy = () => {
+      navigator.clipboard.writeText(displayValue);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    };
+
+    return (
+      <div className={`flex flex-col ${full ? 'col-span-2' : ''}`}>
+        <span className="text-[9px] font-bold text-[#555] uppercase">{label}</span>
+        <div className={`flex items-center justify-between border-b border-[#eee] pb-0.5 min-h-[1.25rem] group hover:bg-gray-50 transition-colors rounded-sm px-1 -ml-1`}>
+          <span className={`text-xs ${highlight ? 'font-black text-win95-blue' : 'font-bold text-black'} ${isMono ? 'font-mono' : ''} truncate pr-2`}>
+            {displayValue}
+          </span>
+          <button 
+            onClick={handleCopy}
+            className={`opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white hover:shadow-sm transition-all ${copied ? 'text-green-600' : 'text-gray-400'}`}
+            title="Copiar"
+          >
+            {copied ? <Check size={12} /> : <Copy size={12} />}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col gap-4">
-      <div className="win95-raised p-4 bg-win95-bg max-w-2xl mx-auto w-full flex flex-col h-full overflow-hidden">
-        <h3 className="text-xs font-black uppercase mb-3 flex items-center gap-2 shrink-0">
-          <Building2 size={14} /> Consulta de Empresas
-        </h3>
-        <div className="flex gap-2 mb-4 shrink-0">
-          <input 
-            className="flex-1 win95-sunken px-2 py-1 text-sm font-mono outline-none bg-white text-black font-bold"
-            placeholder="00.000.000/0001-00"
-            value={cnpj}
-            onChange={(e) => setCnpj(formatCnpj(e.target.value))}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            maxLength={18}
-          />
-          <Button onClick={handleSearch} disabled={loading} className="w-24">
-            {loading ? <Loader2 size={14} className="animate-spin" /> : 'BUSCAR'}
-          </Button>
+      <div className="win95-raised p-4 bg-win95-bg max-w-3xl mx-auto w-full flex flex-col h-full overflow-hidden">
+        {/* Header de Busca */}
+        <div className="shrink-0 mb-4">
+          <h3 className="text-xs font-black uppercase mb-3 flex items-center gap-2">
+            <Building2 size={14} /> Consulta de Empresas
+          </h3>
+          <div className="flex gap-2">
+            <input 
+              className="flex-1 win95-sunken px-2 py-1 text-sm font-mono outline-none bg-white text-black font-bold"
+              placeholder="00.000.000/0001-00"
+              value={cnpj}
+              onChange={(e) => setCnpj(formatCnpj(e.target.value))}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              maxLength={18}
+            />
+            <Button onClick={handleSearch} disabled={loading} className="w-24">
+              {loading ? <Loader2 size={14} className="animate-spin" /> : 'BUSCAR'}
+            </Button>
+          </div>
+          {error && (
+            <div className="win95-sunken bg-red-100 p-2 text-red-700 text-xs font-bold mt-2 text-center border-red-500">
+              {error}
+            </div>
+          )}
         </div>
 
-        {error && (
-           <div className="win95-sunken bg-red-100 p-2 text-red-700 text-xs font-bold mb-2 text-center border-red-500 shrink-0">
-             {error}
-           </div>
-        )}
-
+        {/* Área de Resultados */}
         {data && (
-          <div className="flex-1 overflow-y-auto custom-scrollbar win95-sunken bg-white p-3 space-y-3 animate-in fade-in zoom-in duration-200">
-             
-             {/* Cabeçalho Status */}
-             <div className="flex justify-between items-start border-b pb-2 mb-2">
-               <div>
+          <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+             {/* Cabeçalho da Empresa */}
+             <div className="win95-sunken bg-white p-3 mb-2 flex justify-between items-start shrink-0">
+               <div className="flex-1 min-w-0 mr-2">
                   <div className="text-[10px] font-bold text-[#555] uppercase">Razão Social</div>
-                  <div className="text-sm font-black text-win95-blue uppercase leading-tight">{data.razao_social}</div>
+                  <div className="text-sm font-black text-win95-blue uppercase leading-tight truncate" title={data.razao_social}>{data.razao_social}</div>
+                  <div className="text-xs font-bold text-gray-500 uppercase mt-1 truncate">{data.nome_fantasia || 'Sem Nome Fantasia'}</div>
                </div>
-               <div className={`px-2 py-1 text-[10px] font-bold text-white uppercase border ${isAtiva ? 'bg-green-600 border-green-800' : 'bg-red-600 border-red-800'}`}>
+               <div className={`px-2 py-1 text-[10px] font-bold text-white uppercase border shrink-0 ${isAtiva ? 'bg-green-600 border-green-800' : 'bg-red-600 border-red-800'}`}>
                  {data.descricao_situacao_cadastral}
                </div>
              </div>
 
-             <div className="grid grid-cols-2 gap-3">
-               <div>
-                 <label className="text-[9px] font-bold text-[#555] uppercase block">Nome Fantasia</label>
-                 <div className="text-xs font-bold text-black border-b border-[#eee] py-0.5">{data.nome_fantasia || '---'}</div>
-               </div>
-               <div>
-                 <label className="text-[9px] font-bold text-[#555] uppercase block">Data de Abertura</label>
-                 <div className="text-xs font-bold text-black border-b border-[#eee] py-0.5">{data.data_inicio_atividade ? new Date(data.data_inicio_atividade).toLocaleDateString('pt-BR') : '-'}</div>
-               </div>
+             {/* Navegação de Abas */}
+             <div className="flex gap-1 px-1 shrink-0">
+               {[
+                 { id: 'resumo', label: 'Resumo Geral', icon: <FileText size={12}/> },
+                 { id: 'contato', label: 'Endereço e Contato', icon: <MapPin size={12}/> },
+                 { id: 'socios', label: `Sócios (${data.qsa?.length || 0})`, icon: <Users size={12}/> },
+                 { id: 'cnaes', label: 'Atividades', icon: <Briefcase size={12}/> },
+               ].map(tab => (
+                 <button
+                   key={tab.id}
+                   onClick={() => setResultTab(tab.id as any)}
+                   className={`px-3 py-1.5 text-[10px] font-bold uppercase flex items-center gap-2 rounded-t-sm border-t-2 border-l-2 border-r-2 transition-none ${
+                     resultTab === tab.id 
+                       ? 'bg-[#c0c0c0] border-white border-r-[#808080] pb-2 -mb-[1px] relative z-10' 
+                       : 'bg-[#a0a0a0] border-white text-[#404040] hover:bg-[#b0b0b0]'
+                   }`}
+                 >
+                   {tab.icon} <span className="hidden sm:inline">{tab.label}</span>
+                 </button>
+               ))}
              </div>
 
-             <div>
-               <label className="text-[9px] font-bold text-[#555] uppercase block">Atividade Principal (CNAE)</label>
-               <div className="text-xs font-bold text-black border-b border-[#eee] py-0.5 uppercase">
-                 {data.cnae_fiscal} - {data.cnae_fiscal_descricao}
-               </div>
-             </div>
+             {/* Conteúdo da Aba */}
+             <div className="flex-1 win95-sunken bg-white p-4 overflow-y-auto custom-scrollbar border-t-white relative z-0">
+                
+                {resultTab === 'resumo' && (
+                  <div className="space-y-4">
+                     <div className="grid grid-cols-2 gap-4">
+                        <DataField label="CNPJ" value={formatCnpj(data.cnpj)} isMono highlight />
+                        <DataField label="Data de Abertura" value={formatDate(data.data_inicio_atividade)} />
+                        <DataField label="Natureza Jurídica" value={`${data.codigo_natureza_juridica} - Natureza Jurídica`} full />
+                        <DataField label="Porte da Empresa" value={data.descricao_porte || 'NÃO INFORMADO'} />
+                        <DataField label="Capital Social" value={formatCurrency(data.capital_social)} />
+                     </div>
 
-             <div className="bg-gray-50 p-2 border border-dotted border-gray-300">
-               <label className="text-[9px] font-bold text-[#555] uppercase block mb-1 flex items-center gap-1"><MapPin size={10}/> Endereço Registrado</label>
-               <div className="text-xs font-bold text-black uppercase">
-                 {data.logradouro}, {data.numero} {data.complemento}
-               </div>
-               <div className="text-xs text-black uppercase mb-2">
-                 {data.bairro} - {data.municipio} / {data.uf}
-               </div>
-               <div className="text-xs font-mono font-bold text-black">
-                 CEP: {data.cep}
-               </div>
-             </div>
+                     <div className="border-t border-gray-200 pt-2">
+                        <div className="grid grid-cols-2 gap-4">
+                           <div className="bg-gray-50 p-2 border border-gray-200">
+                             <div className="text-[9px] font-bold text-[#555] uppercase mb-1 flex items-center gap-1">
+                               Simples Nacional
+                             </div>
+                             <div className="flex items-center gap-2">
+                                {data.opcao_pelo_simples ? <CheckCircle2 size={14} className="text-green-600"/> : <XCircle size={14} className="text-gray-400"/>}
+                                <span className="text-xs font-bold">{data.opcao_pelo_simples ? `Optante (${formatDate(data.data_opcao_pelo_simples)})` : 'Não Optante'}</span>
+                             </div>
+                           </div>
+                           <div className="bg-gray-50 p-2 border border-gray-200">
+                             <div className="text-[9px] font-bold text-[#555] uppercase mb-1 flex items-center gap-1">
+                               MEI (Microempreendedor)
+                             </div>
+                             <div className="flex items-center gap-2">
+                                {data.opcao_pelo_mei ? <CheckCircle2 size={14} className="text-green-600"/> : <XCircle size={14} className="text-gray-400"/>}
+                                <span className="text-xs font-bold">{data.opcao_pelo_mei ? 'Sim' : 'Não'}</span>
+                             </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                )}
 
-             <div className="pt-1 flex justify-end">
-                <a 
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${data.logradouro}, ${data.numero} - ${data.municipio}, ${data.uf}`)}`} 
-                  target="_blank"
-                  rel="noreferrer"
-                  className="win95-btn px-2 py-1 text-[10px] font-bold flex items-center gap-1 bg-win95-bg text-black no-underline"
-                >
-                  <ExternalLink size={10} /> Localizar no Mapa
-                </a>
+                {resultTab === 'contato' && (
+                  <div className="space-y-4">
+                     <div>
+                       <h4 className="text-[10px] font-black uppercase text-win95-blue mb-2 flex items-center gap-1"><MapPin size={10}/> Localização</h4>
+                       <div className="bg-gray-50 p-3 border border-gray-200 grid grid-cols-2 gap-4">
+                          <DataField label="Logradouro" value={`${data.descricao_tipo_de_logradouro} ${data.logradouro}`} />
+                          <DataField label="Número" value={data.numero} />
+                          <DataField label="Complemento" value={data.complemento} />
+                          <DataField label="Bairro" value={data.bairro} />
+                          <DataField label="Município / UF" value={`${data.municipio} - ${data.uf}`} />
+                          <DataField label="CEP" value={data.cep} isMono />
+                       </div>
+                       <div className="mt-2 text-right">
+                          <a 
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${data.logradouro}, ${data.numero} - ${data.municipio}, ${data.uf}`)}`} 
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-win95-blue hover:underline"
+                          >
+                            <ExternalLink size={10} /> Ver no Google Maps
+                          </a>
+                       </div>
+                     </div>
+
+                     <div>
+                       <h4 className="text-[10px] font-black uppercase text-win95-blue mb-2 flex items-center gap-1"><Phone size={10}/> Contatos</h4>
+                       <div className="grid grid-cols-2 gap-4">
+                          <DataField label="Telefone Primário" value={data.ddd_telefone_1} />
+                          <DataField label="Telefone Secundário" value={data.ddd_telefone_2} />
+                          <DataField label="E-mail" value={data.email} full highlight />
+                       </div>
+                     </div>
+                  </div>
+                )}
+
+                {resultTab === 'socios' && (
+                  <div>
+                    {data.qsa && data.qsa.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-2">
+                         {data.qsa.map((socio, idx) => (
+                           <div key={idx} className="win95-raised p-2 bg-gray-50 flex flex-col sm:flex-row justify-between gap-4 group hover:bg-white">
+                              <div className="flex-1">
+                                <DataField label="Nome / Razão Social" value={socio.nome_socio} highlight />
+                              </div>
+                              <div className="flex-1">
+                                <DataField label="Qualificação" value={socio.qualificacao_socio} />
+                              </div>
+                              <div className="w-24">
+                                <DataField label="Entrada" value={formatDate(socio.data_entrada_sociedade)} isMono />
+                              </div>
+                           </div>
+                         ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-center text-xs text-gray-500 italic border border-dashed border-gray-300">
+                        Nenhum sócio informado na base de dados (comum para MEIs ou Natureza Jurídica Específica).
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {resultTab === 'cnaes' && (
+                  <div className="space-y-4">
+                    <div>
+                      <div className="bg-win95-blue text-white px-2 py-1 text-[10px] font-bold uppercase mb-2">Atividade Principal</div>
+                      <div className="p-3 border-2 border-win95-blue bg-blue-50 group hover:bg-white transition-colors">
+                         <div className="text-lg font-mono font-black text-win95-blue mb-1 flex justify-between items-center">
+                            {data.cnae_fiscal}
+                            <button 
+                                onClick={() => { navigator.clipboard.writeText(`${data.cnae_fiscal} - ${data.cnae_fiscal_descricao}`) }}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-blue-100 rounded text-blue-500"
+                            >
+                                <Copy size={16} />
+                            </button>
+                         </div>
+                         <div className="text-sm font-bold leading-tight uppercase">{data.cnae_fiscal_descricao}</div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="bg-[#808080] text-white px-2 py-1 text-[10px] font-bold uppercase mb-2">Atividades Secundárias ({data.cnaes_secundarios?.length || 0})</div>
+                      {data.cnaes_secundarios && data.cnaes_secundarios.length > 0 ? (
+                        <div className="max-h-[200px] overflow-y-auto border border-gray-300 bg-gray-50 divide-y divide-gray-200">
+                          {data.cnaes_secundarios.map((cnae) => (
+                            <div key={cnae.codigo} className="p-2 hover:bg-white transition-colors group">
+                               <div className="flex items-start gap-2">
+                                 <span className="font-mono font-bold text-xs text-[#666]">{cnae.codigo}</span>
+                                 <span className="text-xs font-medium leading-tight uppercase flex-1">{cnae.descricao}</span>
+                                 <button 
+                                    onClick={() => { navigator.clipboard.writeText(`${cnae.codigo} - ${cnae.descricao}`) }}
+                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 rounded text-gray-500"
+                                >
+                                    <Copy size={12} />
+                                </button>
+                               </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-2 text-xs text-gray-500 italic">Nenhuma atividade secundária.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
              </div>
              
-             <div className="text-[9px] text-[#555] text-center mt-2 border-t pt-2">
-               Dados fornecidos pela Receita Federal via BrasilAPI
+             <div className="text-[9px] text-[#555] text-center mt-2 border-t pt-2 shrink-0">
+               Dados oficiais da Receita Federal via BrasilAPI
              </div>
           </div>
         )}

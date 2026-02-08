@@ -1,19 +1,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch2, Repeat, Briefcase, PenTool, GripVertical } from 'lucide-react';
+import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Landmark } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
-import { CalendarTool } from './components/CalendarTool';
-import { EmailManager } from './components/EmailManager';
+import { CalendarModule } from './components/CalendarModule';
+import { OfficeModule } from './components/OfficeModule';
 import { WhatsAppTool } from './components/WhatsAppTool';
-import { ProfessionalLinks } from './components/ProfessionalLinks';
 import { ExtensionsDirectory } from './components/ExtensionsDirectory';
 import { NotesModule } from './components/NotesModule';
-import { PdfManager } from './components/PdfManager';
-import { ShiftManager } from './components/ShiftManager';
 import { BrasilTools } from './components/BrasilTools';
-import { SignatureManager } from './components/SignatureManager';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
 import { Button } from './components/ui/Button';
@@ -25,15 +21,11 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 const DEFAULT_TABS = [
   { id: 'notes_combined', label: 'Anotações', icon: <StickyNote size={14} /> },
   { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={14} /> },
-  { id: 'shifts', label: 'Escalas', icon: <Repeat size={14} /> },
+  { id: 'office', label: 'Escritório', icon: <Briefcase size={14} /> },
   { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
-  { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
   { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
-  { id: 'signatures', label: 'Assinador', icon: <PenTool size={14} /> },
-  { id: 'pdf', label: 'PDF', icon: <FileSearch2 size={14} /> },
-  { id: 'brtools', label: 'Serviços BR', icon: <Briefcase size={14} /> },
+  { id: 'brtools', label: 'Serviços BR', icon: <Landmark size={14} /> },
   { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
-  { id: 'links', label: 'Diretório', icon: <Globe size={14} /> },
   { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={14} /> },
 ];
 
@@ -76,6 +68,8 @@ const App: React.FC = () => {
     if (savedOrder) {
       try {
         const parsedOrder = JSON.parse(savedOrder) as string[];
+        
+        // Filtra abas que ainda existem no sistema novo
         const reorderedTabs = parsedOrder
           .map(id => DEFAULT_TABS.find(t => t.id === id))
           .filter(Boolean) as typeof DEFAULT_TABS;
@@ -283,24 +277,42 @@ const App: React.FC = () => {
                     />
                   )}
                   
-                  {activeTab === 'calendar' && <CalendarTool config={calendarConfig} events={calendarEvents} onConfigChange={setCalendarConfig} onEventsChange={setCalendarEvents} />}
-                  {activeTab === 'shifts' && <ShiftManager config={shiftConfig} onChange={setShiftConfig} />}
+                  {activeTab === 'calendar' && (
+                    <CalendarModule 
+                       calendarConfig={calendarConfig}
+                       onCalendarConfigChange={setCalendarConfig}
+                       events={calendarEvents}
+                       onEventsChange={setCalendarEvents}
+                       shiftConfig={shiftConfig}
+                       onShiftConfigChange={setShiftConfig}
+                    />
+                  )}
+                  
+                  {/* Módulo Unificado de Escritório */}
+                  {activeTab === 'office' && (
+                    <OfficeModule 
+                      emails={emails}
+                      onEmailChange={setEmails}
+                      signatures={signatures}
+                      onSignatureChange={setSignatures}
+                      onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
+                      links={links}
+                      onLinkChange={setLinks}
+                    />
+                  )}
+                  
                   {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
                   {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
-                  {activeTab === 'email' && <EmailManager emails={emails} onChange={setEmails} />}
-                  {activeTab === 'links' && <ProfessionalLinks links={links} onChange={setLinks} />}
                   {activeTab === 'whatsapp' && <WhatsAppTool />}
                   {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
-                  {activeTab === 'pdf' && <PdfManager />}
                   {activeTab === 'brtools' && <BrasilTools />}
-                  {activeTab === 'signatures' && <SignatureManager signatures={signatures} onChange={setSignatures} onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])} />}
                 </div>
              </div>
         </div>
       </div>
       
       <div className="mt-1 px-1 flex justify-between items-center text-[10px] text-[#555] font-bold">
-         <span className="flex-1 text-left">YSoffice v1.3.0</span>
+         <span className="flex-1 text-left">YSoffice v1.4.0</span>
          <span className="flex-1 text-center flex items-center justify-center gap-1">
            <ClockIcon size={10} /> {currentTime}
          </span>

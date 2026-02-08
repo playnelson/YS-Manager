@@ -37,7 +37,7 @@ export const NotesModule: React.FC<NotesModuleProps> = ({
           className={activeSubTab === 'docs' ? 'bg-white win95-sunken' : ''}
           icon={<FileText size={14} />}
         >
-          Meus Documentos
+          Anotações
         </Button>
       </div>
 

@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, Loader2, Info, Plus, Trash2, Calendar as CalendarIcon, Bell, Users, Cake, Target } from 'lucide-react';
-import { CalendarConfig, Holiday, UserEvent } from '../types';
+import { ChevronLeft, ChevronRight, MapPin, Loader2, Info, Plus, Trash2, Calendar as CalendarIcon, Bell, Users, Cake, Target, Sun, Moon, Coffee, Clock } from 'lucide-react';
+import { CalendarConfig, Holiday, UserEvent, ShiftConfig } from '../types';
 import { Button } from './ui/Button';
 
 interface CalendarToolProps {
   config: CalendarConfig;
   events: UserEvent[];
+  shiftConfig?: ShiftConfig;
   onConfigChange: (config: CalendarConfig) => void;
   onEventsChange: (events: UserEvent[]) => void;
 }
@@ -20,7 +21,7 @@ const STATE_HOLIDAYS_DB: Record<string, { day: number, month: number, name: stri
   'RS': [{ day: 20, month: 9, name: 'Revolução Farroupilha' }],
 };
 
-export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [], onConfigChange, onEventsChange }) => {
+export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [], shiftConfig, onConfigChange, onEventsChange }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +32,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
+  // --- Lógica de Feriados ---
   const calculateDynamicDates = (y: number): Holiday[] => {
     const dates: Holiday[] = [];
     const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), pascoaMonth = Math.floor((h + l - 7 * m + 114) / 31), pascoaDay = ((h + l - 7 * m + 114) % 31) + 1;
@@ -48,55 +50,24 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
   const fetchHolidays = async () => {
     setIsLoading(true);
     try {
-      // Busca Feriados Nacionais via BrasilAPI
       const response = await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`);
       let apiHolidays: Holiday[] = [];
-      
       if (response.ok) {
         const apiData = await response.json();
-        apiHolidays = Array.isArray(apiData) 
-          ? apiData.map((h: any) => ({ date: h.date, name: h.name, type: 'national' })) 
-          : [];
+        apiHolidays = Array.isArray(apiData) ? apiData.map((h: any) => ({ date: h.date, name: h.name, type: 'national' })) : [];
       }
-
-      // Feriados Estaduais (Base Local)
       const stateHolidaysRaw = STATE_HOLIDAYS_DB[config.uf] || [];
       const stateHolidays: Holiday[] = stateHolidaysRaw.map(sh => ({
         date: `${year}-${String(sh.month).padStart(2, '0')}-${String(sh.day).padStart(2, '0')}`,
         name: sh.name,
         type: 'state'
       }));
-
-      // Feriados Dinâmicos (Cálculo Matemático)
       const dynamicHolidays = calculateDynamicDates(year);
-
-      // Lista final mesclada
       const finalHolidays: Holiday[] = [...apiHolidays];
-
-      // Adiciona estaduais se não houver colisão de data com nacionais
-      stateHolidays.forEach(sh => {
-        if (!finalHolidays.some(fh => fh.date === sh.date)) {
-          finalHolidays.push(sh);
-        }
-      });
-
-      // Adiciona dinâmicos (Páscoa, etc) se não estiverem na API (evita duplicação)
-      dynamicHolidays.forEach(dh => {
-        // Verifica colisão por data OU por nome similar (ex: "Carnaval" vs "Carnaval")
-        const exists = finalHolidays.some(fh => 
-          fh.date === dh.date || 
-          fh.name.toLowerCase().includes(dh.name.toLowerCase())
-        );
-        if (!exists) {
-          finalHolidays.push(dh);
-        }
-      });
-
+      stateHolidays.forEach(sh => { if (!finalHolidays.some(fh => fh.date === sh.date)) finalHolidays.push(sh); });
+      dynamicHolidays.forEach(dh => { if (!finalHolidays.some(fh => fh.date === dh.date || fh.name.toLowerCase().includes(dh.name.toLowerCase()))) finalHolidays.push(dh); });
       setHolidays(finalHolidays);
-
     } catch (e) {
-      console.error("Erro ao carregar feriados:", e);
-      // Fallback em caso de erro na API
       setHolidays(calculateDynamicDates(year));
     } finally {
       setIsLoading(false);
@@ -104,6 +75,60 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
   };
 
   useEffect(() => { fetchHolidays(); }, [year, config.uf]);
+
+  // --- Lógica de Projeção de Escala (Integrada) ---
+  const projectedShifts = useMemo(() => {
+    if (!shiftConfig || !shiftConfig.segments.length) return new Map();
+
+    const startDate = new Date(shiftConfig.startDate + 'T00:00:00');
+    const segments = shiftConfig.segments;
+    const cycleDuration = segments.reduce((acc, s) => acc + s.days, 0);
+    if (cycleDuration === 0) return new Map();
+
+    const calendarStart = new Date(year, month, 1);
+    const calendarEnd = new Date(year, month + 1, 0);
+    const result = new Map();
+
+    const diffTime = calendarStart.getTime() - startDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    let currentDayInCycle = 0;
+    if (diffDays > 0) {
+      currentDayInCycle = diffDays % cycleDuration;
+    } else {
+       // Se o calendário está ANTES do início da escala, precisamos lidar com datas negativas no ciclo
+       // Mas para simplicidade, só renderizamos do startDate para frente.
+       // Se diffDays < 0, vamos começar a renderizar apenas quando projectionDate >= startDate
+    }
+
+    const projectionDate = new Date(calendarStart);
+    
+    // Itera por todos os dias do mês visualizado
+    for (let i = 1; i <= calendarEnd.getDate(); i++) {
+        const dateStr = projectionDate.toISOString().split('T')[0];
+        
+        // Verifica se data é válida (>= startDate)
+        if (projectionDate >= startDate) {
+            // Calcula dia no ciclo
+            const timeFromStart = projectionDate.getTime() - startDate.getTime();
+            const daysFromStart = Math.floor(timeFromStart / (1000 * 60 * 60 * 24));
+            const dayInCycle = daysFromStart % cycleDuration;
+
+            let tempDays = 0;
+            let targetSegment = segments[0];
+            for (const seg of segments) {
+                tempDays += seg.days;
+                if (dayInCycle < tempDays) {
+                    targetSegment = seg;
+                    break;
+                }
+            }
+            result.set(dateStr, targetSegment);
+        }
+        projectionDate.setDate(projectionDate.getDate() + 1);
+    }
+    return result;
+  }, [shiftConfig, year, month]);
 
   const daysInMonth = useMemo(() => {
     const start = new Date(year, month, 1);
@@ -116,11 +141,12 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
         day: i,
         date: dateStr,
         holidays: holidays.filter(h => h.date === dateStr),
-        userEvents: events.filter(e => e.date === dateStr)
+        userEvents: events.filter(e => e.date === dateStr),
+        shift: projectedShifts.get(dateStr)
       });
     }
     return days;
-  }, [year, month, holidays, events]);
+  }, [year, month, holidays, events, projectedShifts]);
 
   const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,10 +168,13 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
   };
 
   const selectedData = useMemo(() => {
-    const hols = holidays.filter(h => h.date === selectedDayStr);
-    const evs = events.filter(e => e.date === selectedDayStr);
-    return { hols, evs };
-  }, [selectedDayStr, holidays, events]);
+    const dayObj = daysInMonth.find(d => d && d.date === selectedDayStr);
+    return { 
+        hols: dayObj?.holidays || [], 
+        evs: dayObj?.userEvents || [],
+        shift: dayObj?.shift
+    };
+  }, [selectedDayStr, daysInMonth]);
 
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -158,7 +187,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
 
   return (
     <div className="h-full flex flex-col gap-2 bg-win95-bg">
-      {/* Barra de Ferramentas Estilo Toolbar Clássica */}
+      {/* Barra de Ferramentas */}
       <div className="win95-raised p-1.5 flex flex-wrap items-center gap-3 bg-win95-bg border-b-2 border-win95-shadow">
         <div className="flex items-center gap-2 px-2 border-r border-win95-shadow">
           <MapPin size={14} className="text-win95-blue" />
@@ -215,28 +244,45 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
               const hasItems = dayObj.holidays.length > 0 || dayObj.userEvents.length > 0;
               const isWeekend = [0, 6].includes(i % 7);
               
+              // Lógica de Shift
+              const shift = dayObj.shift;
+              const isWork = shift?.type === 'work';
+              const isOff = shift?.type === 'off';
+              const isNight = isWork && parseInt(shift?.startTime?.split(':')[0] || '0') >= 18;
+
               return (
                 <div 
                   key={dayObj.date} 
                   onClick={() => setSelectedDayStr(dayObj.date)}
                   className={`relative flex flex-col p-1 cursor-pointer transition-all select-none
                     ${isSelected ? 'win95-sunken bg-white ring-1 ring-inset ring-win95-blue' : 'win95-raised bg-win95-bg hover:bg-[#e0e0e0]'}
-                    ${isToday ? 'bg-yellow-50 font-bold' : ''}`}
+                    ${isToday ? 'bg-yellow-50 font-bold' : ''}
+                    ${isWork ? (isNight ? 'bg-[#e0e0ff]' : 'bg-[#e0f0ff]') : ''}
+                  `}
                 >
                   <div className="flex justify-between items-start">
                     <span className={`text-[11px] font-black leading-none ${isWeekend ? 'text-red-700' : 'text-black'} ${isToday ? 'bg-win95-blue text-white px-1' : ''}`}>
                       {dayObj.day}
                     </span>
-                    {hasItems && <div className="w-1.5 h-1.5 rounded-full bg-win95-blue shadow-sm animate-pulse" />}
+                    {hasItems && <div className="w-1.5 h-1.5 rounded-full bg-win95-blue shadow-sm" />}
                   </div>
 
-                  <div className="mt-1 space-y-[1px] overflow-hidden">
-                    {dayObj.holidays.slice(0, 1).map((h, idx) => (
+                  {/* Indicadores Visuais */}
+                  <div className="mt-1 space-y-[1px] overflow-hidden flex-1">
+                     {/* Indicador de Turno */}
+                     {shift && (
+                        <div className={`text-[7px] font-black uppercase px-1 flex items-center gap-1 mb-0.5 ${isWork ? (isNight ? 'text-indigo-800' : 'text-blue-800') : 'text-gray-500 italic'}`}>
+                           {isWork ? (isNight ? <Moon size={8}/> : <Sun size={8}/>) : <Coffee size={8}/>}
+                           <span className="truncate">{isWork ? shift.startTime : 'FOLGA'}</span>
+                        </div>
+                     )}
+
+                     {dayObj.holidays.slice(0, 1).map((h, idx) => (
                       <div key={idx} className="bg-red-700 text-white text-[7px] px-1 truncate uppercase font-black tracking-tighter shadow-sm border border-red-900">
                         {h.name}
                       </div>
                     ))}
-                    {dayObj.userEvents.slice(0, 1).map((e, idx) => (
+                    {dayObj.userEvents.slice(0, 2).map((e, idx) => (
                       <div key={idx} className="bg-win95-blue text-white text-[7px] px-1 truncate font-black uppercase tracking-tighter shadow-sm border border-blue-900">
                         {e.title}
                       </div>
@@ -254,11 +300,12 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
             <div className="bg-win95-blue text-white px-2 py-1 text-[11px] font-black uppercase flex justify-between items-center shadow-md">
               <div className="flex items-center gap-2">
                 <CalendarIcon size={12} />
-                <span>Agenda do Dia</span>
+                <span>Agenda Detalhada</span>
               </div>
               <button 
                 onClick={() => setIsAddModalOpen(true)}
                 className="win95-raised bg-win95-bg text-black p-0.5 hover:bg-white active:shadow-none"
+                title="Adicionar Evento"
               >
                 <Plus size={12} />
               </button>
@@ -273,7 +320,27 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
               </div>
 
               <div className="space-y-3">
-                {selectedData.hols.length === 0 && selectedData.evs.length === 0 && (
+                
+                {/* Card de Turno de Trabalho */}
+                {selectedData.shift && (
+                    <div className={`win95-raised p-2 border-l-[6px] shadow-sm ${selectedData.shift.type === 'work' ? (parseInt(selectedData.shift.startTime?.split(':')[0] || '0') >= 18 ? 'bg-[#2a2a4a] text-white border-l-indigo-500' : 'bg-blue-50 text-black border-l-blue-600') : 'bg-gray-100 text-gray-500 border-l-gray-400'}`}>
+                        <div className="flex items-center gap-1 mb-1 border-b border-white/20 pb-1">
+                             {selectedData.shift.type === 'work' ? (parseInt(selectedData.shift.startTime?.split(':')[0] || '0') >= 18 ? <Moon size={12} /> : <Sun size={12} />) : <Coffee size={12}/>}
+                             <span className="text-[10px] font-black uppercase">{selectedData.shift.type === 'work' ? 'Turno de Trabalho' : 'Dia de Folga'}</span>
+                        </div>
+                        {selectedData.shift.type === 'work' ? (
+                            <div className="flex justify-between items-center text-xs font-mono font-bold">
+                                <span>{selectedData.shift.startTime}</span>
+                                <span className="opacity-50">Até</span>
+                                <span>{selectedData.shift.endTime}</span>
+                            </div>
+                        ) : (
+                            <div className="text-[10px] italic">Aproveite seu descanso!</div>
+                        )}
+                    </div>
+                )}
+
+                {selectedData.hols.length === 0 && selectedData.evs.length === 0 && !selectedData.shift && (
                   <div className="flex flex-col items-center justify-center py-10 opacity-30 grayscale">
                     <Info size={32} />
                     <span className="text-[9px] font-bold uppercase mt-2">Sem compromissos</span>
@@ -312,8 +379,8 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
             </div>
             
             <div className="p-2 bg-win95-bg border-t border-white text-[10px] font-bold text-win95-shadow flex justify-between uppercase italic">
-              <span>YS-Agendador v2.0</span>
-              <span>{events.length} Totais</span>
+              <span>YS-Agendador Integrado</span>
+              <span>{events.length} Eventos</span>
             </div>
           </div>
         </div>
