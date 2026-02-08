@@ -1,8 +1,23 @@
 
 import React, { useState } from 'react';
-import { Search, Building2, MapPin, Users, AlertTriangle, Briefcase, Copy, Loader2, History, Info, Printer, DollarSign, FileText, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, Building2, MapPin, Users, AlertTriangle, Briefcase, Copy, Loader2, History, Info, Printer, DollarSign, FileText, CheckCircle2, XCircle, Check, ExternalLink } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CnpjData } from '../types';
+
+// URLs dos Sintegra Estaduais
+const SINTEGRA_URLS: Record<string, string> = {
+  'SP': 'https://pf.sintegra.sp.gov.br/consultaSintegra/consultar.do',
+  'RJ': 'http://www4.fazenda.rj.gov.br/sincad-web/index.jsf',
+  'MG': 'http://consultasintegra.fazenda.mg.gov.br/sintegra/',
+  'ES': 'http://www.sintegra.es.gov.br/',
+  'BA': 'http://www.sefaz.ba.gov.br/scripts/cadastro/cadastroBa/consultaBa.asp',
+  'PR': 'http://www.sintegra.pr.gov.br/',
+  'SC': 'http://sistemas3.sef.sc.gov.br/sintegra/consulta_empresa_pesquisa.aspx',
+  'RS': 'https://www.sefaz.rs.gov.br/NFE/NFE-CCC.aspx',
+  'PE': 'http://www.sefaz.pe.gov.br/Publicacoes/Sintegra/Paginas/Consultas.aspx',
+  'GO': 'http://www.sefaz.go.gov.br/Sintegra/Consultar/Consultar.asp',
+  // Fallback genérico para outros estados ou links diretos
+};
 
 export const CnpjQuery: React.FC = () => {
   const [cnpjInput, setCnpjInput] = useState('');
@@ -71,10 +86,6 @@ export const CnpjQuery: React.FC = () => {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
   const isAtiva = (status: number) => status === 2;
 
   const getPorteLabel = (porte: number) => {
@@ -85,6 +96,42 @@ export const CnpjQuery: React.FC = () => {
       case 5: return "DEMAIS";
       default: return `CÓDIGO ${porte}`;
     }
+  };
+
+  const openSintegra = () => {
+    if (!data) return;
+    const url = SINTEGRA_URLS[data.uf] || 'http://www.sintegra.gov.br/';
+    window.open(url, '_blank');
+  };
+
+  // Componente interno para campo com cópia
+  const DataField = ({ label, value, isMono = false, highlight = false, full = false }: { label: string, value: string | number | null | undefined, isMono?: boolean, highlight?: boolean, full?: boolean }) => {
+    const [copied, setCopied] = useState(false);
+    
+    if (!value && value !== 0) return null;
+    const displayValue = String(value);
+
+    const handleCopy = () => {
+      navigator.clipboard.writeText(displayValue);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    };
+
+    return (
+      <div className={`space-y-0.5 ${full ? 'col-span-full' : ''}`}>
+        <label className="text-[9px] font-bold text-[#666] uppercase block">{label}</label>
+        <div className={`text-sm flex items-center justify-between group ${highlight ? 'font-black text-blue-900' : 'font-bold text-black'} ${isMono ? 'font-mono' : ''} border-b border-transparent hover:border-gray-300 hover:bg-gray-50 rounded-sm px-1 -ml-1`}>
+          <span className="truncate pr-2">{displayValue}</span>
+          <button 
+            onClick={handleCopy} 
+            className={`p-1 rounded hover:bg-white hover:shadow-sm transition-all ${copied ? 'text-green-600' : 'text-gray-400 opacity-0 group-hover:opacity-100'}`}
+            title="Copiar"
+          >
+            {copied ? <Check size={12} /> : <Copy size={12} />}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -152,12 +199,14 @@ export const CnpjQuery: React.FC = () => {
           <div className="flex flex-col h-full">
             {/* Header Fixo */}
             <div className="bg-win95-blue p-3 text-white flex justify-between items-start mb-2 shadow-md shrink-0">
-               <div>
-                 <div className="text-[10px] font-mono opacity-80 mb-0.5">Ficha Cadastral # {formatCnpj(data.cnpj)}</div>
-                 <div className="text-lg font-black uppercase leading-none">{data.razao_social}</div>
-                 <div className="text-xs font-bold opacity-80 mt-1">{data.nome_fantasia || '---'}</div>
+               <div className="flex-1 min-w-0 mr-4">
+                 <div className="text-[10px] font-mono opacity-80 mb-0.5 flex items-center gap-2">
+                   Ficha Cadastral # {formatCnpj(data.cnpj)}
+                 </div>
+                 <div className="text-lg font-black uppercase leading-none truncate" title={data.razao_social}>{data.razao_social}</div>
+                 <div className="text-xs font-bold opacity-80 mt-1 truncate">{data.nome_fantasia || '---'}</div>
                </div>
-               <div className={`px-3 py-1 text-xs font-black uppercase border-2 ${isAtiva(data.situacao_cadastral) ? 'bg-green-600 border-green-400 text-white' : 'bg-red-600 border-red-400 text-white'}`}>
+               <div className={`px-3 py-1 text-xs font-black uppercase border-2 shrink-0 ${isAtiva(data.situacao_cadastral) ? 'bg-green-600 border-green-400 text-white' : 'bg-red-600 border-red-400 text-white'}`}>
                  {data.descricao_situacao_cadastral}
                </div>
             </div>
@@ -191,34 +240,39 @@ export const CnpjQuery: React.FC = () => {
               {activeTab === 'resumo' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="space-y-1">
-                       <label className="text-[9px] font-bold text-[#666] uppercase block">CNPJ</label>
-                       <div className="text-sm font-mono font-bold flex items-center gap-2">
-                         {formatCnpj(data.cnpj)}
-                         <button onClick={() => copyToClipboard(data.cnpj)} title="Copiar"><Copy size={12} className="text-blue-600"/></button>
-                       </div>
-                    </div>
-                    <div className="space-y-1">
-                       <label className="text-[9px] font-bold text-[#666] uppercase block">Matriz / Filial</label>
-                       <div className="text-sm font-bold">{data.descricao_matriz_filial}</div>
-                    </div>
-                    <div className="space-y-1">
-                       <label className="text-[9px] font-bold text-[#666] uppercase block">Data de Abertura</label>
-                       <div className="text-sm font-bold">{formatDate(data.data_inicio_atividade)}</div>
-                    </div>
+                    <DataField label="CNPJ" value={formatCnpj(data.cnpj)} isMono highlight />
+                    <DataField label="Matriz / Filial" value={data.descricao_matriz_filial} />
+                    <DataField label="Data de Abertura" value={formatDate(data.data_inicio_atividade)} />
                     
-                    <div className="space-y-1 col-span-2">
-                       <label className="text-[9px] font-bold text-[#666] uppercase block">Natureza Jurídica</label>
-                       <div className="text-sm font-bold">{data.codigo_natureza_juridica}</div>
+                    <div className="col-span-2">
+                       <DataField label="Razão Social" value={data.razao_social} />
                     </div>
-                    <div className="space-y-1">
-                       <label className="text-[9px] font-bold text-[#666] uppercase block">Porte da Empresa</label>
-                       <div className="text-sm font-bold">{getPorteLabel(data.porte)}</div>
-                    </div>
+                    <DataField label="Nome Fantasia" value={data.nome_fantasia || '---'} />
 
-                    <div className="space-y-1 col-span-2 bg-yellow-50 p-2 border border-yellow-200">
-                       <label className="text-[9px] font-bold text-[#666] uppercase block flex items-center gap-1"><DollarSign size={10}/> Capital Social</label>
-                       <div className="text-lg font-black text-green-700">{formatCurrency(data.capital_social)}</div>
+                    <div className="col-span-2">
+                       <DataField label="Natureza Jurídica" value={`${data.codigo_natureza_juridica} - Natureza Jurídica`} />
+                    </div>
+                    <DataField label="Porte da Empresa" value={getPorteLabel(data.porte)} />
+
+                    <div className="col-span-2 bg-yellow-50 p-2 border border-yellow-200">
+                       <DataField label="Capital Social" value={formatCurrency(data.capital_social)} highlight />
+                    </div>
+                  </div>
+                  
+                  {/* Seção Inscrição Estadual */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="bg-blue-50 p-3 border border-blue-100 flex justify-between items-center">
+                       <div>
+                         <h3 className="text-xs font-black uppercase text-win95-blue flex items-center gap-2">
+                           <Info size={14} /> Inscrição Estadual (IE)
+                         </h3>
+                         <p className="text-[10px] text-gray-600 mt-1 max-w-md">
+                           A Inscrição Estadual é um dado governado pelas Secretarias da Fazenda (SEFAZ) de cada estado e não consta na base federal da Receita.
+                         </p>
+                       </div>
+                       <Button onClick={openSintegra} icon={<ExternalLink size={14} />} className="shrink-0">
+                         CONSULTAR NO SINTEGRA / {data.uf}
+                       </Button>
                     </div>
                   </div>
 
@@ -258,32 +312,25 @@ export const CnpjQuery: React.FC = () => {
                     <h3 className="text-xs font-black uppercase text-win95-blue mb-3 flex items-center gap-2"><MapPin size={14}/> Endereço Cadastral</h3>
                     <div className="grid grid-cols-12 gap-y-4 gap-x-2 bg-gray-50 p-3 border border-gray-200">
                       <div className="col-span-10">
-                         <label className="text-[9px] font-bold text-[#666] uppercase block">Logradouro</label>
-                         <div className="text-sm font-bold border-b border-gray-300">{data.descricao_tipo_de_logradouro} {data.logradouro}</div>
+                         <DataField label="Logradouro" value={`${data.descricao_tipo_de_logradouro} ${data.logradouro}`} />
                       </div>
                       <div className="col-span-2">
-                         <label className="text-[9px] font-bold text-[#666] uppercase block">Número</label>
-                         <div className="text-sm font-bold border-b border-gray-300">{data.numero}</div>
+                         <DataField label="Número" value={data.numero} />
                       </div>
                       <div className="col-span-6">
-                         <label className="text-[9px] font-bold text-[#666] uppercase block">Bairro</label>
-                         <div className="text-sm font-bold border-b border-gray-300">{data.bairro}</div>
+                         <DataField label="Bairro" value={data.bairro} />
                       </div>
                       <div className="col-span-6">
-                         <label className="text-[9px] font-bold text-[#666] uppercase block">Complemento</label>
-                         <div className="text-sm font-bold border-b border-gray-300 min-h-[20px]">{data.complemento}</div>
+                         <DataField label="Complemento" value={data.complemento} />
                       </div>
                       <div className="col-span-5">
-                         <label className="text-[9px] font-bold text-[#666] uppercase block">Município</label>
-                         <div className="text-sm font-bold border-b border-gray-300">{data.municipio}</div>
+                         <DataField label="Município" value={data.municipio} />
                       </div>
                       <div className="col-span-2">
-                         <label className="text-[9px] font-bold text-[#666] uppercase block">UF</label>
-                         <div className="text-sm font-bold border-b border-gray-300">{data.uf}</div>
+                         <DataField label="UF" value={data.uf} />
                       </div>
                       <div className="col-span-5">
-                         <label className="text-[9px] font-bold text-[#666] uppercase block">CEP</label>
-                         <div className="text-sm font-bold border-b border-gray-300">{data.cep}</div>
+                         <DataField label="CEP" value={data.cep} isMono />
                       </div>
                     </div>
                   </div>
@@ -292,16 +339,13 @@ export const CnpjQuery: React.FC = () => {
                     <h3 className="text-xs font-black uppercase text-win95-blue mb-3 flex items-center gap-2"><Info size={14}/> Dados de Contato</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <div className="p-2 border border-dotted border-gray-400">
-                         <label className="text-[9px] font-bold text-[#666] uppercase block">Telefone Primário</label>
-                         <div className="text-sm font-bold">{data.ddd_telefone_1 || '---'}</div>
+                         <DataField label="Telefone Primário" value={data.ddd_telefone_1} />
                        </div>
                        <div className="p-2 border border-dotted border-gray-400">
-                         <label className="text-[9px] font-bold text-[#666] uppercase block">Telefone Secundário</label>
-                         <div className="text-sm font-bold">{data.ddd_telefone_2 || '---'}</div>
+                         <DataField label="Telefone Secundário" value={data.ddd_telefone_2} />
                        </div>
                        <div className="p-2 border border-dotted border-gray-400 md:col-span-2">
-                         <label className="text-[9px] font-bold text-[#666] uppercase block">E-mail</label>
-                         <div className="text-sm font-bold lowercase text-blue-700 underline">{data.email || '---'}</div>
+                         <DataField label="E-mail" value={data.email} highlight />
                        </div>
                     </div>
                   </div>
@@ -315,22 +359,15 @@ export const CnpjQuery: React.FC = () => {
                   {data.qsa && data.qsa.length > 0 ? (
                     <div className="grid grid-cols-1 gap-2">
                       {data.qsa.map((socio, idx) => (
-                        <div key={idx} className="win95-raised p-2 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                        <div key={idx} className="win95-raised p-2 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
                            <div className="flex-1">
-                              <div className="text-[9px] font-bold text-[#666] uppercase">Nome / Razão Social</div>
-                              <div className="text-sm font-bold text-black">{socio.nome_socio}</div>
+                              <DataField label="Nome / Razão Social" value={socio.nome_socio} highlight />
                            </div>
                            <div className="flex-1">
-                              <div className="text-[9px] font-bold text-[#666] uppercase">Qualificação</div>
-                              <div className="text-xs font-bold text-[#444]">{socio.qualificacao_socio}</div>
+                              <DataField label="Qualificação" value={socio.qualificacao_socio} />
                            </div>
-                           <div className="flex-1">
-                              <div className="text-[9px] font-bold text-[#666] uppercase">Entrada</div>
-                              <div className="text-xs font-mono">{formatDate(socio.data_entrada_sociedade)}</div>
-                           </div>
-                           <div className="flex-1">
-                              <div className="text-[9px] font-bold text-[#666] uppercase">CPF/CNPJ Oculto</div>
-                              <div className="text-xs font-mono">{socio.cnpj_cpf_do_socio}</div>
+                           <div className="w-32">
+                              <DataField label="Entrada" value={formatDate(socio.data_entrada_sociedade)} isMono />
                            </div>
                         </div>
                       ))}
@@ -348,8 +385,16 @@ export const CnpjQuery: React.FC = () => {
                  <div className="space-y-6">
                    <div>
                      <div className="bg-win95-blue text-white px-2 py-1 text-[10px] font-bold uppercase mb-2">Atividade Principal</div>
-                     <div className="p-3 border-2 border-win95-blue bg-blue-50">
-                        <div className="text-lg font-mono font-black text-win95-blue mb-1">{data.cnae_fiscal}</div>
+                     <div className="p-3 border-2 border-win95-blue bg-blue-50 group hover:bg-white transition-colors">
+                        <div className="text-lg font-mono font-black text-win95-blue mb-1 flex items-center justify-between">
+                          {data.cnae_fiscal}
+                          <button 
+                            onClick={() => { navigator.clipboard.writeText(`${data.cnae_fiscal} - ${data.cnae_fiscal_descricao}`) }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-blue-100 rounded text-blue-500"
+                          >
+                            <Copy size={16} />
+                          </button>
+                        </div>
                         <div className="text-sm font-bold leading-tight">{data.cnae_fiscal_descricao}</div>
                      </div>
                    </div>
@@ -359,10 +404,16 @@ export const CnpjQuery: React.FC = () => {
                      {data.cnaes_secundarios && data.cnaes_secundarios.length > 0 ? (
                        <div className="max-h-[300px] overflow-y-auto border border-gray-300 bg-gray-50 divide-y divide-gray-200">
                          {data.cnaes_secundarios.map((cnae) => (
-                           <div key={cnae.codigo} className="p-2 hover:bg-white transition-colors">
+                           <div key={cnae.codigo} className="p-2 hover:bg-white transition-colors group">
                               <div className="flex items-start gap-3">
                                 <span className="font-mono font-bold text-xs text-[#666] whitespace-nowrap">{cnae.codigo}</span>
-                                <span className="text-xs font-medium leading-tight">{cnae.descricao}</span>
+                                <span className="text-xs font-medium leading-tight flex-1">{cnae.descricao}</span>
+                                <button 
+                                  onClick={() => { navigator.clipboard.writeText(`${cnae.codigo} - ${cnae.descricao}`) }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 rounded text-gray-500"
+                                >
+                                  <Copy size={12} />
+                                </button>
                               </div>
                            </div>
                          ))}

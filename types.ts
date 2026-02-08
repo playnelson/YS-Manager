@@ -194,6 +194,7 @@ export interface CnpjData {
   data_situacao_especial: string | null;
   cnaes_secundarios: Cnae[];
   qsa: Socio[];
+  inscricao_estadual?: string; // Campo opcional, geralmente não retornado pela API federal
 }
 
 // Brasil Tools Types
