@@ -5,7 +5,7 @@ export interface User {
   nick: string;
 }
 
-// Kanban Types
+// Kanban Types (Refatorado para Trello-style)
 export type KanbanPriority = 'low' | 'medium' | 'high';
 
 export interface KanbanCard {
@@ -16,10 +16,14 @@ export interface KanbanCard {
   createdAt: string;
 }
 
+export interface KanbanColumn {
+  id: string;
+  title: string;
+  cards: KanbanCard[];
+}
+
 export interface KanbanState {
-  todo: KanbanCard[];
-  doing: KanbanCard[];
-  done: KanbanCard[];
+  columns: KanbanColumn[];
 }
 
 // Flowchart Types

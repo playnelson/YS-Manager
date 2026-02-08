@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
-import { Plus, Search, Trash2, ArrowRight, ArrowLeft, AlertCircle, Clock, Filter, Archive } from 'lucide-react';
-import { KanbanState, KanbanCard, KanbanPriority } from '../types';
+import React, { useState, useRef } from 'react';
+import { Plus, X, Trash2, Edit2, GripVertical, Check, MoreVertical } from 'lucide-react';
+import { KanbanState, KanbanCard, KanbanColumn, KanbanPriority } from '../types';
 import { Button } from './ui/Button';
 
 interface KanbanBoardProps {
@@ -10,199 +10,267 @@ interface KanbanBoardProps {
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ data, onChange }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+  const [editingColumnTitle, setEditingColumnTitle] = useState('');
 
-  const addCard = (column: keyof KanbanState) => {
+  // Drag State
+  const [draggingCard, setDraggingCard] = useState<{ cardId: string, colId: string } | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+
+  // --- COLUMN ACTIONS ---
+  const addColumn = () => {
+    const newCol: KanbanColumn = {
+      id: `col_${Date.now()}`,
+      title: 'Nova Lista',
+      cards: []
+    };
+    onChange({ columns: [...data.columns, newCol] });
+  };
+
+  const deleteColumn = (colId: string) => {
+    if (confirm("Excluir esta lista e todos os seus cartões?")) {
+      onChange({ columns: data.columns.filter(c => c.id !== colId) });
+    }
+  };
+
+  const updateColumnTitle = (colId: string) => {
+    if (!editingColumnTitle.trim()) return;
+    onChange({
+      columns: data.columns.map(c => c.id === colId ? { ...c, title: editingColumnTitle } : c)
+    });
+    setEditingColumnId(null);
+  };
+
+  // --- CARD ACTIONS ---
+  const addCard = (colId: string) => {
     const newCard: KanbanCard = {
       id: `card_${Date.now()}`,
-      title: 'Nova Atividade',
+      title: 'Nova Tarefa',
       description: '',
       priority: 'medium',
       createdAt: new Date().toISOString()
     };
-    onChange({ ...data, [column]: [newCard, ...data[column]] });
+    onChange({
+      columns: data.columns.map(c => c.id === colId ? { ...c, cards: [...c.cards, newCard] } : c)
+    });
+    // Auto-start edit
+    setEditingCardId(newCard.id);
+    setEditingTitle(newCard.title);
   };
 
-  const updateCard = (column: keyof KanbanState, id: string, field: keyof KanbanCard, value: any) => {
-    const newColumns = { ...data };
-    newColumns[column] = newColumns[column].map(card => card.id === id ? { ...card, [field]: value } : card);
-    onChange(newColumns);
+  const updateCardTitle = (colId: string, cardId: string) => {
+    onChange({
+      columns: data.columns.map(c => c.id === colId ? {
+        ...c,
+        cards: c.cards.map(card => card.id === cardId ? { ...card, title: editingTitle } : card)
+      } : c)
+    });
+    setEditingCardId(null);
   };
 
-  const deleteCard = (column: keyof KanbanState, id: string) => {
-    if (!window.confirm("Deseja excluir permanentemente este card?")) return;
-    const newColumns = { ...data };
-    newColumns[column] = newColumns[column].filter(card => card.id !== id);
-    onChange(newColumns);
+  const updateCardPriority = (colId: string, cardId: string, priority: KanbanPriority) => {
+    onChange({
+      columns: data.columns.map(c => c.id === colId ? {
+        ...c,
+        cards: c.cards.map(card => card.id === cardId ? { ...card, priority } : card)
+      } : c)
+    });
   };
 
-  const moveCard = (currentCol: keyof KanbanState, id: string, direction: 'next' | 'prev') => {
-    const order: (keyof KanbanState)[] = ['todo', 'doing', 'done'];
-    const currentIndex = order.indexOf(currentCol);
-    
-    let nextIndex;
-    if (direction === 'next') {
-      nextIndex = currentIndex + 1;
-    } else {
-      nextIndex = currentIndex - 1;
+  const deleteCard = (colId: string, cardId: string) => {
+    if (!confirm("Remover cartão?")) return;
+    onChange({
+      columns: data.columns.map(c => c.id === colId ? {
+        ...c,
+        cards: c.cards.filter(card => card.id !== cardId)
+      } : c)
+    });
+  };
+
+  // --- DRAG AND DROP LOGIC (Native HTML5) ---
+  const handleDragStart = (e: React.DragEvent, cardId: string, colId: string) => {
+    setDraggingCard({ cardId, colId });
+    e.dataTransfer.effectAllowed = 'move';
+    // Pequeno hack para esconder a imagem fantasma padrão se quiséssemos customizar, 
+    // mas vamos deixar o padrão para simplicidade.
+  };
+
+  const handleDragOver = (e: React.DragEvent, colId: string) => {
+    e.preventDefault(); // Necessário para permitir o drop
+    setDragOverCol(colId);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetColId: string) => {
+    e.preventDefault();
+    setDragOverCol(null);
+
+    if (!draggingCard) return;
+    const { cardId, colId: sourceColId } = draggingCard;
+
+    // Se soltou na mesma coluna, e não implementamos reordenação intra-lista ainda, não faz nada
+    if (sourceColId === targetColId) {
+      setDraggingCard(null);
+      return;
     }
 
-    if (nextIndex < 0 || nextIndex >= order.length) return;
+    // Move Card Logic
+    const sourceCol = data.columns.find(c => c.id === sourceColId);
+    const targetCol = data.columns.find(c => c.id === targetColId);
+    if (!sourceCol || !targetCol) return;
 
-    const nextCol = order[nextIndex];
-    const cardToMove = data[currentCol].find(c => c.id === id);
+    const cardToMove = sourceCol.cards.find(c => c.id === cardId);
     if (!cardToMove) return;
 
-    const newData = { ...data };
-    newData[currentCol] = newData[currentCol].filter(c => c.id !== id);
-    newData[nextCol] = [cardToMove, ...newData[nextCol]];
-    onChange(newData);
+    const newColumns = data.columns.map(c => {
+      if (c.id === sourceColId) {
+        return { ...c, cards: c.cards.filter(card => card.id !== cardId) };
+      }
+      if (c.id === targetColId) {
+        return { ...c, cards: [...c.cards, cardToMove] };
+      }
+      return c;
+    });
+
+    onChange({ columns: newColumns });
+    setDraggingCard(null);
   };
 
-  const clearDone = () => {
-    if (!window.confirm("Arquivar todos os cards concluídos?")) return;
-    onChange({ ...data, done: [] });
+  const getPriorityColor = (p: KanbanPriority) => {
+    switch (p) {
+      case 'high': return 'bg-red-500';
+      case 'medium': return 'bg-yellow-400';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-400';
+    }
   };
-
-  const priorityConfig = {
-    high: { label: 'Alta', color: 'bg-red-600', text: 'text-white' },
-    medium: { label: 'Média', color: 'bg-yellow-400', text: 'text-black' },
-    low: { label: 'Baixa', color: 'bg-blue-500', text: 'text-white' }
-  };
-
-  const filterCards = (cards: KanbanCard[]) => {
-    return cards.filter(c => 
-      c.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      c.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  };
-
-  const columns: { id: keyof KanbanState, label: string, color: string }[] = [
-    { id: 'todo', label: 'Pendentes', color: 'bg-[#000080]' },
-    { id: 'doing', label: 'Em Execução', color: 'bg-[#808000]' },
-    { id: 'done', label: 'Concluído', color: 'bg-[#008000]' }
-  ];
 
   return (
-    <div className="flex flex-col h-full bg-[#c0c0c0]">
-      {/* Kanban Toolbar */}
-      <div className="flex justify-between items-center bg-win95-bg p-2 win95-raised mb-2 gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2 text-win95-shadow" size={14} />
-          <input 
-            type="text"
-            placeholder="Pesquisar tarefas..."
-            className="w-full pl-8 pr-3 py-1 win95-sunken text-xs outline-none focus:bg-white text-black"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="win95-sunken px-3 py-1 bg-white text-[10px] font-bold text-win95-blue hidden sm:block">
-            TOTAL: {data.todo.length + data.doing.length + data.done.length} TAREFAS
-          </div>
-          <Button size="sm" onClick={clearDone} icon={<Archive size={14} />} title="Arquivar Concluídos">
-            LIMPAR
-          </Button>
-        </div>
+    <div className="h-full flex flex-col bg-[#0079bf] overflow-hidden rounded shadow-inner">
+      {/* Trello-like Header */}
+      <div className="p-2 flex justify-between items-center bg-black/20 text-white shrink-0">
+         <h2 className="text-sm font-bold pl-2 flex items-center gap-2">
+            <span className="opacity-80">Quadro de Projetos</span>
+         </h2>
+         <Button onClick={addColumn} className="bg-white/20 hover:bg-white/30 text-white border-none shadow-none text-xs h-7">
+            <Plus size={14} /> Adicionar Lista
+         </Button>
       </div>
 
-      {/* Kanban Board Layout */}
-      <div className="flex-1 flex gap-2 overflow-x-auto p-1 pb-4">
-        {columns.map((col) => (
-          <div key={col.id} className="w-80 flex flex-col shrink-0">
+      {/* Board Area (Horizontal Scrolling) */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden p-3 flex gap-3 items-start">
+        {data.columns.map(col => (
+          <div 
+            key={col.id}
+            className={`w-72 shrink-0 flex flex-col max-h-full rounded-md bg-[#ebecf0] shadow-md transition-colors ${dragOverCol === col.id ? 'bg-[#d0d4db]' : ''}`}
+            onDragOver={(e) => handleDragOver(e, col.id)}
+            onDrop={(e) => handleDrop(e, col.id)}
+          >
             {/* Column Header */}
-            <div className={`${col.color} text-white px-3 py-1.5 text-xs font-bold uppercase flex justify-between items-center mb-1 win95-raised border-none shadow-md`}>
-               <div className="flex items-center gap-2">
-                 <Filter size={12} className="opacity-50" />
-                 <span>{col.label}</span>
-               </div>
-               <span className="bg-white/20 px-2 rounded-sm">{data[col.id].length}</span>
+            <div className="p-2 px-3 flex justify-between items-center font-bold text-sm text-[#172b4d] shrink-0 cursor-pointer group">
+              {editingColumnId === col.id ? (
+                <input 
+                  autoFocus
+                  className="w-full px-1 py-0.5 rounded border border-blue-500 outline-none text-sm"
+                  value={editingColumnTitle}
+                  onChange={e => setEditingColumnTitle(e.target.value)}
+                  onBlur={() => updateColumnTitle(col.id)}
+                  onKeyDown={e => e.key === 'Enter' && updateColumnTitle(col.id)}
+                />
+              ) : (
+                <div onClick={() => { setEditingColumnId(col.id); setEditingColumnTitle(col.title); }} className="flex-1 py-1 truncate">
+                  {col.title}
+                </div>
+              )}
+              <button 
+                onClick={() => deleteColumn(col.id)}
+                className="p-1 rounded hover:bg-gray-300 text-gray-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreVertical size={14} />
+              </button>
             </div>
-            
-            {/* Column Body */}
-            <div className="flex-1 win95-sunken p-2 space-y-3 overflow-y-auto bg-[#808080]/10">
-              {filterCards(data[col.id]).map((card) => (
-                <div key={card.id} className="win95-raised p-2 bg-win95-bg group relative hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-transform">
-                  {/* Card Header */}
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex flex-col gap-1 w-full">
-                      <div className="flex items-center gap-2 mb-1">
-                        <select 
-                          className={`text-[9px] font-bold px-1 py-0.5 uppercase border border-black/20 outline-none ${priorityConfig[card.priority].color} ${priorityConfig[card.priority].text}`}
-                          value={card.priority}
-                          onChange={(e) => updateCard(col.id, card.id, 'priority', e.target.value)}
-                        >
-                          <option value="high">Alta</option>
-                          <option value="medium">Média</option>
-                          <option value="low">Baixa</option>
-                        </select>
-                        <span className="text-[9px] text-[#555] flex items-center gap-1 font-mono">
-                          <Clock size={10} /> {new Date(card.createdAt).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
-                      <input 
-                        className="text-[11px] font-bold bg-transparent outline-none w-full border-b border-transparent focus:border-win95-blue text-black truncate"
-                        value={card.title}
-                        onChange={(e) => updateCard(col.id, card.id, 'title', e.target.value)}
-                      />
-                    </div>
-                    <button onClick={() => deleteCard(col.id, card.id)} className="text-[#808080] hover:text-red-700 transition-colors">
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
 
-                  {/* Card Description */}
-                  <textarea
-                    className="w-full text-[10px] bg-white win95-sunken p-1.5 outline-none resize-none text-black leading-relaxed"
-                    rows={3}
-                    placeholder="Descrição da atividade..."
-                    value={card.description}
-                    onChange={(e) => updateCard(col.id, card.id, 'description', e.target.value)}
+            {/* Cards List */}
+            <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2 custom-scrollbar min-h-[20px]">
+              {col.cards.map(card => (
+                <div 
+                  key={card.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, card.id, col.id)}
+                  className="bg-white p-2 rounded shadow-sm border-b border-gray-200 hover:bg-gray-50 group cursor-grab active:cursor-grabbing relative"
+                >
+                  {/* Priority Strip */}
+                  <div 
+                    className={`w-8 h-1.5 rounded-full mb-1 ${getPriorityColor(card.priority)}`} 
+                    title={`Prioridade: ${card.priority}`}
                   />
 
-                  {/* Card Actions */}
-                  <div className="mt-3 flex justify-between items-center gap-1">
-                     <div className="flex gap-1">
-                        {col.id !== 'todo' && (
-                          <button 
-                            onClick={() => moveCard(col.id, card.id, 'prev')} 
-                            className="win95-raised p-1 text-[#000080] hover:bg-white active:shadow-none"
-                            title="Mover para coluna anterior"
-                          >
-                            <ArrowLeft size={12} />
-                          </button>
-                        )}
-                     </div>
-                     <div className="flex gap-1">
-                        {col.id !== 'done' && (
-                          <button 
-                            onClick={() => moveCard(col.id, card.id, 'next')} 
-                            className="win95-raised px-2 py-1 text-[9px] font-bold uppercase flex items-center gap-1 bg-win95-bg hover:bg-white active:shadow-none text-black"
-                          >
-                            Avançar <ArrowRight size={10} />
-                          </button>
-                        )}
-                     </div>
-                  </div>
+                  {editingCardId === card.id ? (
+                    <div className="space-y-2">
+                       <textarea 
+                          className="w-full text-sm p-1 border rounded resize-none focus:ring-2 focus:ring-blue-400 outline-none"
+                          rows={2}
+                          autoFocus
+                          value={editingTitle}
+                          onChange={e => setEditingTitle(e.target.value)}
+                          onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); updateCardTitle(col.id, card.id); }}}
+                       />
+                       <div className="flex justify-between items-center">
+                          <button onClick={() => updateCardTitle(col.id, card.id)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">Salvar</button>
+                          <div className="flex gap-1">
+                             {(['low', 'medium', 'high'] as KanbanPriority[]).map(p => (
+                               <button 
+                                key={p}
+                                onClick={() => updateCardPriority(col.id, card.id, p)}
+                                className={`w-4 h-4 rounded-full ${getPriorityColor(p)} border border-transparent hover:border-black`}
+                                title={p}
+                               />
+                             ))}
+                          </div>
+                       </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <div 
+                        className="flex-1 text-sm text-[#172b4d]" 
+                        onClick={() => { setEditingCardId(card.id); setEditingTitle(card.title); }}
+                      >
+                        {card.title}
+                      </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); deleteCard(col.id, card.id); }}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
-              
-              <button 
-                onClick={() => addCard(col.id)} 
-                className="w-full py-2 win95-raised text-[10px] font-bold uppercase hover:bg-white transition-colors text-black flex items-center justify-center gap-2"
-              >
-                <Plus size={14} /> Adicionar Atividade
-              </button>
+            </div>
+
+            {/* Column Footer */}
+            <div className="p-2 pt-1 shrink-0">
+               <button 
+                 onClick={() => addCard(col.id)}
+                 className="w-full text-left p-1.5 rounded text-[#5e6c84] hover:bg-[#091e4214] text-sm flex items-center gap-1 transition-colors"
+               >
+                 <Plus size={14} /> Adicionar cartão
+               </button>
             </div>
           </div>
         ))}
-      </div>
-      
-      {/* Footer Info */}
-      <div className="p-1 px-3 bg-win95-bg border-t border-white text-[9px] flex justify-between text-[#555] font-bold">
-        <span className="flex items-center gap-1"><AlertCircle size={10} /> Arraste os cards (Em breve) ou use os botões de ação para organizar o fluxo.</span>
-        <span>MODO: GESTÃO EMPRESARIAL</span>
+        
+        {/* Placeholder for Add List Button to keep layout sane */}
+        <div className="w-72 shrink-0">
+           <button 
+             onClick={addColumn}
+             className="w-full bg-white/20 hover:bg-white/30 text-white p-2 rounded text-left text-sm font-bold flex items-center gap-2 transition-colors"
+           >
+             <Plus size={14} /> Adicionar outra lista
+           </button>
+        </div>
       </div>
     </div>
   );

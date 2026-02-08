@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Search, Globe } from 'lucide-react';
-import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature } from './types';
+import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, KanbanColumn } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarModule } from './components/CalendarModule';
@@ -15,7 +15,15 @@ import { Auth } from './components/Auth';
 import { supabase } from './supabase';
 import { Button } from './components/ui/Button';
 
-const initialKanban: KanbanState = { todo: [], doing: [], done: [] };
+// Initial Kanban com estrutura Trello-like
+const initialKanban: KanbanState = { 
+  columns: [
+    { id: 'col_1', title: 'A Fazer', cards: [] },
+    { id: 'col_2', title: 'Em Andamento', cards: [] },
+    { id: 'col_3', title: 'Concluído', cards: [] }
+  ]
+};
+
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 // Definição das Abas Disponíveis
@@ -149,8 +157,26 @@ const App: React.FC = () => {
         if (user.id === 'demo_user_id') {
           const saved = localStorage.getItem('ysoffice_demo_data');
           if (saved) {
-            const parsed: AppData = JSON.parse(saved);
-            if (parsed.kanban) setKanbanData(parsed.kanban);
+            const parsed: any = JSON.parse(saved);
+            
+            // Migração de Dados Kanban (Old -> New)
+            let safeKanban = initialKanban;
+            if (parsed.kanban) {
+               if (Array.isArray(parsed.kanban.columns)) {
+                  safeKanban = parsed.kanban;
+               } else if (parsed.kanban.todo) {
+                  // Migrar estrutura antiga
+                  safeKanban = {
+                    columns: [
+                      { id: 'todo', title: 'Pendentes', cards: parsed.kanban.todo || [] },
+                      { id: 'doing', title: 'Em Execução', cards: parsed.kanban.doing || [] },
+                      { id: 'done', title: 'Concluído', cards: parsed.kanban.done || [] }
+                    ]
+                  };
+               }
+            }
+            
+            setKanbanData(safeKanban);
             if (parsed.flow) setFlowData({ ...initialFlow, ...parsed.flow });
             if (parsed.calendarConfig) setCalendarConfig(parsed.calendarConfig);
             if (parsed.calendarEvents) setCalendarEvents(parsed.calendarEvents);
@@ -165,8 +191,26 @@ const App: React.FC = () => {
         } else {
           const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
           if (!error && data?.payload) {
-            const payload = data.payload as AppData;
-            setKanbanData(payload.kanban || initialKanban);
+            const payload = data.payload as any;
+
+            // Migração de Dados Kanban (Old -> New) no Supabase
+            let safeKanban = initialKanban;
+            if (payload.kanban) {
+               if (Array.isArray(payload.kanban.columns)) {
+                  safeKanban = payload.kanban;
+               } else if (payload.kanban.todo) {
+                  // Migrar estrutura antiga
+                  safeKanban = {
+                    columns: [
+                      { id: 'todo', title: 'Pendentes', cards: payload.kanban.todo || [] },
+                      { id: 'doing', title: 'Em Execução', cards: payload.kanban.doing || [] },
+                      { id: 'done', title: 'Concluído', cards: payload.kanban.done || [] }
+                    ]
+                  };
+               }
+            }
+
+            setKanbanData(safeKanban);
             setFlowData({ ...initialFlow, ...(payload.flow || {}) });
             setCalendarConfig(payload.calendarConfig || { uf: 'SP', city: 'São Paulo' });
             setCalendarEvents(payload.calendarEvents || []);
