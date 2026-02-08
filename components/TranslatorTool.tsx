@@ -1,24 +1,23 @@
 
 import React, { useState } from 'react';
-import { Languages, ArrowRightLeft, Copy, Check, Sparkles, Loader2, Eraser } from 'lucide-react';
+import { Languages, ArrowRightLeft, Copy, Check, Sparkles, Loader2, Eraser, Globe } from 'lucide-react';
 import { Button } from './ui/Button';
-import { GoogleGenAI } from "@google/genai";
 
 const LANGUAGES = [
-  { code: 'pt', name: 'Português' },
-  { code: 'en', name: 'Inglês' },
-  { code: 'es', name: 'Espanhol' },
-  { code: 'fr', name: 'Francês' },
-  { code: 'de', name: 'Alemão' },
-  { code: 'it', name: 'Italiano' },
-  { code: 'ja', name: 'Japonês' },
-  { code: 'zh', name: 'Chinês (Simplificado)' },
-  { code: 'ru', name: 'Russo' },
+  { code: 'pt-BR', name: 'Português' },
+  { code: 'en-US', name: 'Inglês' },
+  { code: 'es-ES', name: 'Espanhol' },
+  { code: 'fr-FR', name: 'Francês' },
+  { code: 'de-DE', name: 'Alemão' },
+  { code: 'it-IT', name: 'Italiano' },
+  { code: 'ja-JP', name: 'Japonês' },
+  { code: 'zh-CN', name: 'Chinês (Simplificado)' },
+  { code: 'ru-RU', name: 'Russo' },
 ];
 
 export const TranslatorTool: React.FC = () => {
-  const [sourceLang, setSourceLang] = useState('pt');
-  const [targetLang, setTargetLang] = useState('en');
+  const [sourceLang, setSourceLang] = useState('pt-BR');
+  const [targetLang, setTargetLang] = useState('en-US');
   const [inputText, setInputText] = useState('');
   const [outputText, setOutputText] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
@@ -27,42 +26,23 @@ export const TranslatorTool: React.FC = () => {
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
     setIsTranslating(true);
+    
     try {
-      const apiKey = (import.meta as any).env?.VITE_GOOGLE_API_KEY || sessionStorage.getItem('gemini_key') || '';
+      // Uso da API MyMemory (Gratuita para uso moderado)
+      // Nota: Em produção pesada, deve-se usar um backend para evitar rate limits por IP ou CORS
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(inputText)}&langpair=${sourceLang}|${targetLang}`;
       
-      if (!apiKey) {
-         const userKey = window.prompt("API Key do Google Gemini necessária. Insira:");
-         if(userKey) sessionStorage.setItem('gemini_key', userKey);
-         else { setIsTranslating(false); return; }
-      }
-      
-      const keyToUse = apiKey || sessionStorage.getItem('gemini_key') || '';
-      const ai = new GoogleGenAI({ apiKey: keyToUse });
-      
-      const sLang = LANGUAGES.find(l => l.code === sourceLang)?.name;
-      const tLang = LANGUAGES.find(l => l.code === targetLang)?.name;
+      const response = await fetch(url);
+      const data = await response.json();
 
-      const prompt = `Act as a professional translator. Translate the following text from ${sLang} to ${tLang}.
-      Rules:
-      1. Maintain the original tone and intent.
-      2. If it's technical code, do not translate the code keywords.
-      3. Return ONLY the translated text, no preamble or quotes.
-      
-      Text to translate:
-      "${inputText}"`;
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-      });
-
-      // FIX: Access .text property directly
-      if (response.text) {
-        setOutputText(response.text);
+      if (data.responseStatus === 200) {
+        setOutputText(data.responseData.translatedText);
+      } else {
+        throw new Error(data.responseDetails || 'Erro na tradução');
       }
     } catch (error) {
       console.error(error);
-      alert("Erro na tradução. Verifique a chave API ou tente novamente.");
+      setOutputText("Erro ao conectar com o serviço de tradução gratuito. Tente novamente em alguns instantes.");
     } finally {
       setIsTranslating(false);
     }
@@ -83,8 +63,13 @@ export const TranslatorTool: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col gap-4 bg-win95-bg p-4 win95-raised">
-      <div className="bg-[#000080] text-white px-2 py-1 text-sm font-bold flex items-center gap-2 shadow-sm">
-        <Languages size={16} /> Tradutor Neural Inteligente
+      <div className="bg-[#000080] text-white px-2 py-1 text-sm font-bold flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-2">
+           <Languages size={16} /> Tradutor Global (Gratuito)
+        </div>
+        <div className="flex items-center gap-1 text-[9px] opacity-70">
+           <Globe size={10} /> Online
+        </div>
       </div>
 
       <div className="flex items-center gap-2 bg-[#d4d0c8] p-2 win95-raised">
@@ -109,7 +94,7 @@ export const TranslatorTool: React.FC = () => {
         </select>
       </div>
 
-      <div className="flex-1 flex gap-4 overflow-hidden">
+      <div className="flex-1 flex gap-4 overflow-hidden flex-col md:flex-row">
         <div className="flex-1 flex flex-col">
            <div className="flex justify-between items-center mb-1 px-1">
               <label className="text-[10px] font-bold uppercase text-[#555]">Texto Original</label>

@@ -1,104 +1,93 @@
 
-import React, { useState } from 'react';
-import { FileText, Wand2, Download, Printer, ChevronRight, FileCheck, RefreshCw, Bot, Globe, FolderOpen, Search, Briefcase, Home, Scale, User, FileBadge, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Download, Printer, ChevronRight, FileCheck, RefreshCw, Bot, Globe, Search, Briefcase, Home, Scale, User, FileBadge, Loader2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { DocTemplate } from '../types';
-import { GoogleGenAI } from "@google/genai";
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
-// --- CATALOGO CLOUD (SIMULADO) ---
-const CLOUD_CATALOG = {
-  'Imobiliário': [
-    { id: 'cloud_aluguel_res', name: 'Contrato de Locação Residencial' },
-    { id: 'cloud_aluguel_com', name: 'Contrato de Locação Comercial' },
-    { id: 'cloud_vistoria', name: 'Laudo de Vistoria de Imóvel' },
-    { id: 'cloud_desocupacao', name: 'Aviso de Desocupação de Imóvel' },
-    { id: 'cloud_compra_venda_imv', name: 'Promessa de Compra e Venda de Imóvel' },
-  ],
-  'Serviços & Negócios': [
-    { id: 'cloud_prestacao_serv', name: 'Contrato de Prestação de Serviços' },
-    { id: 'cloud_orcamento', name: 'Modelo de Orçamento Formal' },
-    { id: 'cloud_nda', name: 'Acordo de Confidencialidade (NDA)' },
-    { id: 'cloud_parceria', name: 'Memorando de Parceria Comercial' },
-    { id: 'cloud_social_midia', name: 'Contrato de Gestão de Redes Sociais' },
-  ],
-  'Trabalhista & RH': [
-    { id: 'cloud_demissao', name: 'Carta de Pedido de Demissão' },
-    { id: 'cloud_advertencia', name: 'Carta de Advertência Disciplinar' },
-    { id: 'cloud_experiencia', name: 'Contrato de Trabalho (Experiência)' },
-    { id: 'cloud_recomendacao', name: 'Carta de Recomendação Profissional' },
-    { id: 'cloud_homeoffice', name: 'Aditivo de Teletrabalho (Home Office)' },
-  ],
-  'Jurídico & Pessoal': [
-    { id: 'cloud_procuracao_amp', name: 'Procuração de Amplos Poderes' },
-    { id: 'cloud_uniao_estavel', name: 'Declaração de União Estável' },
-    { id: 'cloud_divorcio', name: 'Minuta de Divórcio Consensual' },
-    { id: 'cloud_viagem_menor', name: 'Autorização de Viagem para Menor' },
-    { id: 'cloud_contestacao', name: 'Modelo de Contestação Simples' },
-  ],
-  'Financeiro': [
-    { id: 'cloud_confissao_divida', name: 'Termo de Confissão de Dívida' },
-    { id: 'cloud_recibo_aluguel', name: 'Recibo de Aluguel Detalhado' },
-    { id: 'cloud_cobranca', name: 'Carta de Cobrança Amigável' },
-    { id: 'cloud_distrato', name: 'Termo de Quitação e Distrato' },
-  ]
-};
-
-// --- TEMPLATES NATIVOS (Offline) ---
-const NATIVE_TEMPLATES: DocTemplate[] = [
+// --- BIBLIOTECA EXTENDIDA (Simulando Cloud) ---
+const EXTENDED_LIBRARY: DocTemplate[] = [
+  // Imobiliário
   {
-    id: 'recibo_simples',
-    name: 'Recibo de Pagamento',
-    category: 'Financeiro',
-    description: 'Recibo padrão para comprovação de pagamentos diversos.',
-    fields: ['Valor (R$)', 'Pagador', 'Referente a', 'Cidade', 'Data'],
-    contentPattern: `RECIBO DE PAGAMENTO\n\nVALOR: R$ {{Valor (R$)}}\n\nRecebi(emos) de {{Pagador}} a quantia de R$ {{Valor (R$)}}, referente a {{Referente a}}.\n\nPor ser verdade, firmo(amos) o presente.\n\n{{Cidade}}, {{Data}}.\n\n__________________________\nAssinatura do Recebedor`
+    id: 'cloud_aluguel_res',
+    name: 'Contrato de Locação Residencial',
+    category: 'Jurídico',
+    description: 'Contrato padrão para aluguel de imóvel residencial.',
+    fields: ['Locador', 'Locatário', 'Endereço do Imóvel', 'Valor do Aluguel', 'Data de Início', 'Prazo (Meses)', 'Cidade'],
+    contentPattern: `CONTRATO DE LOCAÇÃO RESIDENCIAL\n\nLOCADOR: {{Locador}}\nLOCATÁRIO: {{Locatário}}\n\nOBJETO: O presente contrato tem como objeto a locação do imóvel residencial situado em: {{Endereço do Imóvel}}.\n\nVALOR: O aluguel mensal será de R$ {{Valor do Aluguel}}, a ser pago até o dia 05 de cada mês.\n\nPRAZO: O prazo de locação é de {{Prazo (Meses)}} meses, iniciando-se em {{Data de Início}}.\n\nFORO: As partes elegem o foro da comarca de {{Cidade}} para dirimir quaisquer dúvidas.\n\n{{Cidade}}, ____ de _______________ de ______.\n\n__________________________\n{{Locador}}\n\n__________________________\n{{Locatário}}`
   },
   {
-    id: 'declaracao_residencia',
+    id: 'cloud_recibo_aluguel',
+    name: 'Recibo de Aluguel',
+    category: 'Financeiro',
+    description: 'Recibo simples de pagamento de aluguel.',
+    fields: ['Valor', 'Inquilino', 'Endereço', 'Mês de Referência', 'Proprietário', 'Cidade'],
+    contentPattern: `RECIBO DE ALUGUEL\n\nRecebi de {{Inquilino}} a importância de R$ {{Valor}}, referente ao aluguel do imóvel situado em {{Endereço}}, relativo ao mês de {{Mês de Referência}}.\n\nPor ser verdade, firmo o presente.\n\n{{Cidade}}, {{Data}}.\n\n__________________________\n{{Proprietário}}`
+  },
+  // Serviços
+  {
+    id: 'cloud_prestacao_serv',
+    name: 'Contrato de Prestação de Serviços',
+    category: 'Serviços',
+    description: 'Modelo genérico para prestação de serviços autônomos.',
+    fields: ['Contratante', 'Contratado', 'Serviço', 'Valor Total', 'Prazo de Entrega', 'Cidade'],
+    contentPattern: `CONTRATO DE PRESTAÇÃO DE SERVIÇOS\n\nCONTRATANTE: {{Contratante}}\nCONTRATADO: {{Contratado}}\n\nOBJETO: Prestação de serviços de {{Serviço}}.\n\nVALOR: Pelos serviços prestados, o CONTRATANTE pagará ao CONTRATADO o valor de R$ {{Valor Total}}.\n\nPRAZO: O serviço deverá ser entregue até {{Prazo de Entrega}}.\n\n{{Cidade}}, ____ de _______________ de ______.\n\n__________________________\n{{Contratante}}\n\n__________________________\n{{Contratado}}`
+  },
+  {
+    id: 'cloud_orcamento',
+    name: 'Modelo de Orçamento',
+    category: 'Serviços',
+    description: 'Orçamento formal para clientes.',
+    fields: ['Cliente', 'Descrição do Serviço', 'Materiais', 'Mão de Obra', 'Valor Total', 'Validade (Dias)', 'Empresa'],
+    contentPattern: `ORÇAMENTO DE SERVIÇOS\n\nEMPRESA: {{Empresa}}\nCLIENTE: {{Cliente}}\n\nDESCRIÇÃO:\n{{Descrição do Serviço}}\n\nMATERIAIS: R$ {{Materiais}}\nMÃO DE OBRA: R$ {{Mão de Obra}}\n\nTOTAL: R$ {{Valor Total}}\n\nEste orçamento é válido por {{Validade (Dias)}} dias.\n\nData: {{Data}}`
+  },
+  // RH
+  {
+    id: 'cloud_demissao',
+    name: 'Carta de Pedido de Demissão',
+    category: 'RH',
+    description: 'Carta formal de solicitação de desligamento.',
+    fields: ['Nome do Empregado', 'Nome da Empresa', 'Cargo', 'Cidade'],
+    contentPattern: `À {{Nome da Empresa}}\nPrezados Senhores,\n\nPor motivos pessoais, venho por meio desta apresentar meu pedido de demissão do cargo de {{Cargo}} que ocupo nesta empresa.\n\nSolicito a dispensa do cumprimento do aviso prévio.\n\nAtenciosamente,\n\n{{Cidade}}, {{Data}}.\n\n__________________________\n{{Nome do Empregado}}`
+  },
+  {
+    id: 'cloud_advertencia',
+    name: 'Advertência Disciplinar',
+    category: 'RH',
+    description: 'Documento de advertência para funcionário.',
+    fields: ['Empregado', 'Motivo', 'Data do Fato', 'Empresa', 'Cidade'],
+    contentPattern: `ADVERTÊNCIA DISCIPLINAR\n\nAo Sr(a). {{Empregado}}\n\nVimos pela presente aplicar-lhe ADVERTÊNCIA DISCIPLINAR em razão de: {{Motivo}}, ocorrido em {{Data do Fato}}.\n\nEsclarecemos que a reincidência poderá ocasionar medidas mais severas, conforme CLT.\n\n{{Empresa}}\n{{Cidade}}, {{Data}}.\n\n__________________________\nEmpregador\n\n__________________________\nCiente do Empregado`
+  },
+  // Jurídico
+  {
+    id: 'cloud_procuracao',
+    name: 'Procuração Simples',
+    category: 'Jurídico',
+    description: 'Procuração para representação geral.',
+    fields: ['Outorgante', 'Nacionalidade', 'Estado Civil', 'Profissão', 'CPF', 'Outorgado', 'Poderes', 'Cidade'],
+    contentPattern: `PROCURAÇÃO\n\nOUTORGANTE: {{Outorgante}}, {{Nacionalidade}}, {{Estado Civil}}, {{Profissão}}, inscrito no CPF sob nº {{CPF}}.\n\nOUTORGADO: {{Outorgado}}.\n\nPODERES: Por este instrumento particular, o OUTORGANTE nomeia o OUTORGADO seu procurador para: {{Poderes}}.\n\n{{Cidade}}, ____ de _______________ de ______.\n\n__________________________\n{{Outorgante}}`
+  },
+  {
+    id: 'cloud_declaracao_residencia',
     name: 'Declaração de Residência',
     category: 'Jurídico',
-    description: 'Declaração formal para comprovação de endereço.',
-    fields: ['Nome Completo', 'CPF', 'RG', 'Endereço Completo', 'Cidade', 'Data'],
-    contentPattern: `DECLARAÇÃO DE RESIDÊNCIA\n\nEu, {{Nome Completo}}, inscrito(a) no CPF sob o nº {{CPF}} e portador(a) do RG nº {{RG}}, DECLARO para os devidos fins de comprovação de residência, que sou residente e domiciliado(a) no endereço:\n\n{{Endereço Completo}}\n\nDeclaro ainda estar ciente de que a falsidade da presente declaração pode implicar na sanção penal prevista no Art. 299 do Código Penal.\n\n{{Cidade}}, {{Data}}.\n\n__________________________\n{{Nome Completo}}`
-  },
-  {
-    id: 'vale_transporte',
-    name: 'Opção de Vale Transporte',
-    category: 'RH',
-    description: 'Formulário para opção ou desistência de VT.',
-    fields: ['Nome do Colaborador', 'Cargo', 'Empresa', 'Cidade', 'Data'],
-    contentPattern: `TERMO DE OPÇÃO DE VALE TRANSPORTE\n\nEmpregador: {{Empresa}}\nColaborador: {{Nome do Colaborador}}\nCargo: {{Cargo}}\n\n(  ) OPTO pela utilização do Vale-Transporte.\nComprometo-me a utilizá-lo exclusivamente para meu efetivo deslocamento residência-trabalho e vice-versa.\n\n(  ) NÃO OPTO pelo Vale-Transporte.\nDeclaro que utilizo meios próprios para meu deslocamento.\n\n{{Cidade}}, {{Data}}.\n\n__________________________\nAssinatura do Colaborador`
-  },
-  {
-    id: 'promissoria',
-    name: 'Nota Promissória',
-    category: 'Financeiro',
-    description: 'Promessa de pagamento de dívida.',
-    fields: ['Número', 'Vencimento', 'Valor (R$)', 'Credor', 'Devedor', 'CPF/CNPJ Devedor', 'Endereço Devedor'],
-    contentPattern: `NOTA PROMISSÓRIA\n\nNº: {{Número}}\nVencimento: {{Vencimento}}\nValor: R$ {{Valor (R$)}}\n\nAo(s) dia(s) do vencimento acima estipulado, pagarei(emos) por esta única via de NOTA PROMISSÓRIA a {{Credor}}, ou à sua ordem, a quantia de R$ {{Valor (R$)}}, em moeda corrente deste país.\n\nPagável em: Domicílio do Credor.\n\nEmitente (Devedor): {{Devedor}}\nCPF/CNPJ: {{CPF/CNPJ Devedor}}\nEndereço: {{Endereço Devedor}}\n\n__________________________\nAssinatura`
-  },
-  {
-    id: 'ia_custom',
-    name: '✨ Criar com IA',
-    category: 'IA',
-    description: 'Descreva o que você precisa e a IA gera o documento.',
-    fields: ['Descrição Detalhada'],
-    contentPattern: '' // Dynamic
+    description: 'Para comprovação de endereço.',
+    fields: ['Nome Completo', 'CPF', 'Endereço', 'Cidade'],
+    contentPattern: `DECLARAÇÃO DE RESIDÊNCIA\n\nEu, {{Nome Completo}}, inscrito no CPF nº {{CPF}}, DECLARO para os devidos fins que resido e domicilio no endereço:\n\n{{Endereço}}\n\nPor ser expressão da verdade, firmo a presente.\n\n{{Cidade}}, {{Data}}.\n\n__________________________\n{{Nome Completo}}`
   }
 ];
 
 export const DocumentGenerator: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'native' | 'cloud'>('native');
-  const [selectedTemplate, setSelectedTemplate] = useState<DocTemplate>(NATIVE_TEMPLATES[0]);
+  const [selectedTemplate, setSelectedTemplate] = useState<DocTemplate>(EXTENDED_LIBRARY[0]);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [generatedContent, setGeneratedContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [searchCloud, setSearchCloud] = useState('');
 
-  // Inicializa o conteúdo ao mudar de template
-  React.useEffect(() => {
+  // Inicializa o conteúdo
+  useEffect(() => {
     setFormValues({});
     if (selectedTemplate.category !== 'IA') {
       let content = selectedTemplate.contentPattern;
@@ -121,103 +110,59 @@ export const DocumentGenerator: React.FC = () => {
         const val = newValues[f] || `[${f.toUpperCase()}]`;
         content = content.split(`{{${f}}}`).join(val);
       });
+      // Replace genérico de {{Data}}
+      const today = new Date().toLocaleDateString('pt-BR');
+      content = content.replace(/{{Data}}/g, today);
+      
       setGeneratedContent(content);
     }
   };
 
-  const fetchCloudTemplate = async (templateName: string, category: string) => {
+  // Simula busca na "Nuvem" usando a biblioteca estendida local
+  const fetchCloudTemplate = (template: DocTemplate) => {
     setIsGenerating(true);
-    try {
-      const apiKey = (import.meta as any).env?.VITE_GOOGLE_API_KEY || sessionStorage.getItem('gemini_key') || '';
-      if (!apiKey) {
-         const userKey = window.prompt("API Key do Google Gemini não encontrada. Insira para carregar o modelo:");
-         if(userKey) sessionStorage.setItem('gemini_key', userKey);
-         else { setIsGenerating(false); return; }
-      }
-      
-      const ai = new GoogleGenAI({ apiKey: apiKey || sessionStorage.getItem('gemini_key')! });
-      
-      const systemPrompt = `
-        Aja como uma API de modelos de documentos brasileiros. 
-        Gere um objeto JSON para o documento "${templateName}".
-        O JSON deve ter estritamente este formato:
-        {
-          "fields": ["Campo1", "Campo2"],
-          "contentPattern": "Texto do documento com placeholders no formato {{Campo1}}..."
-        }
-        Regras:
-        1. Use linguagem jurídica formal e correta para o Brasil.
-        2. "fields" devem ser as variáveis que o usuário precisa preencher.
-        3. "contentPattern" deve ser o texto completo.
-        4. Retorne APENAS o JSON, sem markdown.
-      `;
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: systemPrompt,
-      });
-
-      // FIX: Access .text property directly
-      let text = response.text || '';
-      text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      
-      const result = JSON.parse(text);
-      
-      const newTemplate: DocTemplate = {
-        id: `cloud_${Date.now()}`,
-        name: templateName,
-        category: category as any,
-        description: 'Modelo gerado via Cloud API',
-        fields: result.fields,
-        contentPattern: result.contentPattern
-      };
-
-      setSelectedTemplate(newTemplate);
+    setTimeout(() => {
+      setSelectedTemplate(template);
       setActiveTab('native');
-      
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao baixar o modelo da nuvem. Tente novamente.");
-    } finally {
       setIsGenerating(false);
-    }
+    }, 600); // Fake loading para sensação de "Cloud"
   };
 
+  // "IA" Lógica - Keyword Matching
   const handleAiGeneration = async () => {
     if (!aiPrompt) return alert("Por favor, descreva o documento que deseja.");
     setIsGenerating(true);
 
-    try {
-      const apiKey = (import.meta as any).env?.VITE_GOOGLE_API_KEY || sessionStorage.getItem('gemini_key') || '';
-      
-      if (!apiKey) {
-         const userKey = window.prompt("API Key do Google Gemini não encontrada. Insira para testar (não será salva):");
-         if(userKey) sessionStorage.setItem('gemini_key', userKey);
-         else { setIsGenerating(false); return; }
-      }
-      
-      const keyToUse = apiKey || sessionStorage.getItem('gemini_key') || '';
-      const ai = new GoogleGenAI({ apiKey: keyToUse });
-      
-      const generationPrompt = `Você é um advogado e assistente administrativo experiente. 
-      Crie um documento formal brasileiro com base nesta solicitação: "${aiPrompt}".
-      Regras: Linguagem formal, espaços para assinatura, sem explicações extras.`;
+    // Algoritmo simples de matching
+    const keywords = aiPrompt.toLowerCase().split(' ');
+    let bestMatch: DocTemplate | null = null;
+    let maxScore = 0;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: generationPrompt,
+    EXTENDED_LIBRARY.forEach(tmpl => {
+      let score = 0;
+      const text = (tmpl.name + ' ' + tmpl.description + ' ' + tmpl.category).toLowerCase();
+      keywords.forEach(word => {
+        if (word.length > 3 && text.includes(word)) score++;
       });
-
-      // FIX: Access .text property directly
-      if (response.text) {
-        setGeneratedContent(response.text);
+      if (score > maxScore) {
+        maxScore = score;
+        bestMatch = tmpl;
       }
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao gerar com IA.");
-    } finally {
+    });
+
+    setTimeout(() => {
+      if (bestMatch && maxScore > 0) {
+        setGeneratedContent(`[MODELO ENCONTRADO: ${bestMatch.name}]\n\n` + bestMatch.contentPattern);
+        setSelectedTemplate({
+            ...bestMatch,
+            id: 'ia_result',
+            name: 'Resultado da Busca Inteligente'
+        });
+      } else {
+        setGeneratedContent(`DOCUMENTO GENÉRICO\n\nRef: ${aiPrompt}\n\nPrezados,\n\nVenho por meio desta tratar sobre ${aiPrompt}.\n\nSem mais para o momento,\n\nAtenciosamente,\n\n___________________\nAssinatura`);
+      }
       setIsGenerating(false);
-    }
+    }, 1000);
   };
 
   const downloadPDF = async () => {
@@ -278,42 +223,56 @@ export const DocumentGenerator: React.FC = () => {
   const getCategoryIcon = (cat: string) => {
     switch(cat) {
       case 'Imobiliário': return <Home size={14}/>;
-      case 'Serviços & Negócios': return <Briefcase size={14}/>;
-      case 'Trabalhista & RH': return <User size={14}/>;
-      case 'Jurídico & Pessoal': return <Scale size={14}/>;
+      case 'Serviços': return <Briefcase size={14}/>;
+      case 'RH': return <User size={14}/>;
+      case 'Jurídico': return <Scale size={14}/>;
       default: return <FileBadge size={14}/>;
     }
   };
 
+  // Agrupamento para a UI da Nuvem
+  const cloudCategories = Array.from(new Set(EXTENDED_LIBRARY.map(t => t.category)));
+
   return (
-    <div className="h-full flex gap-4 bg-win95-bg p-2 overflow-hidden">
+    <div className="h-full flex gap-4 bg-win95-bg p-2 overflow-hidden flex-col md:flex-row">
       {/* Sidebar: Seletor e Inputs */}
-      <div className="w-80 flex flex-col gap-2 overflow-hidden">
+      <div className="w-full md:w-80 flex flex-col gap-2 overflow-hidden shrink-0">
          {/* Navegação de Abas */}
          <div className="flex gap-1 shrink-0">
             <button 
               onClick={() => setActiveTab('native')}
               className={`flex-1 px-2 py-1 text-[10px] font-bold uppercase flex items-center justify-center gap-1 border-t-2 border-l-2 border-r-2 ${activeTab === 'native' ? 'bg-win95-bg border-white border-b-0 relative top-[1px] z-10' : 'bg-[#c0c0c0] border-gray-400 text-gray-600'}`}
             >
-              <FileText size={12}/> Modelos Locais
+              <FileText size={12}/> Modelos
             </button>
             <button 
               onClick={() => setActiveTab('cloud')}
               className={`flex-1 px-2 py-1 text-[10px] font-bold uppercase flex items-center justify-center gap-1 border-t-2 border-l-2 border-r-2 ${activeTab === 'cloud' ? 'bg-win95-bg border-white border-b-0 relative top-[1px] z-10' : 'bg-[#c0c0c0] border-gray-400 text-gray-600'}`}
             >
-              <Globe size={12}/> Catálogo Cloud
+              <Globe size={12}/> Biblioteca
             </button>
          </div>
 
          {/* Conteúdo da Sidebar */}
-         <div className="flex-1 win95-raised p-2 bg-win95-bg border-t-white flex flex-col overflow-hidden">
+         <div className="flex-1 win95-raised p-2 bg-win95-bg border-t-white flex flex-col overflow-hidden relative">
             
             {activeTab === 'native' && (
               <>
                 <div className="mb-4">
                   <h3 className="text-[10px] font-bold uppercase mb-2 text-[#555]">Selecionar Modelo</h3>
                   <div className="space-y-1 max-h-40 overflow-y-auto win95-sunken bg-white p-1">
-                    {NATIVE_TEMPLATES.map(tmpl => (
+                    {/* Botão Especial IA */}
+                    <button
+                        onClick={() => {
+                            setSelectedTemplate({ id: 'ia_custom', name: '✨ Assistente de Criação', category: 'IA', description: 'Busca inteligente', fields: [], contentPattern: '' });
+                            setGeneratedContent('');
+                        }}
+                        className={`w-full text-left px-2 py-1 text-xs font-bold border border-transparent flex items-center justify-between group ${selectedTemplate.category === 'IA' ? 'bg-purple-700 text-white' : 'hover:bg-purple-100 text-purple-900'}`}
+                    >
+                        <span>✨ Assistente de Criação</span>
+                    </button>
+
+                    {EXTENDED_LIBRARY.slice(0, 5).map(tmpl => (
                         <button
                           key={tmpl.id}
                           onClick={() => setSelectedTemplate(tmpl)}
@@ -332,19 +291,19 @@ export const DocumentGenerator: React.FC = () => {
 
                 <div className="flex-1 flex flex-col border-t border-gray-300 pt-2 overflow-hidden">
                   <div className="mb-2 text-[10px] font-bold uppercase text-gray-500">
-                    {selectedTemplate.category === 'IA' ? 'Prompt Inteligente' : 'Preenchimento'}
+                    {selectedTemplate.category === 'IA' ? 'O que você precisa?' : 'Preenchimento'}
                   </div>
 
                   {selectedTemplate.category === 'IA' ? (
                     <div className="flex-1 flex flex-col gap-2">
                         <textarea 
                           className="flex-1 w-full win95-sunken p-2 text-xs outline-none resize-none"
-                          placeholder="Descreva o documento..."
+                          placeholder="Ex: Contrato de aluguel, carta de demissão..."
                           value={aiPrompt}
                           onChange={e => setAiPrompt(e.target.value)}
                         />
                         <Button onClick={handleAiGeneration} disabled={isGenerating} icon={isGenerating ? <RefreshCw className="animate-spin" size={14}/> : <Bot size={14}/>}>
-                          {isGenerating ? 'ESCREVENDO...' : 'GERAR DOC'}
+                          {isGenerating ? 'BUSCANDO...' : 'ENCONTRAR MODELO'}
                         </Button>
                     </div>
                   ) : (
@@ -371,7 +330,7 @@ export const DocumentGenerator: React.FC = () => {
                     <Search size={14} className="text-gray-500"/>
                     <input 
                       className="w-full win95-sunken px-1 text-xs outline-none" 
-                      placeholder="Filtrar catálogo..." 
+                      placeholder="Filtrar biblioteca..." 
                       value={searchCloud}
                       onChange={e => setSearchCloud(e.target.value)}
                     />
@@ -380,23 +339,23 @@ export const DocumentGenerator: React.FC = () => {
                     {isGenerating ? (
                       <div className="h-full flex flex-col items-center justify-center text-win95-blue">
                          <Loader2 className="animate-spin mb-2" size={24} />
-                         <p className="text-xs font-bold uppercase">Baixando Modelo...</p>
+                         <p className="text-xs font-bold uppercase">Carregando...</p>
                       </div>
                     ) : (
-                      Object.entries(CLOUD_CATALOG).map(([category, items]) => {
-                        const filteredItems = items.filter(i => i.name.toLowerCase().includes(searchCloud.toLowerCase()));
-                        if (filteredItems.length === 0) return null;
+                      cloudCategories.map(cat => {
+                        const items = EXTENDED_LIBRARY.filter(t => t.category === cat && t.name.toLowerCase().includes(searchCloud.toLowerCase()));
+                        if (items.length === 0) return null;
                         
                         return (
-                          <div key={category}>
+                          <div key={cat}>
                              <div className="flex items-center gap-1 text-[10px] font-black uppercase text-win95-blue mb-1 px-1 border-b border-gray-100">
-                                {getCategoryIcon(category)} {category}
+                                {getCategoryIcon(cat)} {cat}
                              </div>
                              <div className="space-y-0.5">
-                                {filteredItems.map(item => (
+                                {items.map(item => (
                                   <button
                                     key={item.id}
-                                    onClick={() => fetchCloudTemplate(item.name, category)}
+                                    onClick={() => fetchCloudTemplate(item)}
                                     className="w-full text-left px-2 py-1 text-[11px] hover:bg-yellow-50 hover:text-blue-800 flex items-center gap-2 group transition-colors"
                                   >
                                     <div className="w-1 h-1 bg-gray-400 rounded-full group-hover:bg-blue-500"></div>
@@ -410,7 +369,7 @@ export const DocumentGenerator: React.FC = () => {
                     )}
                  </div>
                  <div className="mt-2 text-[9px] text-gray-500 text-center border-t border-gray-300 pt-1">
-                    API de Modelos via Google Gemini
+                    Biblioteca Local v2.0 (Offline)
                  </div>
               </div>
             )}
@@ -419,26 +378,20 @@ export const DocumentGenerator: React.FC = () => {
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 win95-raised p-1 bg-[#808080] flex flex-col">
+      <div className="flex-1 win95-raised p-1 bg-[#808080] flex flex-col min-w-0">
          <div className="bg-win95-blue text-white px-2 py-1 text-xs font-bold uppercase flex justify-between items-center mb-1">
             <span>Pré-visualização</span>
-            <span className="text-[9px] opacity-70">A4 • {selectedTemplate.name}</span>
+            <span className="text-[9px] opacity-70 truncate max-w-[150px]">A4 • {selectedTemplate.name}</span>
          </div>
          
-         <div className="flex-1 bg-[#555] p-8 overflow-y-auto custom-scrollbar flex justify-center">
-             <div className="bg-white w-[210mm] min-h-[297mm] shadow-2xl p-[20mm] flex flex-col relative transition-all">
+         <div className="flex-1 bg-[#555] p-4 md:p-8 overflow-y-auto custom-scrollbar flex justify-center">
+             <div className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-2xl p-8 md:p-[20mm] flex flex-col relative transition-all shrink-0">
                 <textarea 
                   className="w-full h-full resize-none outline-none font-serif text-[12pt] leading-relaxed bg-transparent text-black whitespace-pre-wrap"
                   value={generatedContent}
                   onChange={e => setGeneratedContent(e.target.value)}
                   placeholder="O documento gerado aparecerá aqui..."
                 />
-                
-                {generatedContent && (
-                   <div className="absolute bottom-[20mm] right-[20mm] opacity-10 pointer-events-none">
-                      <FileCheck size={100} className="text-black"/>
-                   </div>
-                )}
              </div>
          </div>
 

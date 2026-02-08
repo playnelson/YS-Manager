@@ -161,7 +161,7 @@ export interface ShiftHandoff {
 export interface DocTemplate {
   id: string;
   name: string;
-  category: 'Financeiro' | 'Jurídico' | 'RH' | 'Pessoal' | 'IA';
+  category: 'Financeiro' | 'Jurídico' | 'RH' | 'Pessoal' | 'IA' | 'Serviços';
   description: string;
   fields: string[]; // Nomes dos campos para preencher (ex: ['Nome', 'Valor'])
   contentPattern: string; // Texto com placeholders {{Nome}}
