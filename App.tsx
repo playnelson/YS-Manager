@@ -1,15 +1,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Landmark } from 'lucide-react';
+import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Search } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarModule } from './components/CalendarModule';
 import { OfficeModule } from './components/OfficeModule';
+import { ConsultationModule } from './components/ConsultationModule';
 import { WhatsAppTool } from './components/WhatsAppTool';
 import { ExtensionsDirectory } from './components/ExtensionsDirectory';
 import { NotesModule } from './components/NotesModule';
-import { BrasilTools } from './components/BrasilTools';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
 import { Button } from './components/ui/Button';
@@ -24,7 +24,7 @@ const DEFAULT_TABS = [
   { id: 'office', label: 'Escritório', icon: <Briefcase size={14} /> },
   { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
   { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
-  { id: 'brtools', label: 'Serviços BR', icon: <Landmark size={14} /> },
+  { id: 'consultas', label: 'Consultas', icon: <Search size={14} /> },
   { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
   { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={14} /> },
 ];
@@ -301,11 +301,13 @@ const App: React.FC = () => {
                     />
                   )}
                   
+                  {/* Módulo Unificado de Consultas */}
+                  {activeTab === 'consultas' && <ConsultationModule />}
+                  
                   {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
                   {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
                   {activeTab === 'whatsapp' && <WhatsAppTool />}
                   {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
-                  {activeTab === 'brtools' && <BrasilTools />}
                 </div>
              </div>
         </div>
