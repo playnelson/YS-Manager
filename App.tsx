@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch2, Repeat, Building2, Briefcase } from 'lucide-react';
+import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch2, Repeat, Building2, Briefcase, Search } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
@@ -24,7 +24,7 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'shifts' | 'kanban' | 'email' | 'flow' | 'pdf' | 'ramais' | 'links' | 'whatsapp' | 'cnpj' | 'brtools'>('postits');
+  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'shifts' | 'kanban' | 'email' | 'flow' | 'pdf' | 'ramais' | 'links' | 'whatsapp' | 'consultas' | 'brtools'>('postits');
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR'));
   
   // Data States
@@ -166,11 +166,11 @@ const App: React.FC = () => {
     { id: 'notes', label: 'Anotações', icon: <FileText size={14} /> },
     { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={14} /> },
     { id: 'shifts', label: 'Escalas', icon: <Repeat size={14} /> },
+    { id: 'consultas', label: 'Consultas', icon: <Search size={14} /> },
     { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
     { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
     { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
     { id: 'pdf', label: 'PDF', icon: <FileSearch2 size={14} /> },
-    { id: 'cnpj', label: 'CNPJ', icon: <Building2 size={14} /> },
     { id: 'brtools', label: 'Serviços BR', icon: <Briefcase size={14} /> },
     { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
     { id: 'links', label: 'Diretório', icon: <Globe size={14} /> },
@@ -219,7 +219,7 @@ const App: React.FC = () => {
                   {activeTab === 'whatsapp' && <WhatsAppTool />}
                   {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
                   {activeTab === 'pdf' && <PdfManager />}
-                  {activeTab === 'cnpj' && <CnpjQuery />}
+                  {activeTab === 'consultas' && <CnpjQuery />}
                   {activeTab === 'brtools' && <BrasilTools />}
                 </div>
              </div>
@@ -227,7 +227,7 @@ const App: React.FC = () => {
       </div>
       
       <div className="mt-1 px-1 flex justify-between items-center text-[10px] text-[#555] font-bold">
-         <span className="flex-1 text-left">YSoffice v1.1.0</span>
+         <span className="flex-1 text-left">YSoffice v1.2.0</span>
          <span className="flex-1 text-center flex items-center justify-center gap-1">
            <ClockIcon size={10} /> {currentTime}
          </span>
