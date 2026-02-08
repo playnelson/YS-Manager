@@ -28,7 +28,6 @@ export const TranslatorTool: React.FC = () => {
     if (!inputText.trim()) return;
     setIsTranslating(true);
     try {
-      // Tenta obter a chave do ambiente ou storage (mesma lógica do DocumentGenerator)
       const apiKey = (import.meta as any).env?.VITE_GOOGLE_API_KEY || sessionStorage.getItem('gemini_key') || '';
       
       if (!apiKey) {
@@ -43,7 +42,6 @@ export const TranslatorTool: React.FC = () => {
       const sLang = LANGUAGES.find(l => l.code === sourceLang)?.name;
       const tLang = LANGUAGES.find(l => l.code === targetLang)?.name;
 
-      // Prompt otimizado para tradução fiel
       const prompt = `Act as a professional translator. Translate the following text from ${sLang} to ${tLang}.
       Rules:
       1. Maintain the original tone and intent.
@@ -88,7 +86,6 @@ export const TranslatorTool: React.FC = () => {
         <Languages size={16} /> Tradutor Neural Inteligente
       </div>
 
-      {/* Controles de Idioma */}
       <div className="flex items-center gap-2 bg-[#d4d0c8] p-2 win95-raised">
         <select 
           className="flex-1 win95-sunken px-2 py-1 text-sm font-bold bg-white outline-none"
@@ -111,9 +108,7 @@ export const TranslatorTool: React.FC = () => {
         </select>
       </div>
 
-      {/* Área de Texto */}
       <div className="flex-1 flex gap-4 overflow-hidden">
-        {/* Entrada */}
         <div className="flex-1 flex flex-col">
            <div className="flex justify-between items-center mb-1 px-1">
               <label className="text-[10px] font-bold uppercase text-[#555]">Texto Original</label>
@@ -134,7 +129,6 @@ export const TranslatorTool: React.FC = () => {
            />
         </div>
 
-        {/* Saída */}
         <div className="flex-1 flex flex-col">
            <div className="flex justify-between items-center mb-1 px-1">
               <label className="text-[10px] font-bold uppercase text-win95-blue">Tradução</label>
@@ -159,7 +153,6 @@ export const TranslatorTool: React.FC = () => {
         </div>
       </div>
 
-      {/* Botão de Ação */}
       <div className="flex justify-end pt-2 border-t border-white">
          <Button 
            onClick={handleTranslate} 

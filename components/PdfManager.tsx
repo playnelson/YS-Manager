@@ -3,10 +3,10 @@ import React, { useState, useRef } from 'react';
 import { FileUp, Scissors, Combine, Download, Trash2, ArrowUp, ArrowDown, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/Button';
 import { PDFDocument } from 'pdf-lib';
-import * as pdfjs from 'pdfjs-dist';
+import { GlobalWorkerOptions, getDocument, version } from 'pdfjs-dist';
 
-// Configuração do worker do PDF.js via CDN
-pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@${pdfjs.version}/build/pdf.worker.mjs`;
+// Configuração do worker do PDF.js via CDN com importação nomeada
+GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@${version}/build/pdf.worker.mjs`;
 
 interface PdfFile {
   id: string;
@@ -29,7 +29,6 @@ export const PdfManager: React.FC = () => {
     if (selectedFiles.length === 0) return;
 
     if (mode === 'split') {
-      // No modo split, só aceitamos um arquivo
       const file = selectedFiles[0];
       const pdfFile = { id: `pdf_${Date.now()}`, file, name: file.name, size: file.size };
       setFiles([pdfFile]);
@@ -43,7 +42,6 @@ export const PdfManager: React.FC = () => {
         setFiles([]);
       }
     } else {
-      // No modo merge, adicionamos à lista
       const newFiles = selectedFiles.map(f => ({
         id: `pdf_${Math.random().toString(36).substr(2, 9)}`,
         file: f,
@@ -156,7 +154,6 @@ export const PdfManager: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-win95-bg p-2 gap-4">
-      {/* Barra de Seleção de Modo */}
       <div className="flex gap-2 shrink-0">
         <Button 
           onClick={() => { setMode('merge'); setFiles([]); setSplitTotalPages(null); }}
@@ -175,7 +172,6 @@ export const PdfManager: React.FC = () => {
       </div>
 
       <div className="flex-1 flex gap-4 overflow-hidden">
-        {/* Lado Esquerdo: Área de Upload e Lista */}
         <div className="flex-1 flex flex-col win95-raised p-2 overflow-hidden">
           <div className="bg-win95-blue text-white px-2 py-1 text-xs font-bold uppercase flex justify-between items-center mb-2 shrink-0">
              <span className="flex items-center gap-2">
@@ -223,7 +219,6 @@ export const PdfManager: React.FC = () => {
           </div>
         </div>
 
-        {/* Lado Direito: Controles e Ação */}
         <div className="w-80 flex flex-col win95-raised p-4 bg-[#d0d0d0] shrink-0">
           <h3 className="text-xs font-black uppercase mb-4 border-b border-win95-shadow pb-2">Configurações de Saída</h3>
           
