@@ -1,6 +1,5 @@
 
 import React, { useState, useRef } from 'react';
-/* Fix: Removed non-existent FileWord from lucide-react imports */
 import { FileUp, Scissors, Combine, Download, Trash2, ArrowUp, ArrowDown, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/Button';
 import { PDFDocument } from 'pdf-lib';
@@ -17,7 +16,7 @@ interface PdfFile {
 }
 
 export const PdfManager: React.FC = () => {
-  const [mode, setMode] = useState<'merge' | 'split' | 'word'>('merge');
+  const [mode, setMode] = useState<'merge' | 'split'>('merge');
   const [files, setFiles] = useState<PdfFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [splitRange, setSplitRange] = useState('');
@@ -29,8 +28,8 @@ export const PdfManager: React.FC = () => {
     const selectedFiles = Array.from(e.target.files || []) as File[];
     if (selectedFiles.length === 0) return;
 
-    if (mode === 'split' || mode === 'word') {
-      // No modo split ou word, só aceitamos um arquivo
+    if (mode === 'split') {
+      // No modo split, só aceitamos um arquivo
       const file = selectedFiles[0];
       const pdfFile = { id: `pdf_${Date.now()}`, file, name: file.name, size: file.size };
       setFiles([pdfFile]);
@@ -117,56 +116,6 @@ export const PdfManager: React.FC = () => {
     }
   };
 
-  const handleToWord = async () => {
-    if (files.length === 0) return alert("Selecione um arquivo para converter.");
-    setIsProcessing(true);
-    try {
-      const sourcePdfItem = files[0];
-      const arrayBuffer = await sourcePdfItem.file.arrayBuffer();
-      
-      // Carrega o PDF usando PDF.js para extração de texto
-      const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
-      let fullText = "";
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(" ");
-        fullText += `<p>${pageText}</p>`;
-      }
-
-      // Cria um conteúdo HTML compatível com o Word
-      const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
-            "xmlns:w='urn:schemas-microsoft-com:office:word' " +
-            "xmlns='http://www.w3.org/TR/REC-html40'>" +
-            "<head><meta charset='utf-8'><title>Conversão YSoffice</title></head><body>";
-      const footer = "</body></html>";
-      const sourceHTML = header + fullText + footer;
-      
-      const blob = new Blob(['\ufeff', sourceHTML], {
-        type: 'application/msword'
-      });
-      
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = sourcePdfItem.name.replace(/\.[^/.]+$/, "") + ".doc";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-    } catch (err) {
-      console.error(err);
-      alert("Falha ao converter para Word. Certifique-se de que o PDF contém camadas de texto.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const parseRange = (rangeStr: string, maxPages: number): number[] => {
     const pages = new Set<number>();
     const parts = rangeStr.split(',').map(p => p.trim());
@@ -222,14 +171,6 @@ export const PdfManager: React.FC = () => {
           icon={<Scissors size={16} />}
         >
           DIVIDIR (EXTRAIR)
-        </Button>
-        <Button 
-          onClick={() => { setMode('word'); setFiles([]); setSplitTotalPages(null); }}
-          className={`flex-1 h-10 ${mode === 'word' ? 'bg-white win95-sunken' : ''}`}
-          /* Fix: Replaced non-existent FileWord with FileText */
-          icon={<FileText size={16} />}
-        >
-          PARA WORD (.DOC)
         </Button>
       </div>
 
@@ -319,21 +260,6 @@ export const PdfManager: React.FC = () => {
               </div>
             )}
 
-            {mode === 'word' && (
-              <div className="text-[10px] space-y-3">
-                <p className="font-bold text-win95-blue uppercase">Transformação Inteligente:</p>
-                <ul className="list-disc pl-4 space-y-1 italic">
-                  <li>O sistema extrai as camadas de texto do PDF.</li>
-                  <li>Imagens e tabelas complexas podem não ser mantidas.</li>
-                  <li>Ideal para documentos de texto, relatórios e ofícios.</li>
-                </ul>
-                <div className="win95-sunken p-2 bg-blue-50 border-none">
-                   <div className="text-[9px] font-bold uppercase text-win95-blue">Compatibilidade:</div>
-                   <div className="text-[8px]">Microsoft Word, Google Docs e LibreOffice.</div>
-                </div>
-              </div>
-            )}
-
             <div className="win95-sunken p-3 bg-white space-y-2">
                <div className="text-[9px] font-bold text-win95-shadow uppercase">Estado do Processador</div>
                <div className="flex items-center gap-2">
@@ -353,12 +279,12 @@ export const PdfManager: React.FC = () => {
           </div>
 
           <Button 
-            onClick={mode === 'merge' ? handleMerge : (mode === 'split' ? handleSplit : handleToWord)}
+            onClick={mode === 'merge' ? handleMerge : handleSplit}
             disabled={isProcessing || files.length === 0}
             className={`w-full h-12 text-sm font-black mt-4 ${isProcessing ? 'opacity-50' : 'bg-win95-blue text-white'}`}
             icon={<Download size={18} />}
           >
-            {mode === 'merge' ? 'MESCLAR E BAIXAR' : (mode === 'split' ? 'EXTRAIR E BAIXAR' : 'CONVERTER E BAIXAR')}
+            {mode === 'merge' ? 'MESCLAR E BAIXAR' : 'EXTRAIR E BAIXAR'}
           </Button>
         </div>
       </div>
