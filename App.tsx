@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch2, Repeat, Briefcase, PenTool } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch2, Repeat, Briefcase, PenTool, GripVertical } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
@@ -9,8 +9,7 @@ import { EmailManager } from './components/EmailManager';
 import { WhatsAppTool } from './components/WhatsAppTool';
 import { ProfessionalLinks } from './components/ProfessionalLinks';
 import { ExtensionsDirectory } from './components/ExtensionsDirectory';
-import { StickyNotesWall } from './components/StickyNotesWall';
-import { ImportantNotes } from './components/ImportantNotes';
+import { NotesModule } from './components/NotesModule';
 import { PdfManager } from './components/PdfManager';
 import { ShiftManager } from './components/ShiftManager';
 import { BrasilTools } from './components/BrasilTools';
@@ -22,9 +21,33 @@ import { Button } from './components/ui/Button';
 const initialKanban: KanbanState = { todo: [], doing: [], done: [] };
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
+// Definição das Abas Disponíveis
+const DEFAULT_TABS = [
+  { id: 'notes_combined', label: 'Anotações', icon: <StickyNote size={14} /> },
+  { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={14} /> },
+  { id: 'shifts', label: 'Escalas', icon: <Repeat size={14} /> },
+  { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
+  { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
+  { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
+  { id: 'signatures', label: 'Assinador', icon: <PenTool size={14} /> },
+  { id: 'pdf', label: 'PDF', icon: <FileSearch2 size={14} /> },
+  { id: 'brtools', label: 'Serviços BR', icon: <Briefcase size={14} /> },
+  { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
+  { id: 'links', label: 'Diretório', icon: <Globe size={14} /> },
+  { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={14} /> },
+];
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'shifts' | 'kanban' | 'email' | 'flow' | 'pdf' | 'ramais' | 'links' | 'whatsapp' | 'brtools' | 'signatures'>('postits');
+  
+  // Estado das Abas (Ordem e Seleção)
+  const [activeTab, setActiveTab] = useState('notes_combined');
+  const [tabs, setTabs] = useState(DEFAULT_TABS);
+  
+  // Drag and Drop State
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR'));
   
   // Data States
@@ -46,6 +69,42 @@ const App: React.FC = () => {
   const [syncError, setSyncError] = useState<string | null>(null);
   
   const [isInverted, setIsInverted] = useState(() => localStorage.getItem('ysoffice_inverted') === 'true');
+
+  // Carregar ordem das abas do localStorage
+  useEffect(() => {
+    const savedOrder = localStorage.getItem('ysoffice_tab_order');
+    if (savedOrder) {
+      try {
+        const parsedOrder = JSON.parse(savedOrder) as string[];
+        const reorderedTabs = parsedOrder
+          .map(id => DEFAULT_TABS.find(t => t.id === id))
+          .filter(Boolean) as typeof DEFAULT_TABS;
+        
+        // Adiciona abas novas que podem não estar no storage antigo
+        const missingTabs = DEFAULT_TABS.filter(t => !parsedOrder.includes(t.id));
+        setTabs([...reorderedTabs, ...missingTabs]);
+      } catch (e) {
+        setTabs(DEFAULT_TABS);
+      }
+    }
+  }, []);
+
+  // Salvar ordem das abas
+  const handleSort = () => {
+    if (dragItem.current === null || dragOverItem.current === null) return;
+    
+    const _tabs = [...tabs];
+    const draggedItemContent = _tabs[dragItem.current];
+    
+    _tabs.splice(dragItem.current, 1);
+    _tabs.splice(dragOverItem.current, 0, draggedItemContent);
+    
+    dragItem.current = null;
+    dragOverItem.current = null;
+    
+    setTabs(_tabs);
+    localStorage.setItem('ysoffice_tab_order', JSON.stringify(_tabs.map(t => t.id)));
+  };
 
   const getFullDate = () => {
     const date = new Date();
@@ -164,22 +223,6 @@ const App: React.FC = () => {
 
   if (!user) return <Auth onLogin={setUser} />;
 
-  const tabs = [
-    { id: 'postits', label: 'Post-its', icon: <StickyNote size={14} /> },
-    { id: 'notes', label: 'Anotações', icon: <FileText size={14} /> },
-    { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={14} /> },
-    { id: 'shifts', label: 'Escalas', icon: <Repeat size={14} /> },
-    { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
-    { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
-    { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
-    { id: 'signatures', label: 'Assinador', icon: <PenTool size={14} /> },
-    { id: 'pdf', label: 'PDF', icon: <FileSearch2 size={14} /> },
-    { id: 'brtools', label: 'Serviços BR', icon: <Briefcase size={14} /> },
-    { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
-    { id: 'links', label: 'Diretório', icon: <Globe size={14} /> },
-    { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={14} /> },
-  ];
-
   return (
     <div className="flex flex-col h-screen bg-[#c0c0c0] p-2 font-sans text-black">
       <div className="flex justify-between items-center px-1 mb-2">
@@ -200,19 +243,46 @@ const App: React.FC = () => {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex gap-1 px-1 z-10 overflow-x-auto no-scrollbar">
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative shrink-0 px-4 py-1.5 flex items-center gap-2 text-xs font-bold rounded-t-sm border-t-2 border-l-2 border-r-2 outline-none ${activeTab === tab.id ? 'bg-[#c0c0c0] border-white border-r-[#808080] pb-2 -mb-[2px] z-20' : 'bg-[#c0c0c0] border-white border-r-[#808080] border-b-2 border-b-white text-[#555] mb-0 z-0 hover:text-black'}`}>
-              {tab.icon} {tab.label}
-            </button>
+        {/* DRAGGABLE TABS */}
+        <div className="flex gap-1 px-1 z-10 overflow-x-auto no-scrollbar pb-0.5">
+          {tabs.map((tab, index) => (
+            <div
+              key={tab.id}
+              draggable
+              onDragStart={() => (dragItem.current = index)}
+              onDragEnter={() => (dragOverItem.current = index)}
+              onDragEnd={handleSort}
+              onDragOver={(e) => e.preventDefault()}
+              className="relative group"
+            >
+              <button 
+                onClick={() => setActiveTab(tab.id)} 
+                className={`relative shrink-0 px-4 py-1.5 flex items-center gap-2 text-xs font-bold rounded-t-sm border-t-2 border-l-2 border-r-2 outline-none select-none transition-none
+                ${activeTab === tab.id 
+                  ? 'bg-[#c0c0c0] border-white border-r-[#808080] pb-2 -mb-[2px] z-20' 
+                  : 'bg-[#c0c0c0] border-white border-r-[#808080] border-b-2 border-b-white text-[#555] mb-0 z-0 hover:text-black'}`}
+              >
+                {/* Grip Handle (Visible on hover to indicate draggable) */}
+                <span className="w-1.5 h-3 opacity-0 group-hover:opacity-20 cursor-grab active:cursor-grabbing border-l border-r border-black mr-1"></span>
+                {tab.icon} {tab.label}
+              </button>
+            </div>
           ))}
         </div>
 
         <div className="flex-1 win95-raised p-1 relative z-10 flex flex-col overflow-hidden">
              <div className="flex-1 win95-sunken bg-white overflow-hidden relative">
-                <div className="absolute inset-0 overflow-auto p-4">
-                  {activeTab === 'postits' && <StickyNotesWall notes={postIts} onChange={setPostIts} />}
-                  {activeTab === 'notes' && <ImportantNotes notes={importantNotes} onChange={setImportantNotes} />}
+                <div className="absolute inset-0 overflow-auto p-4 bg-win95-bg">
+                  {/* Módulo Unificado de Notas */}
+                  {activeTab === 'notes_combined' && (
+                    <NotesModule 
+                      postIts={postIts} 
+                      onPostItChange={setPostIts}
+                      importantNotes={importantNotes}
+                      onNoteChange={setImportantNotes}
+                    />
+                  )}
+                  
                   {activeTab === 'calendar' && <CalendarTool config={calendarConfig} events={calendarEvents} onConfigChange={setCalendarConfig} onEventsChange={setCalendarEvents} />}
                   {activeTab === 'shifts' && <ShiftManager config={shiftConfig} onChange={setShiftConfig} />}
                   {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
@@ -230,7 +300,7 @@ const App: React.FC = () => {
       </div>
       
       <div className="mt-1 px-1 flex justify-between items-center text-[10px] text-[#555] font-bold">
-         <span className="flex-1 text-left">YSoffice v1.2.0</span>
+         <span className="flex-1 text-left">YSoffice v1.3.0</span>
          <span className="flex-1 text-center flex items-center justify-center gap-1">
            <ClockIcon size={10} /> {currentTime}
          </span>

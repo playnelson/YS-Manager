@@ -1,28 +1,35 @@
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Landmark, DollarSign, Search, Loader2, ArrowUp, ArrowDown, Copy, ExternalLink, RefreshCw } from 'lucide-react';
+import { MapPin, Landmark, DollarSign, Search, Loader2, ArrowUp, ArrowDown, Copy, ExternalLink, RefreshCw, Building2 } from 'lucide-react';
 import { Button } from './ui/Button';
-import { CepData, BankData, CurrencyQuote } from '../types';
+import { CepData, BankData, CurrencyQuote, CnpjData } from '../types';
 
 export const BrasilTools: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'cep' | 'banks' | 'finance'>('cep');
+  const [activeTab, setActiveTab] = useState<'cep' | 'cnpj' | 'banks' | 'finance'>('cep');
 
   return (
     <div className="h-full flex flex-col bg-win95-bg gap-2">
-      <div className="flex gap-2 p-1 bg-win95-bg border-b border-white">
+      <div className="flex gap-2 p-1 bg-win95-bg border-b border-white overflow-x-auto">
         <Button 
           onClick={() => setActiveTab('cep')} 
           className={activeTab === 'cep' ? 'bg-white win95-sunken' : ''}
           icon={<MapPin size={14} />}
         >
-          Consulta CEP
+          CEP
+        </Button>
+        <Button 
+          onClick={() => setActiveTab('cnpj')} 
+          className={activeTab === 'cnpj' ? 'bg-white win95-sunken' : ''}
+          icon={<Building2 size={14} />}
+        >
+          CNPJ
         </Button>
         <Button 
           onClick={() => setActiveTab('banks')} 
           className={activeTab === 'banks' ? 'bg-white win95-sunken' : ''}
           icon={<Landmark size={14} />}
         >
-          Lista de Bancos
+          Bancos
         </Button>
         <Button 
           onClick={() => setActiveTab('finance')} 
@@ -35,6 +42,7 @@ export const BrasilTools: React.FC = () => {
 
       <div className="flex-1 win95-raised p-2 bg-[#d0d0d0] overflow-hidden">
         {activeTab === 'cep' && <CepTool />}
+        {activeTab === 'cnpj' && <CnpjTool />}
         {activeTab === 'banks' && <BanksTool />}
         {activeTab === 'finance' && <FinanceTool />}
       </div>
@@ -132,6 +140,143 @@ const CepTool: React.FC = () => {
                 </div>
              </div>
              <div className="text-[9px] text-[#555] text-center">Fonte: Correios / BrasilAPI</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- Sub-componente: CNPJ ---
+const CnpjTool: React.FC = () => {
+  const [cnpj, setCnpj] = useState('');
+  const [data, setData] = useState<CnpjData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const formatCnpj = (val: string) => {
+    return val
+      .replace(/\D/g, '')
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2')
+      .substring(0, 18);
+  };
+
+  const handleSearch = async () => {
+    const cleanCnpj = cnpj.replace(/\D/g, '');
+    if (cleanCnpj.length !== 14) {
+      setError('CNPJ inválido. Digite 14 números.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setData(null);
+
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
+      if (!res.ok) {
+        if (res.status === 404) throw new Error('CNPJ não encontrado.');
+        if (res.status === 429) throw new Error('Muitas requisições. Aguarde um momento.');
+        throw new Error('Erro ao consultar API.');
+      }
+      const json = await res.json();
+      setData(json);
+    } catch (err: any) {
+      setError(err.message || 'Erro na conexão.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isAtiva = data?.descricao_situacao_cadastral === 'ATIVA';
+
+  return (
+    <div className="h-full flex flex-col gap-4">
+      <div className="win95-raised p-4 bg-win95-bg max-w-2xl mx-auto w-full flex flex-col h-full overflow-hidden">
+        <h3 className="text-xs font-black uppercase mb-3 flex items-center gap-2 shrink-0">
+          <Building2 size={14} /> Consulta de Empresas
+        </h3>
+        <div className="flex gap-2 mb-4 shrink-0">
+          <input 
+            className="flex-1 win95-sunken px-2 py-1 text-sm font-mono outline-none bg-white text-black font-bold"
+            placeholder="00.000.000/0001-00"
+            value={cnpj}
+            onChange={(e) => setCnpj(formatCnpj(e.target.value))}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            maxLength={18}
+          />
+          <Button onClick={handleSearch} disabled={loading} className="w-24">
+            {loading ? <Loader2 size={14} className="animate-spin" /> : 'BUSCAR'}
+          </Button>
+        </div>
+
+        {error && (
+           <div className="win95-sunken bg-red-100 p-2 text-red-700 text-xs font-bold mb-2 text-center border-red-500 shrink-0">
+             {error}
+           </div>
+        )}
+
+        {data && (
+          <div className="flex-1 overflow-y-auto custom-scrollbar win95-sunken bg-white p-3 space-y-3 animate-in fade-in zoom-in duration-200">
+             
+             {/* Cabeçalho Status */}
+             <div className="flex justify-between items-start border-b pb-2 mb-2">
+               <div>
+                  <div className="text-[10px] font-bold text-[#555] uppercase">Razão Social</div>
+                  <div className="text-sm font-black text-win95-blue uppercase leading-tight">{data.razao_social}</div>
+               </div>
+               <div className={`px-2 py-1 text-[10px] font-bold text-white uppercase border ${isAtiva ? 'bg-green-600 border-green-800' : 'bg-red-600 border-red-800'}`}>
+                 {data.descricao_situacao_cadastral}
+               </div>
+             </div>
+
+             <div className="grid grid-cols-2 gap-3">
+               <div>
+                 <label className="text-[9px] font-bold text-[#555] uppercase block">Nome Fantasia</label>
+                 <div className="text-xs font-bold text-black border-b border-[#eee] py-0.5">{data.nome_fantasia || '---'}</div>
+               </div>
+               <div>
+                 <label className="text-[9px] font-bold text-[#555] uppercase block">Data de Abertura</label>
+                 <div className="text-xs font-bold text-black border-b border-[#eee] py-0.5">{data.data_inicio_atividade ? new Date(data.data_inicio_atividade).toLocaleDateString('pt-BR') : '-'}</div>
+               </div>
+             </div>
+
+             <div>
+               <label className="text-[9px] font-bold text-[#555] uppercase block">Atividade Principal (CNAE)</label>
+               <div className="text-xs font-bold text-black border-b border-[#eee] py-0.5 uppercase">
+                 {data.cnae_fiscal} - {data.cnae_fiscal_descricao}
+               </div>
+             </div>
+
+             <div className="bg-gray-50 p-2 border border-dotted border-gray-300">
+               <label className="text-[9px] font-bold text-[#555] uppercase block mb-1 flex items-center gap-1"><MapPin size={10}/> Endereço Registrado</label>
+               <div className="text-xs font-bold text-black uppercase">
+                 {data.logradouro}, {data.numero} {data.complemento}
+               </div>
+               <div className="text-xs text-black uppercase mb-2">
+                 {data.bairro} - {data.municipio} / {data.uf}
+               </div>
+               <div className="text-xs font-mono font-bold text-black">
+                 CEP: {data.cep}
+               </div>
+             </div>
+
+             <div className="pt-1 flex justify-end">
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${data.logradouro}, ${data.numero} - ${data.municipio}, ${data.uf}`)}`} 
+                  target="_blank"
+                  rel="noreferrer"
+                  className="win95-btn px-2 py-1 text-[10px] font-bold flex items-center gap-1 bg-win95-bg text-black no-underline"
+                >
+                  <ExternalLink size={10} /> Localizar no Mapa
+                </a>
+             </div>
+             
+             <div className="text-[9px] text-[#555] text-center mt-2 border-t pt-2">
+               Dados fornecidos pela Receita Federal via BrasilAPI
+             </div>
           </div>
         )}
       </div>
