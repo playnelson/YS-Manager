@@ -256,6 +256,14 @@ export interface CurrencyQuote {
   create_date: string;
 }
 
+// Signature Types
+export interface Signature {
+  id: string;
+  name: string;
+  dataUrl: string; // Base64 PNG transparent
+  createdAt: string;
+}
+
 // Global App Data
 export interface AppData {
   kanban: KanbanState;
@@ -268,4 +276,5 @@ export interface AppData {
   postIts: PostIt[];
   importantNotes?: ImportantNote[];
   shiftConfig?: ShiftConfig;
+  signatures?: Signature[];
 }

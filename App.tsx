@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch2, Repeat, Building2, Briefcase, Search } from 'lucide-react';
-import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig } from './types';
+import { Trello, GitMerge, Mail, MessageSquare, RefreshCw, Globe, StickyNote, Contrast, Calendar as CalendarIcon, Phone, FileText, Clock as ClockIcon, FileSearch2, Repeat, Briefcase, PenTool } from 'lucide-react';
+import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarTool } from './components/CalendarTool';
@@ -13,8 +13,8 @@ import { StickyNotesWall } from './components/StickyNotesWall';
 import { ImportantNotes } from './components/ImportantNotes';
 import { PdfManager } from './components/PdfManager';
 import { ShiftManager } from './components/ShiftManager';
-import { CnpjQuery } from './components/CnpjQuery';
 import { BrasilTools } from './components/BrasilTools';
+import { SignatureManager } from './components/SignatureManager';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
 import { Button } from './components/ui/Button';
@@ -24,7 +24,7 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'shifts' | 'kanban' | 'email' | 'flow' | 'pdf' | 'ramais' | 'links' | 'whatsapp' | 'consultas' | 'brtools'>('postits');
+  const [activeTab, setActiveTab] = useState<'postits' | 'notes' | 'calendar' | 'shifts' | 'kanban' | 'email' | 'flow' | 'pdf' | 'ramais' | 'links' | 'whatsapp' | 'brtools' | 'signatures'>('postits');
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR'));
   
   // Data States
@@ -38,6 +38,7 @@ const App: React.FC = () => {
   const [postIts, setPostIts] = useState<PostIt[]>([]);
   const [importantNotes, setImportantNotes] = useState<ImportantNote[]>([]);
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | undefined>(undefined);
+  const [signatures, setSignatures] = useState<Signature[]>([]);
   
   // System States
   const [isSyncing, setIsSyncing] = useState(false);
@@ -104,6 +105,7 @@ const App: React.FC = () => {
             if (parsed.postIts) setPostIts(parsed.postIts);
             if (parsed.importantNotes) setImportantNotes(parsed.importantNotes);
             if (parsed.shiftConfig) setShiftConfig(parsed.shiftConfig);
+            if (parsed.signatures) setSignatures(parsed.signatures);
           }
         } else {
           const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
@@ -119,6 +121,7 @@ const App: React.FC = () => {
             setPostIts(payload.postIts || []);
             setImportantNotes(payload.importantNotes || []);
             setShiftConfig(payload.shiftConfig);
+            setSignatures(payload.signatures || []);
           }
         }
       } catch (err) {
@@ -134,7 +137,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftConfig };
+      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftConfig, signatures };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -150,7 +153,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2000);
     return () => clearTimeout(timeout);
-  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftConfig, user, isDataLoaded]);
+  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftConfig, signatures, user, isDataLoaded]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await (supabase.auth as any).signOut();
@@ -166,10 +169,10 @@ const App: React.FC = () => {
     { id: 'notes', label: 'Anotações', icon: <FileText size={14} /> },
     { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={14} /> },
     { id: 'shifts', label: 'Escalas', icon: <Repeat size={14} /> },
-    { id: 'consultas', label: 'Consultas', icon: <Search size={14} /> },
     { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
     { id: 'email', label: 'E-mails', icon: <Mail size={14} /> },
     { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
+    { id: 'signatures', label: 'Assinador', icon: <PenTool size={14} /> },
     { id: 'pdf', label: 'PDF', icon: <FileSearch2 size={14} /> },
     { id: 'brtools', label: 'Serviços BR', icon: <Briefcase size={14} /> },
     { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
@@ -219,8 +222,8 @@ const App: React.FC = () => {
                   {activeTab === 'whatsapp' && <WhatsAppTool />}
                   {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
                   {activeTab === 'pdf' && <PdfManager />}
-                  {activeTab === 'consultas' && <CnpjQuery />}
                   {activeTab === 'brtools' && <BrasilTools />}
+                  {activeTab === 'signatures' && <SignatureManager signatures={signatures} onChange={setSignatures} />}
                 </div>
              </div>
         </div>
