@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^1.39.0",
+    "@google/genai": "^0.1.2",
     "@supabase/supabase-js": "^2.48.1",
     "lucide-react": "^0.474.0",
     "pdf-lib": "^1.17.1",

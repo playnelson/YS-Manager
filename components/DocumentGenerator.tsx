@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { FileText, Wand2, Download, Printer, ChevronRight, FileCheck, RefreshCw, Bot, Globe, FolderOpen, Search, Briefcase, Home, Scale, User, FileBadge, Loader2 } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -6,7 +7,6 @@ import { GoogleGenAI } from "@google/genai";
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 // --- CATALOGO CLOUD (SIMULADO) ---
-// Estes itens não têm conteúdo hardcoded. O conteúdo é buscado na API (Gemini) na hora do clique.
 const CLOUD_CATALOG = {
   'Imobiliário': [
     { id: 'cloud_aluguel_res', name: 'Contrato de Locação Residencial' },
@@ -101,7 +101,6 @@ export const DocumentGenerator: React.FC = () => {
   React.useEffect(() => {
     setFormValues({});
     if (selectedTemplate.category !== 'IA') {
-      // Pre-fill content with empty placeholders
       let content = selectedTemplate.contentPattern;
       selectedTemplate.fields.forEach(field => {
         content = content.split(`{{${field}}}`).join(`[${field.toUpperCase()}]`);
@@ -112,7 +111,6 @@ export const DocumentGenerator: React.FC = () => {
     }
   }, [selectedTemplate]);
 
-  // Atualiza o preview em tempo real (Modo Template)
   const handleInputChange = (field: string, value: string) => {
     const newValues = { ...formValues, [field]: value };
     setFormValues(newValues);
@@ -127,7 +125,6 @@ export const DocumentGenerator: React.FC = () => {
     }
   };
 
-  // Função para buscar template no "Cloud" (Usando Gemini como API de estrutura)
   const fetchCloudTemplate = async (templateName: string, category: string) => {
     setIsGenerating(true);
     try {
@@ -140,7 +137,6 @@ export const DocumentGenerator: React.FC = () => {
       
       const ai = new GoogleGenAI({ apiKey: apiKey || sessionStorage.getItem('gemini_key')! });
       
-      // Prompt para a IA agir como uma API JSON
       const systemPrompt = `
         Aja como uma API de modelos de documentos brasileiros. 
         Gere um objeto JSON para o documento "${templateName}".
@@ -161,9 +157,8 @@ export const DocumentGenerator: React.FC = () => {
         contents: systemPrompt,
       });
 
-      // CORREÇÃO: Acesso direto à propriedade .text
+      // FIX: Access .text property directly
       let text = response.text || '';
-      // Limpeza básica se a IA retornar markdown code block
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();
       
       const result = JSON.parse(text);
@@ -178,7 +173,7 @@ export const DocumentGenerator: React.FC = () => {
       };
 
       setSelectedTemplate(newTemplate);
-      setActiveTab('native'); // Volta para a aba de edição
+      setActiveTab('native');
       
     } catch (error) {
       console.error(error);
@@ -188,7 +183,6 @@ export const DocumentGenerator: React.FC = () => {
     }
   };
 
-  // Gera documento com IA (Modo Custom)
   const handleAiGeneration = async () => {
     if (!aiPrompt) return alert("Por favor, descreva o documento que deseja.");
     setIsGenerating(true);
@@ -214,7 +208,7 @@ export const DocumentGenerator: React.FC = () => {
         contents: generationPrompt,
       });
 
-      // CORREÇÃO: Acesso direto à propriedade .text
+      // FIX: Access .text property directly
       if (response.text) {
         setGeneratedContent(response.text);
       }
