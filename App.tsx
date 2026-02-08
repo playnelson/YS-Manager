@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Search, Globe } from 'lucide-react';
-import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, KanbanColumn } from './types';
+import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, KanbanColumn, ShiftHandoff } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarModule } from './components/CalendarModule';
@@ -28,15 +28,15 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 // Definição das Abas Disponíveis
 const DEFAULT_TABS = [
-  { id: 'notes_combined', label: 'Anotações', icon: <StickyNote size={14} /> },
-  { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={14} /> },
-  { id: 'office', label: 'Escritório', icon: <Briefcase size={14} /> },
-  { id: 'directory', label: 'Diretório', icon: <Globe size={14} /> },
-  { id: 'kanban', label: 'Tarefas', icon: <Trello size={14} /> },
-  { id: 'flow', label: 'Fluxo', icon: <GitMerge size={14} /> },
-  { id: 'consultas', label: 'Consultas', icon: <Search size={14} /> },
-  { id: 'ramais', label: 'Ramais', icon: <Phone size={14} /> },
-  { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={14} /> },
+  { id: 'notes_combined', label: 'Anotações', icon: <StickyNote size={16} /> },
+  { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={16} /> },
+  { id: 'office', label: 'Escritório', icon: <Briefcase size={16} /> },
+  { id: 'directory', label: 'Diretório', icon: <Globe size={16} /> },
+  { id: 'kanban', label: 'Tarefas', icon: <Trello size={16} /> },
+  { id: 'flow', label: 'Fluxo', icon: <GitMerge size={16} /> },
+  { id: 'consultas', label: 'Consultas', icon: <Search size={16} /> },
+  { id: 'ramais', label: 'Ramais', icon: <Phone size={16} /> },
+  { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={16} /> },
 ];
 
 const App: React.FC = () => {
@@ -62,6 +62,7 @@ const App: React.FC = () => {
   const [extensions, setExtensions] = useState<Extension[]>([]);
   const [postIts, setPostIts] = useState<PostIt[]>([]);
   const [importantNotes, setImportantNotes] = useState<ImportantNote[]>([]);
+  const [shiftHandoffs, setShiftHandoffs] = useState<ShiftHandoff[]>([]);
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | undefined>(undefined);
   const [signatures, setSignatures] = useState<Signature[]>([]);
   
@@ -185,6 +186,7 @@ const App: React.FC = () => {
             if (parsed.extensions) setExtensions(parsed.extensions);
             if (parsed.postIts) setPostIts(parsed.postIts);
             if (parsed.importantNotes) setImportantNotes(parsed.importantNotes);
+            if (parsed.shiftHandoffs) setShiftHandoffs(parsed.shiftHandoffs);
             if (parsed.shiftConfig) setShiftConfig(parsed.shiftConfig);
             if (parsed.signatures) setSignatures(parsed.signatures);
           }
@@ -219,6 +221,7 @@ const App: React.FC = () => {
             setExtensions(payload.extensions || []);
             setPostIts(payload.postIts || []);
             setImportantNotes(payload.importantNotes || []);
+            setShiftHandoffs(payload.shiftHandoffs || []);
             setShiftConfig(payload.shiftConfig);
             setSignatures(payload.signatures || []);
           }
@@ -236,7 +239,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftConfig, signatures };
+      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -252,7 +255,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2000);
     return () => clearTimeout(timeout);
-  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftConfig, signatures, user, isDataLoaded]);
+  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, user, isDataLoaded]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await (supabase.auth as any).signOut();
@@ -264,27 +267,28 @@ const App: React.FC = () => {
   if (!user) return <Auth onLogin={setUser} />;
 
   return (
-    <div className="flex flex-col h-screen bg-[#c0c0c0] p-2 font-sans text-black">
-      <div className="flex justify-between items-center px-1 mb-2">
-        <div className="flex items-center gap-2">
-           <button onClick={() => setActiveTab('calendar')} className="font-bold text-sm text-[#555] hover:text-win95-blue flex items-center gap-2 transition-colors cursor-pointer group">
-             <div className="win95-sunken px-2 py-0.5 bg-white flex items-center gap-2 group-hover:bg-[#f0f0f0]">
-               <CalendarIcon size={14} className="text-win95-blue" />
-               <span>{getFullDate()}</span>
+    <div className="flex flex-col h-screen bg-win95-bg p-4 font-sans text-gray-800">
+      <div className="flex justify-between items-center px-2 mb-4">
+        <div className="flex items-center gap-4">
+           <button onClick={() => setActiveTab('calendar')} className="flex items-center gap-2 group">
+             <div className="win95-sunken px-3 py-1.5 bg-white flex items-center gap-2 group-hover:border-blue-300 transition-colors">
+               <CalendarIcon size={16} className="text-win95-blue" />
+               <span className="font-semibold text-sm text-gray-700">{getFullDate()}</span>
              </div>
            </button>
-           {isSyncing && <RefreshCw size={12} className="animate-spin text-[#000080]" />}
+           {isSyncing && <RefreshCw size={14} className="animate-spin text-win95-blue" />}
         </div>
-        <div className="flex items-center gap-4 text-xs">
-           <span>Usuário: <b>{user.nick}</b></span>
-           <Button onClick={() => setIsInverted(!isInverted)} size="sm" className="min-w-[30px]" title="Inverter Cores"><Contrast size={14} /></Button>
-           <Button onClick={handleLogout} size="sm" className="min-w-[60px]">Sair</Button>
+        <div className="flex items-center gap-4 text-xs font-medium bg-white/50 px-3 py-1.5 rounded-full shadow-sm border border-white/50">
+           <span className="text-gray-600">Usuário: <b className="text-gray-900">{user.nick}</b></span>
+           <div className="h-4 w-px bg-gray-300"></div>
+           <button onClick={() => setIsInverted(!isInverted)} className="hover:text-blue-600 transition-colors" title="Modo Escuro"><Contrast size={16} /></button>
+           <button onClick={handleLogout} className="hover:text-red-600 transition-colors font-bold">Sair</button>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* DRAGGABLE TABS */}
-        <div className="flex gap-1 px-1 z-10 overflow-x-auto no-scrollbar pb-0.5">
+      <div className="flex-1 flex flex-col overflow-hidden win95-raised bg-gray-100 shadow-2xl">
+        {/* Modern Tabs */}
+        <div className="flex px-2 pt-2 bg-[#d1d5db] border-b border-gray-300 overflow-x-auto no-scrollbar gap-1">
           {tabs.map((tab, index) => (
             <div
               key={tab.id}
@@ -293,84 +297,86 @@ const App: React.FC = () => {
               onDragEnter={() => (dragOverItem.current = index)}
               onDragEnd={handleSort}
               onDragOver={(e) => e.preventDefault()}
-              className="relative group"
+              className="relative"
             >
               <button 
                 onClick={() => setActiveTab(tab.id)} 
-                className={`relative shrink-0 px-4 py-1.5 flex items-center gap-2 text-xs font-bold rounded-t-sm border-t-2 border-l-2 border-r-2 outline-none select-none transition-none
-                ${activeTab === tab.id 
-                  ? 'bg-[#c0c0c0] border-white border-r-[#808080] pb-2 -mb-[2px] z-20' 
-                  : 'bg-[#c0c0c0] border-white border-r-[#808080] border-b-2 border-b-white text-[#555] mb-0 z-0 hover:text-black'}`}
+                className={`
+                  relative flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-t-lg transition-all duration-200
+                  ${activeTab === tab.id 
+                    ? 'bg-white text-blue-700 shadow-[0_-2px_5px_rgba(0,0,0,0.05)] z-10 -mb-[1px] border-t-2 border-blue-500' 
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 border-t-2 border-transparent'}
+                `}
               >
-                {/* Grip Handle (Visible on hover to indicate draggable) */}
-                <span className="w-1.5 h-3 opacity-0 group-hover:opacity-20 cursor-grab active:cursor-grabbing border-l border-r border-black mr-1"></span>
                 {tab.icon} {tab.label}
               </button>
             </div>
           ))}
         </div>
 
-        <div className="flex-1 win95-raised p-1 relative z-10 flex flex-col overflow-hidden">
-             <div className="flex-1 win95-sunken bg-white overflow-hidden relative">
-                <div className="absolute inset-0 overflow-auto p-4 bg-win95-bg">
-                  {/* Módulo Unificado de Notas */}
-                  {activeTab === 'notes_combined' && (
-                    <NotesModule 
-                      postIts={postIts} 
-                      onPostItChange={setPostIts}
-                      importantNotes={importantNotes}
-                      onNoteChange={setImportantNotes}
-                    />
-                  )}
-                  
-                  {activeTab === 'calendar' && (
-                    <CalendarModule 
-                       calendarConfig={calendarConfig}
-                       onCalendarConfigChange={setCalendarConfig}
-                       events={calendarEvents}
-                       onEventsChange={setCalendarEvents}
-                       shiftConfig={shiftConfig}
-                       onShiftConfigChange={setShiftConfig}
-                    />
-                  )}
-                  
-                  {/* Módulo Unificado de Escritório */}
-                  {activeTab === 'office' && (
-                    <OfficeModule 
-                      emails={emails}
-                      onEmailChange={setEmails}
-                      signatures={signatures}
-                      onSignatureChange={setSignatures}
-                      onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
-                    />
-                  )}
+        <div className="flex-1 overflow-hidden relative bg-white">
+            <div className="absolute inset-0 overflow-auto p-4 bg-gray-50">
+              {/* Módulo Unificado de Notas */}
+              {activeTab === 'notes_combined' && (
+                <NotesModule 
+                  postIts={postIts} 
+                  onPostItChange={setPostIts}
+                  importantNotes={importantNotes}
+                  onNoteChange={setImportantNotes}
+                  handoffs={shiftHandoffs}
+                  onHandoffChange={setShiftHandoffs}
+                  currentUser={user}
+                />
+              )}
+              
+              {activeTab === 'calendar' && (
+                <CalendarModule 
+                    calendarConfig={calendarConfig}
+                    onCalendarConfigChange={setCalendarConfig}
+                    events={calendarEvents}
+                    onEventsChange={setCalendarEvents}
+                    shiftConfig={shiftConfig}
+                    onShiftConfigChange={setShiftConfig}
+                />
+              )}
+              
+              {/* Módulo Unificado de Escritório */}
+              {activeTab === 'office' && (
+                <OfficeModule 
+                  emails={emails}
+                  onEmailChange={setEmails}
+                  signatures={signatures}
+                  onSignatureChange={setSignatures}
+                  onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
+                />
+              )}
 
-                  {/* Módulo de Diretório Web (Grid de Ícones) */}
-                  {activeTab === 'directory' && (
-                    <ProfessionalLinks 
-                       links={links}
-                       onChange={setLinks}
-                    />
-                  )}
-                  
-                  {/* Módulo Unificado de Consultas */}
-                  {activeTab === 'consultas' && <ConsultationModule />}
-                  
-                  {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
-                  {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
-                  {activeTab === 'whatsapp' && <WhatsAppTool />}
-                  {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
-                </div>
-             </div>
+              {/* Módulo de Diretório Web (Grid de Ícones) */}
+              {activeTab === 'directory' && (
+                <ProfessionalLinks 
+                    links={links}
+                    onChange={setLinks}
+                />
+              )}
+              
+              {/* Módulo Unificado de Consultas */}
+              {activeTab === 'consultas' && <ConsultationModule />}
+              
+              {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
+              {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
+              {activeTab === 'whatsapp' && <WhatsAppTool />}
+              {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
+            </div>
         </div>
-      </div>
-      
-      <div className="mt-1 px-1 flex justify-between items-center text-[10px] text-[#555] font-bold">
-         <span className="flex-1 text-left">YSoffice v1.5.0</span>
-         <span className="flex-1 text-center flex items-center justify-center gap-1">
-           <ClockIcon size={10} /> {currentTime}
-         </span>
-         <span className="flex-1 text-right">{isDataLoaded ? 'Base de Dados Conectada' : 'Aguardando Sincronização...'}</span>
+        
+        {/* Footer Status Bar */}
+        <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none">
+           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> YSoffice v2.0 - Modern UI</span>
+           <span className="flex items-center gap-1 font-mono">
+             <ClockIcon size={10} /> {currentTime}
+           </span>
+           <span>{isDataLoaded ? 'Conectado' : 'Sincronizando...'}</span>
+        </div>
       </div>
     </div>
   );

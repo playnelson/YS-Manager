@@ -144,6 +144,19 @@ export interface ShiftConfig {
   segments: ShiftSegment[];
 }
 
+// Shift Handoff Types (Passagem de Serviço)
+export type HandoffStatus = 'ok' | 'warning' | 'critical';
+
+export interface ShiftHandoff {
+  id: string;
+  timestamp: string;
+  userNick: string;
+  shiftPeriod: string; // Manhã, Tarde, Noite, Plantão A, etc.
+  status: HandoffStatus;
+  occurrences: string;
+  pendingItems: string;
+}
+
 // CNPJ Data Type (BrasilAPI Completo)
 export interface Cnae {
   codigo: number;
@@ -280,6 +293,7 @@ export interface AppData {
   extensions?: Extension[];
   postIts: PostIt[];
   importantNotes?: ImportantNote[];
+  shiftHandoffs?: ShiftHandoff[]; // New Field
   shiftConfig?: ShiftConfig;
   signatures?: Signature[];
 }

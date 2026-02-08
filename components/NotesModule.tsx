@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
-import { StickyNote, FileText } from 'lucide-react';
-import { PostIt, ImportantNote } from '../types';
+import { StickyNote, FileText, ClipboardList } from 'lucide-react';
+import { PostIt, ImportantNote, ShiftHandoff, User } from '../types';
 import { StickyNotesWall } from './StickyNotesWall';
 import { ImportantNotes } from './ImportantNotes';
+import { ShiftHandoffModule } from './ShiftHandoff';
 import { Button } from './ui/Button';
 
 interface NotesModuleProps {
@@ -11,20 +12,26 @@ interface NotesModuleProps {
   onPostItChange: (notes: PostIt[]) => void;
   importantNotes: ImportantNote[];
   onNoteChange: (notes: ImportantNote[]) => void;
+  handoffs?: ShiftHandoff[];
+  onHandoffChange?: (handoffs: ShiftHandoff[]) => void;
+  currentUser?: User | null;
 }
 
 export const NotesModule: React.FC<NotesModuleProps> = ({ 
   postIts, 
   onPostItChange, 
   importantNotes, 
-  onNoteChange 
+  onNoteChange,
+  handoffs = [],
+  onHandoffChange = () => {},
+  currentUser = null
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'wall' | 'docs'>('wall');
+  const [activeSubTab, setActiveSubTab] = useState<'wall' | 'docs' | 'handoff'>('wall');
 
   return (
     <div className="h-full flex flex-col gap-2">
       {/* Sub-navegação interna */}
-      <div className="flex gap-2 shrink-0 border-b border-white pb-1">
+      <div className="flex gap-2 shrink-0 border-b border-white pb-1 overflow-x-auto">
         <Button 
           onClick={() => setActiveSubTab('wall')} 
           className={activeSubTab === 'wall' ? 'bg-white win95-sunken' : ''}
@@ -39,15 +46,26 @@ export const NotesModule: React.FC<NotesModuleProps> = ({
         >
           Anotações
         </Button>
+        <Button 
+          onClick={() => setActiveSubTab('handoff')} 
+          className={activeSubTab === 'handoff' ? 'bg-white win95-sunken' : ''}
+          icon={<ClipboardList size={14} />}
+        >
+          Passagem de Serviço
+        </Button>
       </div>
 
       {/* Área de Conteúdo */}
       <div className="flex-1 win95-sunken bg-[#808080] p-0.5 overflow-hidden border-2 border-white border-t-[#808080] border-l-[#808080] border-r-white border-b-white">
         <div className="h-full w-full bg-win95-bg">
-            {activeSubTab === 'wall' ? (
+            {activeSubTab === 'wall' && (
                 <StickyNotesWall notes={postIts} onChange={onPostItChange} />
-            ) : (
+            )}
+            {activeSubTab === 'docs' && (
                 <ImportantNotes notes={importantNotes} onChange={onNoteChange} />
+            )}
+            {activeSubTab === 'handoff' && (
+                <ShiftHandoffModule handoffs={handoffs} onChange={onHandoffChange} currentUser={currentUser} />
             )}
         </div>
       </div>

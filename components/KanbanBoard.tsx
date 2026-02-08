@@ -93,8 +93,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ data, onChange }) => {
   const handleDragStart = (e: React.DragEvent, cardId: string, colId: string) => {
     setDraggingCard({ cardId, colId });
     e.dataTransfer.effectAllowed = 'move';
-    // Pequeno hack para esconder a imagem fantasma padrão se quiséssemos customizar, 
-    // mas vamos deixar o padrão para simplicidade.
   };
 
   const handleDragOver = (e: React.DragEvent, colId: string) => {
@@ -109,7 +107,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ data, onChange }) => {
     if (!draggingCard) return;
     const { cardId, colId: sourceColId } = draggingCard;
 
-    // Se soltou na mesma coluna, e não implementamos reordenação intra-lista ainda, não faz nada
     if (sourceColId === targetColId) {
       setDraggingCard(null);
       return;
@@ -137,140 +134,145 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ data, onChange }) => {
     setDraggingCard(null);
   };
 
-  const getPriorityColor = (p: KanbanPriority) => {
-    switch (p) {
-      case 'high': return 'bg-red-500';
-      case 'medium': return 'bg-yellow-400';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-gray-400';
-    }
-  };
-
   return (
-    <div className="h-full flex flex-col bg-[#0079bf] overflow-hidden rounded shadow-inner">
-      {/* Trello-like Header */}
-      <div className="p-2 flex justify-between items-center bg-black/20 text-white shrink-0">
-         <h2 className="text-sm font-bold pl-2 flex items-center gap-2">
-            <span className="opacity-80">Quadro de Projetos</span>
-         </h2>
-         <Button onClick={addColumn} className="bg-white/20 hover:bg-white/30 text-white border-none shadow-none text-xs h-7">
-            <Plus size={14} /> Adicionar Lista
+    <div className="h-full flex flex-col gap-2 bg-win95-bg">
+      {/* Toolbar / Header */}
+      <div className="win95-raised p-1 flex justify-between items-center bg-win95-bg shrink-0">
+         <div className="flex items-center gap-2 px-2">
+            <div className="bg-win95-blue text-white px-2 py-1 text-xs font-bold uppercase shadow-sm flex items-center gap-2">
+                <span>Gerenciador de Tarefas</span>
+            </div>
+         </div>
+         <Button onClick={addColumn} icon={<Plus size={14} />}>
+            NOVA LISTA
          </Button>
       </div>
 
-      {/* Board Area (Horizontal Scrolling) */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden p-3 flex gap-3 items-start">
+      {/* Board Area */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 flex gap-4 items-start win95-sunken bg-[#808080] border-2 border-white">
         {data.columns.map(col => (
           <div 
             key={col.id}
-            className={`w-72 shrink-0 flex flex-col max-h-full rounded-md bg-[#ebecf0] shadow-md transition-colors ${dragOverCol === col.id ? 'bg-[#d0d4db]' : ''}`}
+            className={`w-72 shrink-0 flex flex-col max-h-full win95-raised bg-win95-bg p-1 transition-colors ${dragOverCol === col.id ? 'outline outline-2 outline-white' : ''}`}
             onDragOver={(e) => handleDragOver(e, col.id)}
             onDrop={(e) => handleDrop(e, col.id)}
           >
-            {/* Column Header */}
-            <div className="p-2 px-3 flex justify-between items-center font-bold text-sm text-[#172b4d] shrink-0 cursor-pointer group">
+            {/* Column Header - Style Title Bar */}
+            <div className="bg-win95-blue text-white px-2 py-1 mb-1 text-xs font-bold uppercase flex justify-between items-center group cursor-grab active:cursor-grabbing select-none shadow-sm">
               {editingColumnId === col.id ? (
                 <input 
                   autoFocus
-                  className="w-full px-1 py-0.5 rounded border border-blue-500 outline-none text-sm"
+                  className="w-full bg-blue-800 text-white outline-none border-b border-white px-1"
                   value={editingColumnTitle}
                   onChange={e => setEditingColumnTitle(e.target.value)}
                   onBlur={() => updateColumnTitle(col.id)}
                   onKeyDown={e => e.key === 'Enter' && updateColumnTitle(col.id)}
                 />
               ) : (
-                <div onClick={() => { setEditingColumnId(col.id); setEditingColumnTitle(col.title); }} className="flex-1 py-1 truncate">
+                <div onClick={() => { setEditingColumnId(col.id); setEditingColumnTitle(col.title); }} className="flex-1 truncate">
                   {col.title}
                 </div>
               )}
               <button 
                 onClick={() => deleteColumn(col.id)}
-                className="p-1 rounded hover:bg-gray-300 text-gray-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="hover:bg-red-600 p-0.5 rounded-sm"
+                title="Excluir Lista"
               >
-                <MoreVertical size={14} />
+                <X size={10} />
               </button>
             </div>
 
             {/* Cards List */}
-            <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2 custom-scrollbar min-h-[20px]">
+            <div className="flex-1 overflow-y-auto p-1 win95-sunken bg-[#d4d0c8] min-h-[50px] space-y-2 custom-scrollbar border-t border-l border-[#404040] border-b border-r border-white">
               {col.cards.map(card => (
                 <div 
                   key={card.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, card.id, col.id)}
-                  className="bg-white p-2 rounded shadow-sm border-b border-gray-200 hover:bg-gray-50 group cursor-grab active:cursor-grabbing relative"
+                  className="win95-raised bg-white p-2 group relative cursor-grab active:cursor-grabbing hover:bg-[#ffffe0]"
                 >
-                  {/* Priority Strip */}
-                  <div 
-                    className={`w-8 h-1.5 rounded-full mb-1 ${getPriorityColor(card.priority)}`} 
-                    title={`Prioridade: ${card.priority}`}
-                  />
+                  {/* Priority Indicator */}
+                  <div className={`w-full h-1 mb-2 border-b border-[#eee] ${
+                    card.priority === 'high' ? 'bg-red-600' : 
+                    card.priority === 'medium' ? 'bg-yellow-400' : 
+                    card.priority === 'low' ? 'bg-green-600' : 'bg-gray-300'
+                  }`} />
 
                   {editingCardId === card.id ? (
                     <div className="space-y-2">
                        <textarea 
-                          className="w-full text-sm p-1 border rounded resize-none focus:ring-2 focus:ring-blue-400 outline-none"
-                          rows={2}
+                          className="w-full text-xs p-1 win95-sunken outline-none resize-none font-sans bg-white text-black"
+                          rows={3}
                           autoFocus
                           value={editingTitle}
                           onChange={e => setEditingTitle(e.target.value)}
                           onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); updateCardTitle(col.id, card.id); }}}
                        />
-                       <div className="flex justify-between items-center">
-                          <button onClick={() => updateCardTitle(col.id, card.id)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">Salvar</button>
-                          <div className="flex gap-1">
+                       <div className="flex justify-between items-center gap-2">
+                          <div className="flex gap-1 bg-gray-100 p-1 win95-sunken">
                              {(['low', 'medium', 'high'] as KanbanPriority[]).map(p => (
                                <button 
                                 key={p}
                                 onClick={() => updateCardPriority(col.id, card.id, p)}
-                                className={`w-4 h-4 rounded-full ${getPriorityColor(p)} border border-transparent hover:border-black`}
+                                className={`w-3 h-3 border border-black ${
+                                  p === 'high' ? 'bg-red-600' : 
+                                  p === 'medium' ? 'bg-yellow-400' : 'bg-green-600'
+                                } ${card.priority === p ? 'ring-1 ring-black ring-offset-1' : ''}`}
                                 title={p}
                                />
                              ))}
                           </div>
+                          <Button size="sm" onClick={() => updateCardTitle(col.id, card.id)}>OK</Button>
                        </div>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
+                    <>
                       <div 
-                        className="flex-1 text-sm text-[#172b4d]" 
-                        onClick={() => { setEditingCardId(card.id); setEditingTitle(card.title); }}
+                        className="text-xs font-bold text-black mb-1 leading-tight" 
+                        onDoubleClick={() => { setEditingCardId(card.id); setEditingTitle(card.title); }}
                       >
                         {card.title}
                       </div>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); deleteCard(col.id, card.id); }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
+                      
+                      <div className="flex justify-end opacity-0 group-hover:opacity-100 absolute top-1 right-1 gap-1">
+                         <button 
+                          onClick={(e) => { e.stopPropagation(); setEditingCardId(card.id); setEditingTitle(card.title); }}
+                          className="p-1 hover:bg-blue-100 text-blue-600 bg-white border border-gray-300 shadow-sm"
+                          title="Editar"
+                        >
+                          <Edit2 size={10} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); deleteCard(col.id, card.id); }}
+                          className="p-1 hover:bg-red-100 text-red-600 bg-white border border-gray-300 shadow-sm"
+                          title="Excluir"
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
+              {col.cards.length === 0 && (
+                <div className="text-center py-4 text-[10px] text-gray-500 italic">
+                  Lista Vazia
+                </div>
+              )}
             </div>
 
             {/* Column Footer */}
-            <div className="p-2 pt-1 shrink-0">
-               <button 
+            <div className="pt-1 mt-1">
+               <Button 
                  onClick={() => addCard(col.id)}
-                 className="w-full text-left p-1.5 rounded text-[#5e6c84] hover:bg-[#091e4214] text-sm flex items-center gap-1 transition-colors"
+                 className="w-full text-[10px]"
+                 icon={<Plus size={10} />}
                >
-                 <Plus size={14} /> Adicionar cartão
-               </button>
+                 Adicionar Tarefa
+               </Button>
             </div>
           </div>
         ))}
-        
-        {/* Placeholder for Add List Button to keep layout sane */}
-        <div className="w-72 shrink-0">
-           <button 
-             onClick={addColumn}
-             className="w-full bg-white/20 hover:bg-white/30 text-white p-2 rounded text-left text-sm font-bold flex items-center gap-2 transition-colors"
-           >
-             <Plus size={14} /> Adicionar outra lista
-           </button>
-        </div>
       </div>
     </div>
   );
