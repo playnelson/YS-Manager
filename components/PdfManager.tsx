@@ -3,10 +3,10 @@ import React, { useState, useRef } from 'react';
 import { FileUp, Scissors, Combine, Download, Trash2, ArrowUp, ArrowDown, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/Button';
 import { PDFDocument } from 'pdf-lib';
-import * as pdfjsLib from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
 
-// Configuração do worker do PDF.js via CDN com importação nomeada
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.mjs`;
+// Configuração do worker usando CDN para garantir compatibilidade em build
+GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
 
 interface PdfFile {
   id: string;

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Printer, ChevronRight, FileCheck, RefreshCw, Bot, Globe, Search, Briefcase, Home, Scale, User, FileBadge, Loader2 } from 'lucide-react';
+import { FileText, Download, Printer, ChevronRight, RefreshCw, Bot, Globe, Search, Briefcase, Home, Scale, User, FileBadge, Loader2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { DocTemplate } from '../types';
 import { PDFDocument } from 'pdf-lib';
@@ -175,9 +175,8 @@ export const DocumentGenerator: React.FC = () => {
       const page = doc.addPage([595.28, 841.89]); // A4 em points
       const basePdf = await doc.saveAsBase64({ dataUri: true });
 
-      // 2. Definir o Schema do PDFME
-      // Criamos um campo de texto único que ocupa a página (margem 20mm)
-      const template = {
+      // 2. Definir o Schema do PDFME (Usando any para evitar conflitos estritos de TS no build)
+      const template: any = {
         basePdf,
         schemas: [
           [
@@ -189,7 +188,6 @@ export const DocumentGenerator: React.FC = () => {
               width: 170, // 210mm (A4) - 40mm (margens)
               height: 250, // Altura útil
               fontSize: 11,
-              fontName: 'Roboto', // Fonte padrão do pdfme
               lineHeight: 1.5,
               alignment: 'left',
               verticalAlignment: 'top',
