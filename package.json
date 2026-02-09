@@ -10,12 +10,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@pdfme/common": "^4.1.0",
+    "@pdfme/generator": "^4.1.0",
+    "@pdfme/schemas": "^4.1.0",
     "@supabase/supabase-js": "^2.48.1",
     "lucide-react": "^0.474.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.10.38",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
