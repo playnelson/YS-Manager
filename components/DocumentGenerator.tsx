@@ -3,7 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Download, Printer, ChevronRight, FileCheck, RefreshCw, Bot, Globe, Search, Briefcase, Home, Scale, User, FileBadge, Loader2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { DocTemplate } from '../types';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument } from 'pdf-lib';
+import { generate } from '@pdfme/generator';
+import { text } from '@pdfme/schemas';
 
 // --- BIBLIOTECA EXTENDIDA (Simulando Cloud) ---
 const EXTENDED_LIBRARY: DocTemplate[] = [
@@ -125,7 +127,7 @@ export const DocumentGenerator: React.FC = () => {
       setSelectedTemplate(template);
       setActiveTab('native');
       setIsGenerating(false);
-    }, 600); // Fake loading para sensação de "Cloud"
+    }, 600);
   };
 
   // "IA" Lógica - Keyword Matching
@@ -133,7 +135,6 @@ export const DocumentGenerator: React.FC = () => {
     if (!aiPrompt) return alert("Por favor, descreva o documento que deseja.");
     setIsGenerating(true);
 
-    // Algoritmo simples de matching
     const keywords = aiPrompt.toLowerCase().split(' ');
     let bestMatch: DocTemplate | null = null;
     let maxScore = 0;
@@ -165,50 +166,47 @@ export const DocumentGenerator: React.FC = () => {
     }, 1000);
   };
 
+  // --- PDFME INTEGRATION ---
   const downloadPDF = async () => {
+    setIsGenerating(true);
     try {
-      const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage();
-      const { width, height } = page.getSize();
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const fontSize = 12;
-      const margin = 50;
-      const text = generatedContent;
-      const lines = text.split('\n');
-      let y = height - margin;
+      // 1. Criar um Base PDF em branco (A4)
+      const doc = await PDFDocument.create();
+      const page = doc.addPage([595.28, 841.89]); // A4 em points
+      const basePdf = await doc.saveAsBase64({ dataUri: true });
 
-      const writeLine = (line: string) => {
-         const maxWidth = width - (margin * 2);
-         const words = line.split(' ');
-         let currentLine = '';
-         for (const word of words) {
-            const testLine = currentLine + (currentLine ? ' ' : '') + word;
-            const textWidth = font.widthOfTextAtSize(testLine, fontSize);
-            if (textWidth > maxWidth) {
-               page.drawText(currentLine, { x: margin, y, size: fontSize, font, color: rgb(0, 0, 0) });
-               y -= (fontSize + 5);
-               currentLine = word;
-            } else {
-               currentLine = testLine;
+      // 2. Definir o Schema do PDFME
+      // Criamos um campo de texto único que ocupa a página (margem 20mm)
+      const template = {
+        basePdf,
+        schemas: [
+          [
+            {
+              name: 'content',
+              type: 'text',
+              content: 'Conteúdo do Documento',
+              position: { x: 20, y: 20 },
+              width: 170, // 210mm (A4) - 40mm (margens)
+              height: 250, // Altura útil
+              fontSize: 11,
+              fontName: 'Roboto', // Fonte padrão do pdfme
+              lineHeight: 1.5,
+              alignment: 'left',
+              verticalAlignment: 'top',
             }
-         }
-         if (currentLine) {
-            page.drawText(currentLine, { x: margin, y, size: fontSize, font, color: rgb(0, 0, 0) });
-            y -= (fontSize + 5);
-         }
+          ]
+        ]
       };
 
-      lines.forEach(line => {
-         writeLine(line);
-         y -= 5; 
-         if (y < margin) { 
-             const newPage = pdfDoc.addPage(); 
-             y = height - margin; 
-         }
-      });
+      // 3. Inputs
+      const inputs = [{ content: generatedContent }];
 
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      // 4. Gerar PDF usando @pdfme/generator
+      // Passamos o plugin 'text' para renderizar o texto corretamente
+      const pdf = await generate({ template, inputs, plugins: { text } });
+
+      // 5. Download
+      const blob = new Blob([pdf.buffer], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = `documento_${selectedTemplate.name.toLowerCase().replace(/\s/g, '_')}.pdf`;
@@ -216,7 +214,9 @@ export const DocumentGenerator: React.FC = () => {
 
     } catch (err) {
       console.error(err);
-      alert("Erro ao criar PDF.");
+      alert("Erro ao gerar PDF com PDFME.");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -230,7 +230,6 @@ export const DocumentGenerator: React.FC = () => {
     }
   };
 
-  // Agrupamento para a UI da Nuvem
   const cloudCategories = Array.from(new Set(EXTENDED_LIBRARY.map(t => t.category)));
 
   return (
@@ -397,7 +396,9 @@ export const DocumentGenerator: React.FC = () => {
 
          <div className="bg-win95-bg p-2 flex justify-end gap-2 border-t border-white">
              <Button onClick={() => window.print()} variant="secondary" icon={<Printer size={16}/>}>IMPRIMIR</Button>
-             <Button onClick={downloadPDF} className="bg-win95-blue text-white" icon={<Download size={16}/>}>BAIXAR PDF</Button>
+             <Button onClick={downloadPDF} disabled={isGenerating} className="bg-win95-blue text-white" icon={isGenerating ? <Loader2 className="animate-spin" size={16}/> : <Download size={16}/>}>
+               {isGenerating ? 'GERANDO PDF...' : 'BAIXAR PDF (PDFME)'}
+             </Button>
          </div>
       </div>
       

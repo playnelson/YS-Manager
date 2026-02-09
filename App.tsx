@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Search, Globe } from 'lucide-react';
+import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Search, Globe, Menu, Eye, EyeOff, GripHorizontal, LayoutGrid } from 'lucide-react';
 import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, KanbanColumn, ShiftHandoff } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
@@ -46,6 +46,11 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('notes_combined');
   const [tabs, setTabs] = useState(DEFAULT_TABS);
   
+  // Menu Cascata e Visibilidade
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
   // Drag and Drop State
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -72,6 +77,17 @@ const App: React.FC = () => {
   const [syncError, setSyncError] = useState<string | null>(null);
   
   const [isInverted, setIsInverted] = useState(() => localStorage.getItem('ysoffice_inverted') === 'true');
+
+  // Fechar menu ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Carregar ordem das abas do localStorage
   useEffect(() => {
@@ -189,6 +205,7 @@ const App: React.FC = () => {
             if (parsed.shiftHandoffs) setShiftHandoffs(parsed.shiftHandoffs);
             if (parsed.shiftConfig) setShiftConfig(parsed.shiftConfig);
             if (parsed.signatures) setSignatures(parsed.signatures);
+            if (parsed.hiddenTabs) setHiddenTabs(parsed.hiddenTabs);
           }
         } else {
           const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
@@ -201,7 +218,6 @@ const App: React.FC = () => {
                if (Array.isArray(payload.kanban.columns)) {
                   safeKanban = payload.kanban;
                } else if (payload.kanban.todo) {
-                  // Migrar estrutura antiga
                   safeKanban = {
                     columns: [
                       { id: 'todo', title: 'Pendentes', cards: payload.kanban.todo || [] },
@@ -224,6 +240,7 @@ const App: React.FC = () => {
             setShiftHandoffs(payload.shiftHandoffs || []);
             setShiftConfig(payload.shiftConfig);
             setSignatures(payload.signatures || []);
+            setHiddenTabs(payload.hiddenTabs || []);
           }
         }
       } catch (err) {
@@ -239,7 +256,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures };
+      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, hiddenTabs };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -255,7 +272,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2000);
     return () => clearTimeout(timeout);
-  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, user, isDataLoaded]);
+  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, hiddenTabs, user, isDataLoaded]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await (supabase.auth as any).signOut();
@@ -264,7 +281,17 @@ const App: React.FC = () => {
     setIsDataLoaded(false);
   };
 
+  const toggleTabVisibility = (tabId: string) => {
+    setHiddenTabs(prev => {
+      if (prev.includes(tabId)) return prev.filter(id => id !== tabId);
+      return [...prev, tabId];
+    });
+  };
+
   if (!user) return <Auth onLogin={setUser} />;
+
+  // Filter only visible tabs for the top bar
+  const visibleTabs = tabs.filter(t => !hiddenTabs.includes(t.id));
 
   return (
     <div className="flex flex-col h-screen bg-win95-bg p-4 font-sans text-gray-800">
@@ -287,31 +314,94 @@ const App: React.FC = () => {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden win95-raised bg-gray-100 shadow-2xl">
-        {/* Modern Tabs */}
-        <div className="flex px-2 pt-2 bg-[#d1d5db] border-b border-gray-300 overflow-x-auto no-scrollbar gap-1">
-          {tabs.map((tab, index) => (
-            <div
-              key={tab.id}
-              draggable
-              onDragStart={() => (dragItem.current = index)}
-              onDragEnter={() => (dragOverItem.current = index)}
-              onDragEnd={handleSort}
-              onDragOver={(e) => e.preventDefault()}
-              className="relative"
+        {/* Modern Tabs Bar with Start Menu */}
+        <div className="flex px-2 pt-2 bg-[#d1d5db] border-b border-gray-300 gap-1 items-end relative">
+          
+          {/* Botão Menu Iniciar / Navegação */}
+          <div ref={menuRef} className="relative z-50">
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className={`flex items-center gap-2 px-3 py-2 text-xs font-black uppercase rounded-t-lg transition-all duration-200 border-t-2 border-l-2 border-r-2 ${isMenuOpen ? 'bg-win95-blue text-white border-white shadow-xl' : 'bg-gray-300 text-black border-white hover:bg-gray-200'}`}
             >
-              <button 
-                onClick={() => setActiveTab(tab.id)} 
-                className={`
-                  relative flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-t-lg transition-all duration-200
-                  ${activeTab === tab.id 
-                    ? 'bg-white text-blue-700 shadow-[0_-2px_5px_rgba(0,0,0,0.05)] z-10 -mb-[1px] border-t-2 border-blue-500' 
-                    : 'bg-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 border-t-2 border-transparent'}
-                `}
+              <LayoutGrid size={14} /> Iniciar
+            </button>
+
+            {isMenuOpen && (
+              <div className="absolute top-full left-0 w-64 win95-raised bg-win95-bg p-1 shadow-[4px_4px_10px_rgba(0,0,0,0.3)] animate-in slide-in-from-top-2 fade-in duration-100 border-2 border-win95-light">
+                 <div className="bg-[#000080] text-white px-2 py-4 mb-1 flex items-center gap-2">
+                    <span className="text-lg font-black italic transform -rotate-2 origin-left">YSoffice</span>
+                    <span className="text-[10px] uppercase tracking-widest opacity-80 mt-1">Professional</span>
+                 </div>
+                 
+                 <div className="flex flex-col gap-0.5 max-h-[400px] overflow-y-auto custom-scrollbar">
+                    {tabs.map(tab => {
+                      const isHidden = hiddenTabs.includes(tab.id);
+                      const isActive = activeTab === tab.id;
+                      
+                      return (
+                        <div key={tab.id} className="group flex items-center p-1 hover:bg-[#000080] hover:text-white transition-colors">
+                           <button 
+                             onClick={() => { setActiveTab(tab.id); setIsMenuOpen(false); }}
+                             className="flex-1 flex items-center gap-3 px-2 text-xs font-bold text-left"
+                           >
+                             <div className="w-6 h-6 flex items-center justify-center bg-white/20 rounded shadow-sm group-hover:bg-white/10">
+                               {tab.icon}
+                             </div>
+                             <span className={isActive ? 'underline decoration-2 underline-offset-2' : ''}>
+                               {tab.label}
+                             </span>
+                           </button>
+                           
+                           <button 
+                             onClick={(e) => { e.stopPropagation(); toggleTabVisibility(tab.id); }}
+                             className="p-1.5 hover:bg-white/20 rounded text-gray-500 group-hover:text-white"
+                             title={isHidden ? "Mostrar na Barra" : "Esconder da Barra"}
+                           >
+                             {isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                           </button>
+                        </div>
+                      );
+                    })}
+                 </div>
+                 
+                 <div className="border-t border-white border-b border-[#808080] my-1 h-0.5"></div>
+                 
+                 <button onClick={handleLogout} className="w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-[#000080] hover:text-white text-xs font-bold transition-colors">
+                    <div className="w-6 h-6 bg-red-600 flex items-center justify-center text-white rounded"><div className="w-2 h-2 border-2 border-white rounded-full"></div></div>
+                    Encerrar Sessão
+                 </button>
+              </div>
+            )}
+          </div>
+
+          <div className="w-px h-6 bg-gray-400 mx-1 mb-1"></div>
+
+          {/* Visible Tabs List */}
+          <div className="flex-1 flex overflow-x-auto no-scrollbar gap-1 items-end">
+            {visibleTabs.map((tab, index) => (
+              <div
+                key={tab.id}
+                draggable
+                onDragStart={() => (dragItem.current = index)}
+                onDragEnter={() => (dragOverItem.current = index)}
+                onDragEnd={handleSort}
+                onDragOver={(e) => e.preventDefault()}
+                className="relative"
               >
-                {tab.icon} {tab.label}
-              </button>
-            </div>
-          ))}
+                <button 
+                  onClick={() => setActiveTab(tab.id)} 
+                  className={`
+                    relative flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-t-lg transition-all duration-200 whitespace-nowrap
+                    ${activeTab === tab.id 
+                      ? 'bg-white text-blue-700 shadow-[0_-2px_5px_rgba(0,0,0,0.05)] z-10 -mb-[1px] border-t-2 border-blue-500 pb-2.5' 
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 border-t-2 border-transparent pb-2 opacity-80 hover:opacity-100'}
+                  `}
+                >
+                  {tab.icon} {tab.label}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex-1 overflow-hidden relative bg-white">
@@ -371,7 +461,7 @@ const App: React.FC = () => {
         
         {/* Footer Status Bar */}
         <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none">
-           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> YSoffice v2.0 - Modern UI</span>
+           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> YSoffice v2.1 - Enhanced Navigation</span>
            <span className="flex items-center gap-1 font-mono">
              <ClockIcon size={10} /> {currentTime}
            </span>

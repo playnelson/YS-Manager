@@ -306,4 +306,5 @@ export interface AppData {
   shiftHandoffs?: ShiftHandoff[]; // New Field
   shiftConfig?: ShiftConfig;
   signatures?: Signature[];
+  hiddenTabs?: string[]; // Field to store hidden tabs preferences
 }
