@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
-import { Mail, PenTool, FileSearch2, FileText, Languages } from 'lucide-react';
+import { Mail, PenTool, FileSearch2, FileText, Languages, Link } from 'lucide-react';
 import { EmailTemplate, Signature, UserEvent } from '../types';
 import { EmailManager } from './EmailManager';
 import { SignatureManager } from './SignatureManager';
 import { PdfManager } from './PdfManager';
 import { DocumentGenerator } from './DocumentGenerator';
 import { TranslatorTool } from './TranslatorTool';
+import { MessageLinker } from './MessageLinker';
 import { Button } from './ui/Button';
 
 interface OfficeModuleProps {
@@ -24,7 +25,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   onSignatureChange,
   onAddEvent
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'email' | 'signatures' | 'pdf' | 'docs' | 'translate'>('email');
+  const [activeSubTab, setActiveSubTab] = useState<'email' | 'signatures' | 'pdf' | 'docs' | 'translate' | 'linker'>('email');
 
   return (
     <div className="h-full flex flex-col gap-2">
@@ -43,6 +44,13 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
           icon={<FileText size={14} />}
         >
           Criador de Docs
+        </Button>
+        <Button 
+          onClick={() => setActiveSubTab('linker')} 
+          className={activeSubTab === 'linker' ? 'bg-white win95-sunken' : ''}
+          icon={<Link size={14} />}
+        >
+          Mensageiro Linkado
         </Button>
         <Button 
           onClick={() => setActiveSubTab('translate')} 
@@ -75,6 +83,9 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
             )}
             {activeSubTab === 'docs' && (
                 <DocumentGenerator />
+            )}
+            {activeSubTab === 'linker' && (
+                <MessageLinker mode="create" />
             )}
             {activeSubTab === 'translate' && (
                 <TranslatorTool />

@@ -11,6 +11,7 @@ import { WhatsAppTool } from './components/WhatsAppTool';
 import { ExtensionsDirectory } from './components/ExtensionsDirectory';
 import { NotesModule } from './components/NotesModule';
 import { ProfessionalLinks } from './components/ProfessionalLinks';
+import { MessageLinker } from './components/MessageLinker';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
 import { Button } from './components/ui/Button';
@@ -40,6 +41,17 @@ const DEFAULT_TABS = [
 ];
 
 const App: React.FC = () => {
+  // --- Check for Secret Message URL ---
+  const [viewMessage, setViewMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const msg = params.get('msg');
+    if (msg) {
+      setViewMessage(msg);
+    }
+  }, []);
+
   const [user, setUser] = useState<User | null>(null);
   
   // Estado das Abas (Ordem e Seleção)
@@ -287,6 +299,11 @@ const App: React.FC = () => {
       return [...prev, tabId];
     });
   };
+
+  // --- SE MENSAGEM VIA URL FOR DETECTADA, RENDERIZA O LEITOR ---
+  if (viewMessage) {
+    return <MessageLinker mode="view" encodedMessage={viewMessage} />;
+  }
 
   if (!user) return <Auth onLogin={setUser} />;
 
