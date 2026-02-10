@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageSquare, Link, Share2, Copy, ArrowLeft, Check, Cloud, Loader2, AlertTriangle, Database, Scissors, Clock, ShieldAlert, Timer } from 'lucide-react';
 import { Button } from './ui/Button';
 import { supabase } from '../supabase';
-import LZString from 'https://esm.sh/lz-string@1.5.0';
+import LZString from 'lz-string';
 
 interface MessageLinkerProps {
   mode?: 'create' | 'view';
