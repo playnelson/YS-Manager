@@ -352,7 +352,7 @@ export const MessageLinker: React.FC<MessageLinkerProps> = ({ mode = 'create', e
 
             <div className="flex justify-center border-t border-white pt-4">
                <Button onClick={() => window.location.href = window.location.origin} icon={<ArrowLeft size={14}/>}>
-                 ACESSAR SISTEMA YSOFFICE
+                 ACESSAR SISTEMA BRAIN
                </Button>
             </div>
           </div>

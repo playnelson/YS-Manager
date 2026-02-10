@@ -91,7 +91,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       <div className="w-96 win95-raised p-1 shadow-xl">
         {/* Title Bar */}
         <div className="bg-[#000080] text-white px-2 py-1 text-sm font-bold flex justify-between items-center mb-4 select-none">
-          <span>{isRegistering ? 'Novo Cadastro' : 'Login YSoffice'}</span>
+          <span>{isRegistering ? 'Novo Cadastro' : 'Login Brain'}</span>
         </div>
 
         <div className="px-4 pb-4">

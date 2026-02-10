@@ -346,7 +346,7 @@ const App: React.FC = () => {
             {isMenuOpen && (
               <div className="absolute top-full left-0 w-64 win95-raised bg-win95-bg p-1 shadow-[4px_4px_10px_rgba(0,0,0,0.3)] animate-in slide-in-from-top-2 fade-in duration-100 border-2 border-win95-light">
                  <div className="bg-[#000080] text-white px-2 py-4 mb-1 flex items-center gap-2">
-                    <span className="text-lg font-black italic transform -rotate-2 origin-left">YSoffice</span>
+                    <span className="text-lg font-black italic transform -rotate-2 origin-left">Brain</span>
                     <span className="text-[10px] uppercase tracking-widest opacity-80 mt-1">Professional</span>
                  </div>
                  
@@ -478,7 +478,7 @@ const App: React.FC = () => {
         
         {/* Footer Status Bar */}
         <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none">
-           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> YSoffice v2.1 - Enhanced Navigation</span>
+           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.1 - Enhanced Navigation</span>
            <span className="flex items-center gap-1 font-mono">
              <ClockIcon size={10} /> {currentTime}
            </span>
