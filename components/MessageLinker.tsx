@@ -19,7 +19,6 @@ export const MessageLinker: React.FC<MessageLinkerProps> = ({ mode = 'create', e
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [storageMethod, setStorageMethod] = useState<'db' | 'url'>('db');
-  const [useShortener, setUseShortener] = useState(true);
   
   // Estados de Leitura
   const [isExpired, setIsExpired] = useState(false);
@@ -135,13 +134,14 @@ export const MessageLinker: React.FC<MessageLinkerProps> = ({ mode = 'create', e
         setStorageMethod('url');
       } else { setError(err.message); setIsLoading(false); return; }
     }
-    if (useShortener) {
-        try {
-            const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(finalLongUrl)}`)}`);
-            const short = await res.text();
-            setGeneratedLink(short.startsWith('http') ? short : finalLongUrl);
-        } catch { setGeneratedLink(finalLongUrl); }
-    } else { setGeneratedLink(finalLongUrl); }
+    
+    // Encurtamento sempre ativo
+    try {
+        const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(finalLongUrl)}`)}`);
+        const short = await res.text();
+        setGeneratedLink(short.startsWith('http') ? short : finalLongUrl);
+    } catch { setGeneratedLink(finalLongUrl); }
+    
     setIsLoading(false);
   };
 
@@ -268,11 +268,7 @@ export const MessageLinker: React.FC<MessageLinkerProps> = ({ mode = 'create', e
                 value={text}
                 onChange={(e) => { setText(e.target.value); setGeneratedLink(''); setError(null); }}
               />
-              <div className="text-[9px] text-gray-500 text-right mt-1 flex justify-between items-center">
-                <label className="flex items-center gap-1 cursor-pointer select-none">
-                   <input type="checkbox" checked={useShortener} onChange={e => setUseShortener(e.target.checked)} />
-                   <span className="font-bold">Encurtar Link</span>
-                </label>
+              <div className="text-[9px] text-gray-500 text-right mt-1 flex justify-end items-center">
                 <span>{text.length} caracteres</span>
               </div>
            </div>
