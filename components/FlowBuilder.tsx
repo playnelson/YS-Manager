@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, X, Calculator, RefreshCw, Save, FolderOpen, Play, Undo, Redo, Square, Copy, Clipboard, Eraser, FilePlus, Monitor, Edit, Eye } from 'lucide-react';
+import { Plus, X, Calculator, RefreshCw, Save, FolderOpen, Play, Undo, Redo, Square, Copy, Clipboard, Eraser, FilePlus, Monitor, Edit } from 'lucide-react';
 import { FlowState, FlowNode, FlowNodeType, FlowOperation, FlowTemplate } from '../types';
 import { Button } from './ui/Button';
 
