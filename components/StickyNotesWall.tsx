@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Palette, Calendar, StickyNote, Download, Clock, X, FileText } from 'lucide-react';
+import { Plus, Trash2, Palette, Calendar, StickyNote, Download, Clock, X, FileText, ArrowRight } from 'lucide-react';
 import { PostIt } from '../types';
 import { Button } from './ui/Button';
 
@@ -20,7 +20,11 @@ const COLORS = [
 export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChange }) => {
   // Estados para o Modal de Relatório
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Agora usamos Data Inicio e Data Fim separadas para cobrir turnos noturnos (ex: 22h as 06h do dia seguinte)
+  const [reportStartDate, setReportStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
+  
   const [reportStartTime, setReportStartTime] = useState('00:00');
   const [reportEndTime, setReportEndTime] = useState('23:59');
 
@@ -57,9 +61,14 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
   };
 
   const handleGenerateReport = () => {
-    // Cria objetos Date para comparação
-    const startDateTime = new Date(`${reportDate}T${reportStartTime}:00`);
-    const endDateTime = new Date(`${reportDate}T${reportEndTime}:59`);
+    // Cria objetos Date combinando Data + Hora para inicio e fim
+    const startDateTime = new Date(`${reportStartDate}T${reportStartTime}:00`);
+    const endDateTime = new Date(`${reportEndDate}T${reportEndTime}:59`);
+
+    if (endDateTime < startDateTime) {
+        alert("A data/hora final não pode ser anterior à data/hora inicial.");
+        return;
+    }
 
     const filteredNotes = notes.filter(n => {
       if (!n.createdAt) return false;
@@ -75,32 +84,32 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
     // Ordenar por hora
     filteredNotes.sort((a, b) => new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime());
 
-    const dateFormatted = new Date(reportDate + 'T00:00:00').toLocaleDateString('pt-BR');
+    const dateStartFmt = new Date(startDateTime).toLocaleDateString('pt-BR');
+    const dateEndFmt = new Date(endDateTime).toLocaleDateString('pt-BR');
 
-    let content = `RELATÓRIO DE LEMBRETES\n`;
-    content += `Data: ${dateFormatted}\n`;
-    content += `Período: ${reportStartTime} às ${reportEndTime}\n`;
-    content += `Gerado pelo Sistema Brain\n`;
+    let content = `RELATÓRIO DE LEMBRETES - BRAIN\n`;
+    content += `=================================================\n`;
+    content += `Período: ${dateStartFmt} ${reportStartTime}  ATÉ  ${dateEndFmt} ${reportEndTime}\n`;
+    content += `Total de itens: ${filteredNotes.length}\n`;
     content += `=================================================\n\n`;
 
     filteredNotes.forEach((n, index) => {
-      const time = new Date(n.createdAt!).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+      const noteDate = new Date(n.createdAt!);
+      const dateStr = noteDate.toLocaleDateString('pt-BR');
+      const timeStr = noteDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
       const cleanText = n.text || "(Sem conteúdo)";
       
-      content += `[${time}] NOTA #${index + 1}\n`;
+      content += `#${index + 1} - [${dateStr} às ${timeStr}]\n`;
       content += `---------------------------------\n`;
       content += `${cleanText}\n`;
       content += `\n`;
     });
 
-    content += `=================================================\n`;
-    content += `Total de notas: ${filteredNotes.length}`;
-
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Relatorio_Notas_${reportDate}_${reportStartTime.replace(':','')}-${reportEndTime.replace(':','')}.txt`;
+    link.download = `Relatorio_Turno_${reportStartDate}_${reportStartTime.replace(':','')}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -143,6 +152,9 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
               const timeStr = note.createdAt 
                 ? new Date(note.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
                 : '';
+              const dateStr = note.createdAt
+                ? new Date(note.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+                : '';
 
               return (
                 <div 
@@ -156,7 +168,7 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
                     <div className="flex justify-between items-center mb-1 select-none">
                        <div className="flex items-center gap-1 opacity-40">
                           <Calendar size={10} className="text-black" />
-                          <span className="text-[8px] font-bold text-black uppercase">Lembrete</span>
+                          <span className="text-[8px] font-bold text-black uppercase">{dateStr}</span>
                        </div>
                        {timeStr && (
                          <div className="flex items-center gap-0.5 opacity-60 text-black">
@@ -203,52 +215,83 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
       </div>
 
       <div className="p-1 px-3 bg-win95-bg border-t border-white text-[9px] font-bold text-win95-shadow uppercase italic shrink-0">
-        <span>Dica: Use o botão de relatório para salvar suas anotações do dia.</span>
+        <span>Dica: Use o botão de relatório para salvar suas anotações do turno.</span>
       </div>
 
       {/* MODAL DE RELATÓRIO */}
       {isReportModalOpen && (
         <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-[1px]">
-          <div className="bg-win95-bg w-full max-w-xs win95-raised p-1 shadow-2xl animate-in zoom-in duration-200">
+          <div className="bg-win95-bg w-full max-w-sm win95-raised p-1 shadow-2xl animate-in zoom-in duration-200">
             <div className="bg-win95-blue text-white px-2 py-1 text-xs font-bold flex justify-between items-center mb-2 shadow-sm">
-              <span className="flex items-center gap-2"><FileText size={12} /> Gerar Relatório</span>
+              <span className="flex items-center gap-2"><FileText size={12} /> Gerar Relatório de Turno</span>
               <button onClick={() => setIsReportModalOpen(false)} className="win95-raised bg-win95-bg text-black w-5 h-5 flex items-center justify-center text-xs font-black">×</button>
             </div>
             
             <div className="p-4 space-y-4">
-               <div>
-                 <label className="text-[10px] font-bold uppercase block mb-1">Data do Relatório:</label>
-                 <input 
-                   type="date"
-                   className="w-full win95-sunken p-1.5 text-xs font-bold"
-                   value={reportDate}
-                   onChange={(e) => setReportDate(e.target.value)}
-                 />
+               {/* Intervalo de Início */}
+               <div className="bg-white/50 p-2 win95-sunken">
+                 <div className="flex items-center gap-2 mb-1 text-win95-blue font-bold uppercase text-[10px]">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Início do Turno
+                 </div>
+                 <div className="flex gap-2">
+                    <div className="flex-1">
+                        <label className="text-[9px] font-bold block">DATA:</label>
+                        <input 
+                        type="date"
+                        className="w-full win95-raised px-1 py-1 text-xs font-bold bg-white"
+                        value={reportStartDate}
+                        onChange={(e) => setReportStartDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="w-24">
+                        <label className="text-[9px] font-bold block">HORA:</label>
+                        <input 
+                        type="time"
+                        className="w-full win95-raised px-1 py-1 text-xs font-bold bg-white"
+                        value={reportStartTime}
+                        onChange={(e) => setReportStartTime(e.target.value)}
+                        />
+                    </div>
+                 </div>
                </div>
 
-               <div className="grid grid-cols-2 gap-2">
-                 <div>
-                   <label className="text-[10px] font-bold uppercase block mb-1">Hora Início:</label>
-                   <input 
-                     type="time"
-                     className="w-full win95-sunken p-1.5 text-xs font-bold"
-                     value={reportStartTime}
-                     onChange={(e) => setReportStartTime(e.target.value)}
-                   />
+               <div className="flex justify-center -my-2 relative z-10">
+                  <div className="bg-win95-bg p-1 rounded-full border border-gray-400">
+                     <ArrowRight size={12} className="text-gray-600 rotate-90" />
+                  </div>
+               </div>
+
+               {/* Intervalo de Fim */}
+               <div className="bg-white/50 p-2 win95-sunken">
+                 <div className="flex items-center gap-2 mb-1 text-win95-blue font-bold uppercase text-[10px]">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    Fim do Turno
                  </div>
-                 <div>
-                   <label className="text-[10px] font-bold uppercase block mb-1">Hora Fim:</label>
-                   <input 
-                     type="time"
-                     className="w-full win95-sunken p-1.5 text-xs font-bold"
-                     value={reportEndTime}
-                     onChange={(e) => setReportEndTime(e.target.value)}
-                   />
+                 <div className="flex gap-2">
+                    <div className="flex-1">
+                        <label className="text-[9px] font-bold block">DATA:</label>
+                        <input 
+                        type="date"
+                        className="w-full win95-raised px-1 py-1 text-xs font-bold bg-white"
+                        value={reportEndDate}
+                        onChange={(e) => setReportEndDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="w-24">
+                        <label className="text-[9px] font-bold block">HORA:</label>
+                        <input 
+                        type="time"
+                        className="w-full win95-raised px-1 py-1 text-xs font-bold bg-white"
+                        value={reportEndTime}
+                        onChange={(e) => setReportEndTime(e.target.value)}
+                        />
+                    </div>
                  </div>
                </div>
 
                <div className="bg-yellow-50 border border-yellow-200 p-2 text-[9px] text-yellow-800 leading-tight">
-                 <span className="font-bold">Nota:</span> Serão incluídos apenas os post-its criados dentro do intervalo de tempo selecionado.
+                 <span className="font-bold">Dica:</span> Para turno da noite, defina o "Início" no dia atual (ex: 22:00) e o "Fim" no dia seguinte (ex: 06:00).
                </div>
 
                <div className="flex justify-end gap-2 pt-2 border-t border-gray-300">
