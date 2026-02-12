@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Plus, Trash2, Palette, Calendar, StickyNote, Download, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Trash2, Palette, Calendar, StickyNote, Download, Clock, X, FileText } from 'lucide-react';
 import { PostIt } from '../types';
 import { Button } from './ui/Button';
 
@@ -18,7 +18,12 @@ const COLORS = [
 ];
 
 export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChange }) => {
-  
+  // Estados para o Modal de Relatório
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportStartTime, setReportStartTime] = useState('00:00');
+  const [reportEndTime, setReportEndTime] = useState('23:59');
+
   const addNote = () => {
     const newNote: PostIt = {
       id: `note_${Date.now()}`,
@@ -51,29 +56,34 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
     }
   };
 
-  const downloadDailyReport = () => {
-    const todayStr = new Date().toLocaleDateString('pt-BR');
-    
-    // Filtrar notas criadas hoje ou que não tem data (assumidas como antigas/permanentes)
-    // Se quiser estritamente apenas HOJE, altere a lógica. Aqui pegaremos as de hoje.
-    const todaysNotes = notes.filter(n => {
+  const handleGenerateReport = () => {
+    // Cria objetos Date para comparação
+    const startDateTime = new Date(`${reportDate}T${reportStartTime}:00`);
+    const endDateTime = new Date(`${reportDate}T${reportEndTime}:59`);
+
+    const filteredNotes = notes.filter(n => {
       if (!n.createdAt) return false;
-      return new Date(n.createdAt).toLocaleDateString('pt-BR') === todayStr;
+      const noteTime = new Date(n.createdAt);
+      return noteTime >= startDateTime && noteTime <= endDateTime;
     });
 
-    if (todaysNotes.length === 0) {
-      alert("Nenhum post-it foi criado hoje para gerar o relatório.");
+    if (filteredNotes.length === 0) {
+      alert("Nenhum post-it encontrado neste período.");
       return;
     }
 
     // Ordenar por hora
-    todaysNotes.sort((a, b) => new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime());
+    filteredNotes.sort((a, b) => new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime());
 
-    let content = `RELATÓRIO DIÁRIO DE LEMBRETES - ${todayStr}\n`;
+    const dateFormatted = new Date(reportDate + 'T00:00:00').toLocaleDateString('pt-BR');
+
+    let content = `RELATÓRIO DE LEMBRETES\n`;
+    content += `Data: ${dateFormatted}\n`;
+    content += `Período: ${reportStartTime} às ${reportEndTime}\n`;
     content += `Gerado pelo Sistema Brain\n`;
     content += `=================================================\n\n`;
 
-    todaysNotes.forEach((n, index) => {
+    filteredNotes.forEach((n, index) => {
       const time = new Date(n.createdAt!).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
       const cleanText = n.text || "(Sem conteúdo)";
       
@@ -84,16 +94,18 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
     });
 
     content += `=================================================\n`;
-    content += `Total de notas: ${todaysNotes.length}`;
+    content += `Total de notas: ${filteredNotes.length}`;
 
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Relatorio_PostIts_${todayStr.replace(/\//g, '-')}.txt`;
+    link.download = `Relatorio_Notas_${reportDate}_${reportStartTime.replace(':','')}-${reportEndTime.replace(':','')}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    setIsReportModalOpen(false);
   };
 
   return (
@@ -108,8 +120,8 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
         </div>
         
         <div className="flex gap-2">
-          <Button onClick={downloadDailyReport} icon={<Download size={14} />} variant="secondary" title="Baixar relatório de hoje">
-             RELATÓRIO DIÁRIO
+          <Button onClick={() => setIsReportModalOpen(true)} icon={<Download size={14} />} variant="secondary" title="Gerar relatório personalizado">
+             RELATÓRIO
           </Button>
           <Button onClick={addNote} icon={<Plus size={14} />} className="bg-win95-bg">
              NOVA ANOTAÇÃO
@@ -193,6 +205,60 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
       <div className="p-1 px-3 bg-win95-bg border-t border-white text-[9px] font-bold text-win95-shadow uppercase italic shrink-0">
         <span>Dica: Use o botão de relatório para salvar suas anotações do dia.</span>
       </div>
+
+      {/* MODAL DE RELATÓRIO */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-[1px]">
+          <div className="bg-win95-bg w-full max-w-xs win95-raised p-1 shadow-2xl animate-in zoom-in duration-200">
+            <div className="bg-win95-blue text-white px-2 py-1 text-xs font-bold flex justify-between items-center mb-2 shadow-sm">
+              <span className="flex items-center gap-2"><FileText size={12} /> Gerar Relatório</span>
+              <button onClick={() => setIsReportModalOpen(false)} className="win95-raised bg-win95-bg text-black w-5 h-5 flex items-center justify-center text-xs font-black">×</button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+               <div>
+                 <label className="text-[10px] font-bold uppercase block mb-1">Data do Relatório:</label>
+                 <input 
+                   type="date"
+                   className="w-full win95-sunken p-1.5 text-xs font-bold"
+                   value={reportDate}
+                   onChange={(e) => setReportDate(e.target.value)}
+                 />
+               </div>
+
+               <div className="grid grid-cols-2 gap-2">
+                 <div>
+                   <label className="text-[10px] font-bold uppercase block mb-1">Hora Início:</label>
+                   <input 
+                     type="time"
+                     className="w-full win95-sunken p-1.5 text-xs font-bold"
+                     value={reportStartTime}
+                     onChange={(e) => setReportStartTime(e.target.value)}
+                   />
+                 </div>
+                 <div>
+                   <label className="text-[10px] font-bold uppercase block mb-1">Hora Fim:</label>
+                   <input 
+                     type="time"
+                     className="w-full win95-sunken p-1.5 text-xs font-bold"
+                     value={reportEndTime}
+                     onChange={(e) => setReportEndTime(e.target.value)}
+                   />
+                 </div>
+               </div>
+
+               <div className="bg-yellow-50 border border-yellow-200 p-2 text-[9px] text-yellow-800 leading-tight">
+                 <span className="font-bold">Nota:</span> Serão incluídos apenas os post-its criados dentro do intervalo de tempo selecionado.
+               </div>
+
+               <div className="flex justify-end gap-2 pt-2 border-t border-gray-300">
+                 <Button onClick={() => setIsReportModalOpen(false)} variant="secondary" size="sm">Cancelar</Button>
+                 <Button onClick={handleGenerateReport} icon={<Download size={12}/>} size="sm">Baixar Arquivo</Button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

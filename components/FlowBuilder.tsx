@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, X, Calculator, RefreshCw, Save, FolderOpen, Play, Undo, Redo, Square, Copy, Clipboard } from 'lucide-react';
+import { Plus, X, Calculator, RefreshCw, Save, FolderOpen, Play, Undo, Redo, Square, Copy, Clipboard, Eraser } from 'lucide-react';
 import { FlowState, FlowNode, FlowNodeType, FlowOperation, FlowTemplate } from '../types';
 import { Button } from './ui/Button';
 
@@ -202,6 +202,16 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     onChange({ ...data, nodes });
   }, [data, onChange]);
 
+  const clearValues = () => {
+    saveHistory();
+    const newNodes = data.nodes.map(n => ({
+      ...n,
+      value: n.type === 'input' ? 0 : n.value,
+      calculatedValue: null
+    }));
+    onChange({ ...data, nodes: newNodes });
+  };
+
   const getFormulaDisplay = (node: FlowNode) => {
     if (node.type !== 'op') return null;
     const incoming = data.connections.filter(c => c.to === node.id).map(c => data.nodes.find(n => n.id === c.from)).filter(n => n && n.calculatedValue !== null && n.calculatedValue !== undefined).sort((a, b) => (a?.y || 0) - (b?.y || 0));
@@ -269,6 +279,7 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
         <Button size="sm" onClick={() => addNode('result')}><Play size={12} className="mr-1"/> Saída</Button>
         <div className="w-0.5 h-5 bg-win95-shadow mx-1 border-r border-white"></div>
         <Button size="sm" onClick={calculateFlow} title="Recalcular"><RefreshCw size={12} className="mr-1"/> Calc</Button>
+        <Button size="sm" onClick={clearValues} title="Limpar Valores"><Eraser size={12} className="mr-1"/> Limpar</Button>
         <div className="w-0.5 h-5 bg-win95-shadow mx-1 border-r border-white"></div>
         <Button size="sm" onClick={handleUndo} disabled={history.length === 0} title="Desfazer (Ctrl+Z)"><Undo size={12} className="mr-1"/></Button>
         <Button size="sm" onClick={handleRedo} disabled={future.length === 0} title="Refazer (Ctrl+Y)"><Redo size={12} className="mr-1"/></Button>
