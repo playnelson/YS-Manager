@@ -116,12 +116,42 @@ export const MessageLinker: React.FC<MessageLinkerProps> = ({ mode = 'create', e
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, '-');
   };
 
+  // Função robusta de encurtamento
+  const shortenUrl = async (longUrl: string): Promise<string> => {
+    const targetUrl = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`;
+    
+    // Lista de proxies para tentar contornar CORS
+    const proxies = [
+        (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&timestamp=${Date.now()}`,
+        (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`
+    ];
+
+    for (const proxyGen of proxies) {
+        try {
+            const response = await fetch(proxyGen(targetUrl));
+            if (response.ok) {
+                const text = await response.text();
+                if (text.trim().startsWith('http')) {
+                    return text.trim();
+                }
+            }
+        } catch (e) {
+            console.warn("Tentativa de encurtamento falhou, tentando próximo proxy...", e);
+        }
+    }
+
+    return longUrl; // Retorna original se falhar
+  };
+
   const handleGenerateLink = async () => {
     if (!text.trim() || !subject.trim()) return alert("Preencha o assunto e a mensagem.");
     setIsLoading(true); setError(null); setGeneratedLink('');
     const slug = createSlug(subject);
     const baseUrl = window.location.origin + window.location.pathname;
     let finalLongUrl = '';
+    
+    // 1. Gera URL Longa
     try {
       const { error: dbError } = await supabase.from('shared_messages').insert([{ slug, content: text, created_at: new Date().toISOString() }]);
       if (dbError) throw new Error(dbError.code === '23505' ? `O assunto "${slug}" já existe.` : "DB_UNAVAILABLE");
@@ -132,15 +162,18 @@ export const MessageLinker: React.FC<MessageLinkerProps> = ({ mode = 'create', e
         const compressed = LZString.compressToEncodedURIComponent(text);
         finalLongUrl = `${baseUrl}?msg=${slug}__${Date.now()}__${compressed}`;
         setStorageMethod('url');
-      } else { setError(err.message); setIsLoading(false); return; }
+      } else { 
+          setError(err.message); 
+          setIsLoading(false); 
+          return; 
+      }
     }
     
-    // Encurtamento sempre ativo
-    try {
-        const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(finalLongUrl)}`)}`);
-        const short = await res.text();
-        setGeneratedLink(short.startsWith('http') ? short : finalLongUrl);
-    } catch { setGeneratedLink(finalLongUrl); }
+    // 2. Encurta URL (Obrigatório)
+    // Pequeno delay para garantir que a UI mostre o loading antes de travar na network
+    await new Promise(r => setTimeout(r, 100)); 
+    const shortLink = await shortenUrl(finalLongUrl);
+    setGeneratedLink(shortLink);
     
     setIsLoading(false);
   };
@@ -274,7 +307,7 @@ export const MessageLinker: React.FC<MessageLinkerProps> = ({ mode = 'create', e
            </div>
 
            <Button onClick={handleGenerateLink} disabled={isLoading} className="w-full h-10" icon={isLoading ? <Loader2 className="animate-spin" size={16}/> : <Link size={16}/>}>
-             {isLoading ? 'PROCESSANDO...' : 'GERAR LINK TEMPORÁRIO (24H)'}
+             {isLoading ? 'GERANDO LINK CURTO...' : 'GERAR LINK TEMPORÁRIO (24H)'}
            </Button>
         </div>
 

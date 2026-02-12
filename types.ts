@@ -128,6 +128,7 @@ export interface PostIt {
   text: string;
   color: string;
   rotation: number;
+  createdAt?: string; // Data de criação ISO
 }
 
 // Shift Manager Types

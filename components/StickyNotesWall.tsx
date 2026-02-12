@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Plus, Trash2, Palette, FileText, Calendar, StickyNote } from 'lucide-react';
+import { Plus, Trash2, Palette, Calendar, StickyNote, Download, Clock } from 'lucide-react';
 import { PostIt } from '../types';
 import { Button } from './ui/Button';
 
@@ -24,7 +24,8 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
       id: `note_${Date.now()}`,
       text: '',
       color: 'sand',
-      rotation: 0
+      rotation: 0,
+      createdAt: new Date().toISOString()
     };
     onChange([newNote, ...notes]);
   };
@@ -50,19 +51,70 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
     }
   };
 
+  const downloadDailyReport = () => {
+    const todayStr = new Date().toLocaleDateString('pt-BR');
+    
+    // Filtrar notas criadas hoje ou que não tem data (assumidas como antigas/permanentes)
+    // Se quiser estritamente apenas HOJE, altere a lógica. Aqui pegaremos as de hoje.
+    const todaysNotes = notes.filter(n => {
+      if (!n.createdAt) return false;
+      return new Date(n.createdAt).toLocaleDateString('pt-BR') === todayStr;
+    });
+
+    if (todaysNotes.length === 0) {
+      alert("Nenhum post-it foi criado hoje para gerar o relatório.");
+      return;
+    }
+
+    // Ordenar por hora
+    todaysNotes.sort((a, b) => new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime());
+
+    let content = `RELATÓRIO DIÁRIO DE LEMBRETES - ${todayStr}\n`;
+    content += `Gerado pelo Sistema Brain\n`;
+    content += `=================================================\n\n`;
+
+    todaysNotes.forEach((n, index) => {
+      const time = new Date(n.createdAt!).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+      const cleanText = n.text || "(Sem conteúdo)";
+      
+      content += `[${time}] NOTA #${index + 1}\n`;
+      content += `---------------------------------\n`;
+      content += `${cleanText}\n`;
+      content += `\n`;
+    });
+
+    content += `=================================================\n`;
+    content += `Total de notas: ${todaysNotes.length}`;
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Relatorio_PostIts_${todayStr.replace(/\//g, '-')}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="h-full flex flex-col bg-[#808080]/5">
       {/* Toolbar estilo Win95 */}
-      <div className="mb-4 flex justify-between items-center bg-win95-bg win95-raised p-2 shrink-0">
-        <div className="flex items-center gap-2 px-2">
+      <div className="mb-4 flex justify-between items-center bg-win95-bg win95-raised p-2 shrink-0 gap-2">
+        <div className="flex items-center gap-2 px-2 flex-1">
           <StickyNote size={18} className="text-win95-blue" />
-          <h2 className="text-sm font-black uppercase text-black tracking-tight">
+          <h2 className="text-sm font-black uppercase text-black tracking-tight hidden md:block">
             Mural de Lembretes Rápidos
           </h2>
         </div>
-        <Button onClick={addNote} icon={<Plus size={14} />} className="bg-win95-bg">
-           NOVA ANOTAÇÃO
-        </Button>
+        
+        <div className="flex gap-2">
+          <Button onClick={downloadDailyReport} icon={<Download size={14} />} variant="secondary" title="Baixar relatório de hoje">
+             RELATÓRIO DIÁRIO
+          </Button>
+          <Button onClick={addNote} icon={<Plus size={14} />} className="bg-win95-bg">
+             NOVA ANOTAÇÃO
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
@@ -76,6 +128,10 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 pb-8">
             {notes.map((note) => {
               const colorInfo = COLORS.find(c => c.name === note.color) || COLORS[0];
+              const timeStr = note.createdAt 
+                ? new Date(note.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                : '';
+
               return (
                 <div 
                   key={note.id}
@@ -85,9 +141,17 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
                   <div className={`h-1.5 w-full ${colorInfo.bar} opacity-40`} />
                   
                   <div className="p-3 flex flex-col flex-1">
-                    <div className="flex justify-between items-center mb-1">
-                       <Calendar size={10} className="text-black/30" />
-                       <div className="text-[8px] font-bold text-black/30 uppercase">Lembrete</div>
+                    <div className="flex justify-between items-center mb-1 select-none">
+                       <div className="flex items-center gap-1 opacity-40">
+                          <Calendar size={10} className="text-black" />
+                          <span className="text-[8px] font-bold text-black uppercase">Lembrete</span>
+                       </div>
+                       {timeStr && (
+                         <div className="flex items-center gap-0.5 opacity-60 text-black">
+                            <Clock size={8} />
+                            <span className="text-[8px] font-mono font-bold">{timeStr}</span>
+                         </div>
+                       )}
                     </div>
                     
                     <textarea
@@ -127,7 +191,7 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
       </div>
 
       <div className="p-1 px-3 bg-win95-bg border-t border-white text-[9px] font-bold text-win95-shadow uppercase italic shrink-0">
-        <span>Dica: Use cores diferentes para categorizar suas tarefas urgentes.</span>
+        <span>Dica: Use o botão de relatório para salvar suas anotações do dia.</span>
       </div>
     </div>
   );
