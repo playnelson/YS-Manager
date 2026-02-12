@@ -11,7 +11,7 @@ interface FlowBuilderProps {
 
 export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
   // Estados de Controle UI
-  const [viewMode, setViewMode] = useState(false); // false = Editor, true = Apresentação
+  const [viewMode, setViewMode] = useState(true); // false = Editor, true = Apresentação
 
   // Estados do Editor
   const [isConnecting, setIsConnecting] = useState(false);
