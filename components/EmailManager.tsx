@@ -29,9 +29,10 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
     emails.forEach(e => cats.add(e.category || 'Geral'));
     tempFolders.forEach(t => cats.add(t));
     
-    cats.delete('Geral'); // Remove para reordenar
+    // Remove 'Geral' explicitamente para não aparecer na lista
+    cats.delete('Geral'); 
     const sorted = Array.from(cats).sort();
-    return ['Todas', 'Geral', ...sorted];
+    return ['Todas', ...sorted];
   }, [emails, tempFolders]);
 
   // --- FILTRAGEM DE EMAILS ---
@@ -45,11 +46,11 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
     const name = prompt("Nome da Nova Pasta:");
     if (name && name.trim()) {
       const cleanName = name.trim();
-      if (!categories.includes(cleanName)) {
+      if (!categories.includes(cleanName) && cleanName !== 'Geral') {
         setTempFolders(prev => [...prev, cleanName]);
         setActiveCategory(cleanName);
       } else {
-        alert("Esta pasta já existe.");
+        alert("Esta pasta já existe ou nome inválido.");
       }
     }
   };
@@ -85,7 +86,7 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
       const updatedEmails = emails.map(e => (e.category === cat ? { ...e, category: 'Geral' } : e));
       onChange(updatedEmails);
       setTempFolders(prev => prev.filter(t => t !== cat));
-      if (activeCategory === cat) setActiveCategory('Geral');
+      if (activeCategory === cat) setActiveCategory('Todas');
     }
   };
 
@@ -100,7 +101,7 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
     setSelectedId(null);
     setFormData({
       name: '',
-      category: activeCategory !== 'Todas' ? activeCategory : 'Geral', // Herda a pasta atual
+      category: activeCategory !== 'Todas' ? activeCategory : 'Geral', // Herda a pasta atual ou vai para Geral
       to: '',
       cc: '',
       subject: '',
@@ -181,7 +182,7 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
         <div className="flex-1 overflow-y-auto win95-sunken bg-white p-1">
           {categories.map(cat => {
             const isEditing = editingCategory === cat;
-            const isSystem = cat === 'Todas' || cat === 'Geral';
+            const isSystem = cat === 'Todas';
 
             return (
                 <div 

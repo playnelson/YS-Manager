@@ -90,10 +90,10 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
     files.forEach(f => cats.add(f.category || 'Geral'));
     tempFolders.forEach(t => cats.add(t));
     
-    // Remove 'Geral' para ordenar e readiciona no topo
+    // Remove 'Geral' explicitamente para não aparecer na lista, mantendo apenas 'Todos' e as personalizadas
     cats.delete('Geral');
     const sorted = Array.from(cats).sort();
-    return ['Todos', 'Geral', ...sorted];
+    return ['Todos', ...sorted];
   }, [files, tempFolders]);
 
   const filteredFiles = useMemo(() => {
@@ -117,7 +117,7 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
     const reader = new FileReader();
     reader.onload = (ev) => {
       const base64 = ev.target?.result as string;
-      // Define a categoria baseada na pasta aberta. Se for "Todos", vai para "Geral".
+      // Define a categoria baseada na pasta aberta. Se for "Todos", vai para "Geral" (interno).
       const targetCat = activeCategory === 'Todos' ? 'Geral' : activeCategory;
 
       const newFile: StoredFile = {
@@ -158,11 +158,11 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
     const name = prompt("Nome da Nova Pasta:");
     if (name && name.trim()) {
       const cleanName = name.trim();
-      if (!categories.includes(cleanName)) {
+      if (!categories.includes(cleanName) && cleanName !== 'Geral') {
         setTempFolders(prev => [...prev, cleanName]);
         setActiveCategory(cleanName); // Já abre a pasta nova
       } else {
-        alert("Esta pasta já existe.");
+        alert("Esta pasta já existe ou nome inválido.");
       }
     }
   };
@@ -185,9 +185,6 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
         // Atualiza temp folders se necessário
         if (tempFolders.includes(editingCategory)) {
             setTempFolders(prev => prev.map(t => t === editingCategory ? newName : t));
-        } else {
-            // Se renomeou uma pasta que não estava em temp (tinha arquivos), garante que a nova exista visualmente
-            // (Na verdade o useMemo cuida disso pq os arquivos mudaram, mas se esvaziou a antiga, ela some)
         }
 
         if (activeCategory === editingCategory) setActiveCategory(newName);
@@ -201,7 +198,7 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
         const updatedFiles = files.map(f => (f.category === cat ? { ...f, category: 'Geral' } : f));
         onChange(updatedFiles);
         setTempFolders(prev => prev.filter(t => t !== cat));
-        if (activeCategory === cat) setActiveCategory('Geral');
+        if (activeCategory === cat) setActiveCategory('Todos');
     }
   };
 
@@ -259,7 +256,7 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
             <div className="flex-1 win95-sunken bg-white overflow-y-auto p-1">
                 {categories.map(cat => {
                     const isEditing = editingCategory === cat;
-                    const isSystem = cat === 'Todos' || cat === 'Geral';
+                    const isSystem = cat === 'Todos';
                     
                     return (
                         <div 
