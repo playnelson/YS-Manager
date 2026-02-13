@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Search, Globe, Menu, Eye, EyeOff, GripHorizontal, LayoutGrid } from 'lucide-react';
-import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, KanbanColumn, ShiftHandoff } from './types';
+import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Search, Globe, Menu, Eye, EyeOff, GripHorizontal, LayoutGrid, FolderOpen } from 'lucide-react';
+import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, KanbanColumn, ShiftHandoff, StoredFile } from './types';
 import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarModule } from './components/CalendarModule';
 import { OfficeModule } from './components/OfficeModule';
+import { DocumentsModule } from './components/DocumentsModule';
 import { ConsultationModule } from './components/ConsultationModule';
 import { WhatsAppTool } from './components/WhatsAppTool';
 import { ExtensionsDirectory } from './components/ExtensionsDirectory';
@@ -31,6 +32,7 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 const DEFAULT_TABS = [
   { id: 'notes_combined', label: 'Anotações', icon: <StickyNote size={16} /> },
   { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={16} /> },
+  { id: 'documents', label: 'Documentos', icon: <FolderOpen size={16} /> },
   { id: 'office', label: 'Escritório', icon: <Briefcase size={16} /> },
   { id: 'directory', label: 'Diretório', icon: <Globe size={16} /> },
   { id: 'kanban', label: 'Tarefas', icon: <Trello size={16} /> },
@@ -82,6 +84,7 @@ const App: React.FC = () => {
   const [shiftHandoffs, setShiftHandoffs] = useState<ShiftHandoff[]>([]);
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | undefined>(undefined);
   const [signatures, setSignatures] = useState<Signature[]>([]);
+  const [personalFiles, setPersonalFiles] = useState<StoredFile[]>([]);
   
   // System States
   const [isSyncing, setIsSyncing] = useState(false);
@@ -217,6 +220,7 @@ const App: React.FC = () => {
             if (parsed.shiftHandoffs) setShiftHandoffs(parsed.shiftHandoffs);
             if (parsed.shiftConfig) setShiftConfig(parsed.shiftConfig);
             if (parsed.signatures) setSignatures(parsed.signatures);
+            if (parsed.personalFiles) setPersonalFiles(parsed.personalFiles);
             if (parsed.hiddenTabs) setHiddenTabs(parsed.hiddenTabs);
           }
         } else {
@@ -252,6 +256,7 @@ const App: React.FC = () => {
             setShiftHandoffs(payload.shiftHandoffs || []);
             setShiftConfig(payload.shiftConfig);
             setSignatures(payload.signatures || []);
+            setPersonalFiles(payload.personalFiles || []);
             setHiddenTabs(payload.hiddenTabs || []);
           }
         }
@@ -268,7 +273,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, hiddenTabs };
+      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -284,7 +289,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2000);
     return () => clearTimeout(timeout);
-  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, hiddenTabs, user, isDataLoaded]);
+  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, user, isDataLoaded]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await (supabase.auth as any).signOut();
@@ -446,6 +451,17 @@ const App: React.FC = () => {
                     onShiftConfigChange={setShiftConfig}
                 />
               )}
+
+              {/* Módulo de Documentos (Centralizado) */}
+              {activeTab === 'documents' && (
+                <DocumentsModule 
+                  personalFiles={personalFiles}
+                  onFilesChange={setPersonalFiles}
+                  signatures={signatures}
+                  onSignatureChange={setSignatures}
+                  onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
+                />
+              )}
               
               {/* Módulo Unificado de Escritório */}
               {activeTab === 'office' && (
@@ -478,7 +494,7 @@ const App: React.FC = () => {
         
         {/* Footer Status Bar */}
         <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none">
-           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.1 - Enhanced Navigation</span>
+           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.2 - Enterprise Docs</span>
            <span className="flex items-center gap-1 font-mono">
              <ClockIcon size={10} /> {currentTime}
            </span>

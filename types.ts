@@ -293,6 +293,16 @@ export interface Signature {
   createdAt: string;
 }
 
+// Personal File Type
+export interface StoredFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string; // Base64
+  uploadedAt: string;
+}
+
 // Global App Data
 export interface AppData {
   kanban: KanbanState;
@@ -304,8 +314,9 @@ export interface AppData {
   extensions?: Extension[];
   postIts: PostIt[];
   importantNotes?: ImportantNote[];
-  shiftHandoffs?: ShiftHandoff[]; // New Field
+  shiftHandoffs?: ShiftHandoff[]; 
   shiftConfig?: ShiftConfig;
   signatures?: Signature[];
-  hiddenTabs?: string[]; // Field to store hidden tabs preferences
+  personalFiles?: StoredFile[]; // New Field
+  hiddenTabs?: string[]; 
 }

@@ -1,11 +1,9 @@
 
 import React, { useState } from 'react';
-import { Mail, PenTool, FileSearch2, FileText, Languages, Link } from 'lucide-react';
+import { Mail, FileSearch2, Languages, Link } from 'lucide-react';
 import { EmailTemplate, Signature, UserEvent } from '../types';
 import { EmailManager } from './EmailManager';
-import { SignatureManager } from './SignatureManager';
 import { PdfManager } from './PdfManager';
-import { DocumentGenerator } from './DocumentGenerator';
 import { TranslatorTool } from './TranslatorTool';
 import { MessageLinker } from './MessageLinker';
 import { Button } from './ui/Button';
@@ -25,7 +23,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   onSignatureChange,
   onAddEvent
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'email' | 'signatures' | 'pdf' | 'docs' | 'translate' | 'linker'>('email');
+  const [activeSubTab, setActiveSubTab] = useState<'email' | 'pdf' | 'translate' | 'linker'>('email');
 
   return (
     <div className="h-full flex flex-col gap-2">
@@ -37,13 +35,6 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
           icon={<Mail size={14} />}
         >
           E-mails
-        </Button>
-        <Button 
-          onClick={() => setActiveSubTab('docs')} 
-          className={activeSubTab === 'docs' ? 'bg-white win95-sunken' : ''}
-          icon={<FileText size={14} />}
-        >
-          Criador de Docs
         </Button>
         <Button 
           onClick={() => setActiveSubTab('linker')} 
@@ -60,13 +51,6 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
           Tradutor
         </Button>
         <Button 
-          onClick={() => setActiveSubTab('signatures')} 
-          className={activeSubTab === 'signatures' ? 'bg-white win95-sunken' : ''}
-          icon={<PenTool size={14} />}
-        >
-          Assinador Digital
-        </Button>
-        <Button 
           onClick={() => setActiveSubTab('pdf')} 
           className={activeSubTab === 'pdf' ? 'bg-white win95-sunken' : ''}
           icon={<FileSearch2 size={14} />}
@@ -81,17 +65,11 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
             {activeSubTab === 'email' && (
                 <EmailManager emails={emails} onChange={onEmailChange} />
             )}
-            {activeSubTab === 'docs' && (
-                <DocumentGenerator />
-            )}
             {activeSubTab === 'linker' && (
                 <MessageLinker mode="create" />
             )}
             {activeSubTab === 'translate' && (
                 <TranslatorTool />
-            )}
-            {activeSubTab === 'signatures' && (
-                <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />
             )}
             {activeSubTab === 'pdf' && (
                 <PdfManager />
