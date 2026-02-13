@@ -301,6 +301,7 @@ export interface StoredFile {
   size: number;
   data: string; // Base64
   uploadedAt: string;
+  category?: string; // Categoria/Pasta do arquivo
 }
 
 // Global App Data
@@ -317,6 +318,6 @@ export interface AppData {
   shiftHandoffs?: ShiftHandoff[]; 
   shiftConfig?: ShiftConfig;
   signatures?: Signature[];
-  personalFiles?: StoredFile[]; // New Field
+  personalFiles?: StoredFile[];
   hiddenTabs?: string[]; 
 }
