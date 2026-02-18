@@ -6,12 +6,8 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarModule } from './components/CalendarModule';
 import { OfficeModule } from './components/OfficeModule';
-import { DocumentsModule } from './components/DocumentsModule';
 import { ConsultationModule } from './components/ConsultationModule';
 import { WhatsAppTool } from './components/WhatsAppTool';
-import { ExtensionsDirectory } from './components/ExtensionsDirectory';
-import { NotesModule } from './components/NotesModule';
-import { ProfessionalLinks } from './components/ProfessionalLinks';
 import { MessageLinker } from './components/MessageLinker';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
@@ -28,18 +24,14 @@ const initialKanban: KanbanState = {
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
-// Definição das Abas Disponíveis
+// Definição das Abas Principais (Consolidadas)
 const DEFAULT_TABS = [
-  { id: 'notes_combined', label: 'Anotações', icon: <StickyNote size={16} /> },
-  { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={16} /> },
-  { id: 'documents', label: 'Documentos', icon: <FolderOpen size={16} /> },
   { id: 'office', label: 'Escritório', icon: <Briefcase size={16} /> },
-  { id: 'directory', label: 'Diretório', icon: <Globe size={16} /> },
+  { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={16} /> },
   { id: 'kanban', label: 'Tarefas', icon: <Trello size={16} /> },
   { id: 'flow', label: 'Fluxo', icon: <GitMerge size={16} /> },
   { id: 'consultas', label: 'Consultas', icon: <Search size={16} /> },
-  { id: 'ramais', label: 'Ramais', icon: <Phone size={16} /> },
-  { id: 'whatsapp', label: 'Whats', icon: <MessageSquare size={16} /> },
+  { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={16} /> },
 ];
 
 const App: React.FC = () => {
@@ -57,7 +49,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   
   // Estado das Abas (Ordem e Seleção)
-  const [activeTab, setActiveTab] = useState('notes_combined');
+  const [activeTab, setActiveTab] = useState('office');
   const [tabs, setTabs] = useState(DEFAULT_TABS);
   
   // Menu Cascata e Visibilidade
@@ -428,16 +420,28 @@ const App: React.FC = () => {
 
         <div className="flex-1 overflow-hidden relative bg-white">
             <div className="absolute inset-0 overflow-auto p-4 bg-gray-50">
-              {/* Módulo Unificado de Notas */}
-              {activeTab === 'notes_combined' && (
-                <NotesModule 
-                  postIts={postIts} 
+              
+              {/* Módulo Escritório: Centralizando todas as ferramentas solicitadas */}
+              {activeTab === 'office' && (
+                <OfficeModule 
+                  emails={emails}
+                  onEmailChange={setEmails}
+                  signatures={signatures}
+                  onSignatureChange={setSignatures}
+                  onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
+                  postIts={postIts}
                   onPostItChange={setPostIts}
                   importantNotes={importantNotes}
                   onNoteChange={setImportantNotes}
                   handoffs={shiftHandoffs}
                   onHandoffChange={setShiftHandoffs}
                   currentUser={user}
+                  links={links}
+                  onLinkChange={setLinks}
+                  extensions={extensions}
+                  onExtensionChange={setExtensions}
+                  personalFiles={personalFiles}
+                  onFilesChange={setPersonalFiles}
                 />
               )}
               
@@ -452,49 +456,16 @@ const App: React.FC = () => {
                 />
               )}
 
-              {/* Módulo de Documentos (Centralizado) */}
-              {activeTab === 'documents' && (
-                <DocumentsModule 
-                  personalFiles={personalFiles}
-                  onFilesChange={setPersonalFiles}
-                  signatures={signatures}
-                  onSignatureChange={setSignatures}
-                  onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
-                />
-              )}
-              
-              {/* Módulo Unificado de Escritório */}
-              {activeTab === 'office' && (
-                <OfficeModule 
-                  emails={emails}
-                  onEmailChange={setEmails}
-                  signatures={signatures}
-                  onSignatureChange={setSignatures}
-                  onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
-                />
-              )}
-
-              {/* Módulo de Diretório Web (Grid de Ícones) */}
-              {activeTab === 'directory' && (
-                <ProfessionalLinks 
-                    links={links}
-                    onChange={setLinks}
-                />
-              )}
-              
-              {/* Módulo Unificado de Consultas */}
-              {activeTab === 'consultas' && <ConsultationModule />}
-              
               {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
               {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
+              {activeTab === 'consultas' && <ConsultationModule />}
               {activeTab === 'whatsapp' && <WhatsAppTool />}
-              {activeTab === 'ramais' && <ExtensionsDirectory extensions={extensions} onChange={setExtensions} />}
             </div>
         </div>
         
         {/* Footer Status Bar */}
         <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none">
-           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.2 - Enterprise Docs</span>
+           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.3 - Office Integrated</span>
            <span className="flex items-center gap-1 font-mono">
              <ClockIcon size={10} /> {currentTime}
            </span>
