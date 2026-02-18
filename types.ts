@@ -186,6 +186,8 @@ export interface CnpjData {
   nome_fantasia: string | null;
   situacao_cadastral: number;
   descricao_situacao_cadastral: string;
+  identificador_matriz_filial: number;
+  descricao_matriz_filial: string;
   data_inicio_atividade: string | null;
   codigo_natureza_juridica: number;
   porte: number;
