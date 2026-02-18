@@ -1,15 +1,19 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Clock as ClockIcon, Briefcase, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Briefcase, Search } from 'lucide-react';
 import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, FinancialTransaction } from './types';
-import { FlowBuilder } from './components/FlowBuilder';
-import { CalendarModule } from './components/CalendarModule';
-import { OfficeModule } from './components/OfficeModule';
-import { ConsultationModule } from './components/ConsultationModule';
-import { WhatsAppTool } from './components/WhatsAppTool';
-import { MessageLinker } from './components/MessageLinker';
 import { Auth } from './components/Auth';
+import { MessageLinker } from './components/MessageLinker';
+import { DigitalClock } from './components/DigitalClock';
+import { LoadingPlaceholder } from './components/LoadingPlaceholder';
 import { supabase } from './supabase';
+
+// Lazy Loading de Módulos Pesados para rapidez inicial
+const OfficeModule = lazy(() => import('./components/OfficeModule').then(m => ({ default: m.OfficeModule })));
+const CalendarModule = lazy(() => import('./components/CalendarModule').then(m => ({ default: m.CalendarModule })));
+const FlowBuilder = lazy(() => import('./components/FlowBuilder').then(m => ({ default: m.FlowBuilder })));
+const ConsultationModule = lazy(() => import('./components/ConsultationModule').then(m => ({ default: m.ConsultationModule })));
+const WhatsAppTool = lazy(() => import('./components/WhatsAppTool').then(m => ({ default: m.WhatsAppTool })));
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
@@ -27,9 +31,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const msg = params.get('msg');
-    if (msg) {
-      setViewMessage(msg);
-    }
+    if (msg) setViewMessage(msg);
   }, []);
 
   const [user, setUser] = useState<User | null>(null);
@@ -38,8 +40,8 @@ const App: React.FC = () => {
   const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR'));
   
+  // Estados de Dados
   const [flowData, setFlowData] = useState<FlowState>(initialFlow);
   const [calendarConfig, setCalendarConfig] = useState<CalendarConfig>({ uf: 'SP', city: 'São Paulo' });
   const [calendarEvents, setCalendarEvents] = useState<UserEvent[]>([]);
@@ -54,9 +56,9 @@ const App: React.FC = () => {
   const [personalFiles, setPersonalFiles] = useState<StoredFile[]>([]);
   // Added financial transactions state
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
+  
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
   const [isInverted, setIsInverted] = useState(() => localStorage.getItem('ysoffice_inverted') === 'true');
 
   useEffect(() => {
@@ -69,9 +71,7 @@ const App: React.FC = () => {
           .filter(Boolean) as typeof DEFAULT_TABS;
         const missingTabs = DEFAULT_TABS.filter(t => !parsedOrder.includes(t.id));
         setTabs([...reorderedTabs, ...missingTabs]);
-      } catch (e) {
-        setTabs(DEFAULT_TABS);
-      }
+      } catch (e) { setTabs(DEFAULT_TABS); }
     }
   }, []);
 
@@ -92,13 +92,6 @@ const App: React.FC = () => {
     const formatted = date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   };
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString('pt-BR'));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }: any) => {
@@ -122,14 +115,9 @@ const App: React.FC = () => {
   }, [isInverted]);
 
   useEffect(() => {
-    if (!user) {
-      setIsDataLoaded(false);
-      return;
-    }
-
+    if (!user) { setIsDataLoaded(false); return; }
     const fetchData = async () => {
       setIsSyncing(true);
-      setSyncError(null);
       try {
         if (user.id === 'demo_user_id') {
           const saved = localStorage.getItem('ysoffice_demo_data');
@@ -148,7 +136,7 @@ const App: React.FC = () => {
             if (parsed.signatures) setSignatures(parsed.signatures);
             if (parsed.personalFiles) setPersonalFiles(parsed.personalFiles);
             if (parsed.hiddenTabs) setHiddenTabs(parsed.hiddenTabs);
-            // Fix: load transactions from demo data
+            // Load financial transactions for demo user
             if (parsed.transactions) setTransactions(parsed.transactions);
           }
         } else {
@@ -168,16 +156,12 @@ const App: React.FC = () => {
             setSignatures(payload.signatures || []);
             setPersonalFiles(payload.personalFiles || []);
             setHiddenTabs(payload.hiddenTabs || []);
-            // Fix: load transactions from payload
+            // Load financial transactions from supabase
             setTransactions(payload.transactions || []);
           }
         }
-      } catch (err) {
-        setSyncError('Falha de conexão.');
-      } finally {
-        setIsSyncing(false);
-        setIsDataLoaded(true);
-      }
+      } catch (err) { console.error(err); } 
+      finally { setIsSyncing(false); setIsDataLoaded(true); }
     };
     fetchData();
   }, [user]);
@@ -185,40 +169,19 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { 
-        kanban: { columns: [] }, 
-        flow: flowData, 
-        calendarConfig, 
-        calendarEvents, 
-        emails, 
-        links, 
-        extensions, 
-        postIts, 
-        importantNotes, 
-        shiftHandoffs, 
-        shiftConfig, 
-        signatures, 
-        personalFiles, 
-        hiddenTabs,
-        // Fix: include transactions in save payload
-        transactions 
-      };
+      // Include transactions in the payload
+      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, transactions };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
         setIsSyncing(true);
         try {
           await supabase.from('user_data').upsert({ user_id: user.id, payload, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
-        } catch (err) {
-           setSyncError('Erro ao salvar.');
-        } finally {
-          setIsSyncing(false);
-        }
+        } finally { setIsSyncing(false); }
       }
     };
-    const timeout = setTimeout(saveData, 2000);
+    const timeout = setTimeout(saveData, 2500); // Maior intervalo para menos carga
     return () => clearTimeout(timeout);
-    // Fix: add transactions to dependencies
   }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, transactions, user, isDataLoaded]);
 
   const handleLogout = async () => {
@@ -228,10 +191,7 @@ const App: React.FC = () => {
     setIsDataLoaded(false);
   };
 
-  if (viewMessage) {
-    return <MessageLinker mode="view" encodedMessage={viewMessage} />;
-  }
-
+  if (viewMessage) return <MessageLinker mode="view" encodedMessage={viewMessage} />;
   if (!user) return <Auth onLogin={setUser} />;
 
   const visibleTabs = tabs.filter(t => !hiddenTabs.includes(t.id));
@@ -287,52 +247,39 @@ const App: React.FC = () => {
 
         <div className="flex-1 overflow-hidden relative bg-white">
             <div className="absolute inset-0 overflow-auto bg-white">
-              {activeTab === 'office' && (
-                <OfficeModule 
-                  emails={emails}
-                  onEmailChange={setEmails}
-                  signatures={signatures}
-                  onSignatureChange={setSignatures}
-                  onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
-                  postIts={postIts}
-                  onPostItChange={setPostIts}
-                  importantNotes={importantNotes}
-                  onNoteChange={setImportantNotes}
-                  handoffs={shiftHandoffs}
-                  onHandoffChange={setShiftHandoffs}
-                  currentUser={user}
-                  links={links}
-                  onLinkChange={setLinks}
-                  extensions={extensions}
-                  onExtensionChange={setExtensions}
-                  personalFiles={personalFiles}
-                  onFilesChange={setPersonalFiles}
-                  // Fix: pass transactions state to OfficeModule
-                  transactions={transactions}
-                  onTransactionChange={setTransactions}
-                />
-              )}
-              {activeTab === 'calendar' && (
-                <CalendarModule 
-                    calendarConfig={calendarConfig}
-                    onCalendarConfigChange={setCalendarConfig}
-                    events={calendarEvents}
-                    onEventsChange={setCalendarEvents}
-                    shiftConfig={shiftConfig}
-                    onShiftConfigChange={setShiftConfig}
-                />
-              )}
-              {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
-              {activeTab === 'consultas' && <ConsultationModule />}
-              {activeTab === 'whatsapp' && <WhatsAppTool />}
+              <Suspense fallback={<LoadingPlaceholder />}>
+                {activeTab === 'office' && (
+                  <OfficeModule 
+                    emails={emails} onEmailChange={setEmails}
+                    signatures={signatures} onSignatureChange={setSignatures}
+                    onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
+                    postIts={postIts} onPostItChange={setPostIts}
+                    importantNotes={importantNotes} onNoteChange={setImportantNotes}
+                    handoffs={shiftHandoffs} onHandoffChange={setShiftHandoffs}
+                    currentUser={user} links={links} onLinkChange={setLinks}
+                    extensions={extensions} onExtensionChange={setExtensions}
+                    personalFiles={personalFiles} onFilesChange={setPersonalFiles}
+                    // Pass transactions state and setter to OfficeModule
+                    transactions={transactions} onTransactionChange={setTransactions}
+                  />
+                )}
+                {activeTab === 'calendar' && (
+                  <CalendarModule 
+                    calendarConfig={calendarConfig} onCalendarConfigChange={setCalendarConfig}
+                    events={calendarEvents} onEventsChange={setCalendarEvents}
+                    shiftConfig={shiftConfig} onShiftConfigChange={setShiftConfig}
+                  />
+                )}
+                {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
+                {activeTab === 'consultas' && <ConsultationModule />}
+                {activeTab === 'whatsapp' && <WhatsAppTool />}
+              </Suspense>
             </div>
         </div>
         
         <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none shrink-0">
-           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.3 - Office Integrated</span>
-           <span className="flex items-center gap-1 font-mono">
-             <ClockIcon size={10} /> {currentTime}
-           </span>
+           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.5 - Optimized Engine</span>
+           <DigitalClock />
            <span>{isDataLoaded ? 'Conectado' : 'Sincronizando...'}</span>
         </div>
       </div>
