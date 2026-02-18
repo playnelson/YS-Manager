@@ -6,70 +6,8 @@ import { StoredFile, Signature, UserEvent } from '../types';
 import { DocumentGenerator } from './DocumentGenerator';
 import { SignatureManager } from './SignatureManager';
 
-interface DocumentsModuleProps {
-  personalFiles: StoredFile[];
-  onFilesChange: (files: StoredFile[]) => void;
-  signatures: Signature[];
-  onSignatureChange: (signatures: Signature[]) => void;
-  onAddEvent: (event: UserEvent) => void;
-}
-
-export const DocumentsModule: React.FC<DocumentsModuleProps> = ({
-  personalFiles = [],
-  onFilesChange,
-  signatures,
-  onSignatureChange,
-  onAddEvent
-}) => {
-  const [activeSubTab, setActiveSubTab] = useState<'myfiles' | 'generator' | 'signer'>('myfiles');
-
-  return (
-    <div className="h-full flex flex-col gap-2">
-      {/* Sub-navegação interna */}
-      <div className="flex gap-2 shrink-0 border-b border-white pb-1 overflow-x-auto">
-        <Button 
-          onClick={() => setActiveSubTab('myfiles')} 
-          className={activeSubTab === 'myfiles' ? 'bg-white win95-sunken' : ''}
-          icon={<HardDrive size={14} />}
-        >
-          Meus Arquivos
-        </Button>
-        <Button 
-          onClick={() => setActiveSubTab('generator')} 
-          className={activeSubTab === 'generator' ? 'bg-white win95-sunken' : ''}
-          icon={<FileText size={14} />}
-        >
-          Criador de Docs
-        </Button>
-        <Button 
-          onClick={() => setActiveSubTab('signer')} 
-          className={activeSubTab === 'signer' ? 'bg-white win95-sunken' : ''}
-          icon={<PenTool size={14} />}
-        >
-          Assinador Digital
-        </Button>
-      </div>
-
-      {/* Área de Conteúdo */}
-      <div className="flex-1 win95-sunken bg-[#808080] p-0.5 overflow-hidden border-2 border-white border-t-[#808080] border-l-[#808080] border-r-white border-b-white">
-        <div className="h-full w-full bg-win95-bg">
-            {activeSubTab === 'myfiles' && (
-                <PersonalFileManager files={personalFiles} onChange={onFilesChange} />
-            )}
-            {activeSubTab === 'generator' && (
-                <DocumentGenerator />
-            )}
-            {activeSubTab === 'signer' && (
-                <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />
-            )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- SUB-COMPONENTE: GERENCIADOR DE ARQUIVOS PESSOAIS ---
-const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: StoredFile[]) => void }> = ({ files, onChange }) => {
+// --- SUB-COMPONENTE: GERENCIADOR DE ARQUIVOS PESSOAIS (AGORA EXPORTADO) ---
+export const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: StoredFile[]) => void }> = ({ files, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('Todos');
@@ -90,7 +28,7 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
     files.forEach(f => cats.add(f.category || 'Geral'));
     tempFolders.forEach(t => cats.add(t));
     
-    // Remove 'Geral' explicitamente para não aparecer na lista, mantendo apenas 'Todos' e as personalizadas
+    // Remove 'Geral' explicitamente conforme solicitado
     cats.delete('Geral');
     const sorted = Array.from(cats).sort();
     return ['Todos', ...sorted];
@@ -100,8 +38,6 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
     if (activeCategory === 'Todos') return files;
     return files.filter(f => (f.category || 'Geral') === activeCategory);
   }, [files, activeCategory]);
-
-  // --- AÇÕES DE ARQUIVO ---
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -117,7 +53,6 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
     const reader = new FileReader();
     reader.onload = (ev) => {
       const base64 = ev.target?.result as string;
-      // Define a categoria baseada na pasta aberta. Se for "Todos", vai para "Geral" (interno).
       const targetCat = activeCategory === 'Todos' ? 'Geral' : activeCategory;
 
       const newFile: StoredFile = {
@@ -152,15 +87,13 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
     document.body.removeChild(link);
   };
 
-  // --- AÇÕES DE PASTA ---
-
   const handleCreateFolder = () => {
     const name = prompt("Nome da Nova Pasta:");
     if (name && name.trim()) {
       const cleanName = name.trim();
       if (!categories.includes(cleanName) && cleanName !== 'Geral') {
         setTempFolders(prev => [...prev, cleanName]);
-        setActiveCategory(cleanName); // Já abre a pasta nova
+        setActiveCategory(cleanName);
       } else {
         alert("Esta pasta já existe ou nome inválido.");
       }
@@ -178,15 +111,11 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
     const newName = editName.trim();
     
     if (newName !== editingCategory) {
-        // Atualiza todos os arquivos
         const updatedFiles = files.map(f => (f.category === editingCategory ? { ...f, category: newName } : f));
         onChange(updatedFiles);
-        
-        // Atualiza temp folders se necessário
         if (tempFolders.includes(editingCategory)) {
             setTempFolders(prev => prev.map(t => t === editingCategory ? newName : t));
         }
-
         if (activeCategory === editingCategory) setActiveCategory(newName);
     }
     setEditingCategory(null);
@@ -194,7 +123,7 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
 
   const deleteCategory = (cat: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`Atenção: Excluir a pasta "${cat}" moverá todos os arquivos para a pasta "Geral". Deseja continuar?`)) {
+    if (confirm(`Atenção: Excluir a pasta "${cat}" moverá todos os arquivos para a pasta "Geral" (Oculta). Deseja continuar?`)) {
         const updatedFiles = files.map(f => (f.category === cat ? { ...f, category: 'Geral' } : f));
         onChange(updatedFiles);
         setTempFolders(prev => prev.filter(t => t !== cat));
@@ -215,14 +144,13 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
   };
 
   return (
-    <div className="h-full flex flex-col relative">
-      {/* Header / Toolbar */}
+    <div className="h-full flex flex-col relative bg-win95-bg">
       <div className="flex justify-between items-center bg-[#000080] text-white p-2 shrink-0">
          <div className="flex items-center gap-2 text-xs font-bold uppercase">
-            <FolderOpen size={16} /> Arquivo Digital Pessoal
+            <FolderOpen size={16} /> Meus Arquivos Salvos
          </div>
-         <div className="text-[10px] opacity-70">
-            {files.length} Arqs • {categories.length - 1} Pastas
+         <div className="text-[10px] opacity-70 italic">
+            Armazenamento Local Seguro
          </div>
       </div>
 
@@ -240,67 +168,37 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
          <div>
             <input type="file" className="hidden" ref={fileInputRef} onChange={handleUpload} />
             <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading} icon={<Upload size={14}/>}>
-               {isUploading ? 'SALVANDO...' : `UPLOAD EM "${activeCategory.toUpperCase()}"`}
+               {isUploading ? 'ENVIANDO...' : `UPLOAD EM "${activeCategory.toUpperCase()}"`}
             </Button>
          </div>
       </div>
 
-      {/* Main Content: Split View */}
       <div className="flex-1 flex overflow-hidden p-1 gap-1">
-        
-        {/* Sidebar: Categories Tree */}
         <div className="w-56 win95-raised bg-win95-bg flex flex-col shrink-0">
-            <div className="p-1 bg-[#000080] text-white text-[10px] font-bold uppercase mb-1 flex justify-between items-center">
-                <span>Diretório</span>
+            <div className="p-1 bg-[#808080] text-white text-[10px] font-bold uppercase mb-1">
+                <span>Estrutura</span>
             </div>
             <div className="flex-1 win95-sunken bg-white overflow-y-auto p-1">
                 {categories.map(cat => {
                     const isEditing = editingCategory === cat;
                     const isSystem = cat === 'Todos';
-                    
                     return (
-                        <div 
-                            key={cat}
-                            onClick={() => !isEditing && setActiveCategory(cat)}
-                            className={`flex items-center justify-between px-2 py-1.5 cursor-pointer mb-0.5 text-xs group ${activeCategory === cat && !isEditing ? 'bg-[#000080] text-white' : 'hover:bg-gray-100 text-black'}`}
-                        >
+                        <div key={cat} onClick={() => !isEditing && setActiveCategory(cat)} className={`flex items-center justify-between px-2 py-1.5 cursor-pointer mb-0.5 text-xs group ${activeCategory === cat && !isEditing ? 'bg-[#000080] text-white' : 'hover:bg-gray-100 text-black'}`}>
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                                 <Folder size={14} className={activeCategory === cat ? 'text-yellow-300 fill-yellow-300' : 'text-yellow-500 fill-yellow-500'} />
-                                
                                 {isEditing ? (
                                     <div className="flex items-center gap-1 flex-1" onClick={e => e.stopPropagation()}>
-                                        <input 
-                                            className="w-full text-xs p-0.5 border border-black text-black"
-                                            value={editName}
-                                            onChange={e => setEditName(e.target.value)}
-                                            autoFocus
-                                            onKeyDown={e => e.key === 'Enter' && saveRenameCategory()}
-                                        />
+                                        <input className="w-full text-xs p-0.5 border border-black text-black" value={editName} onChange={e => setEditName(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && saveRenameCategory()} />
                                         <button onClick={saveRenameCategory} className="text-green-600 hover:bg-green-100 p-0.5"><Check size={12}/></button>
-                                        <button onClick={() => setEditingCategory(null)} className="text-red-600 hover:bg-red-100 p-0.5"><X size={12}/></button>
                                     </div>
                                 ) : (
-                                    <span className="truncate font-bold">{cat}</span>
+                                    <span className="truncate font-bold uppercase">{cat}</span>
                                 )}
                             </div>
-
-                            {/* Action Buttons (Only for non-system and not-editing) */}
                             {!isSystem && !isEditing && (
                                 <div className={`flex gap-1 ${activeCategory === cat ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                                    <button 
-                                        onClick={(e) => startRenameCategory(cat, e)}
-                                        className={`p-0.5 rounded ${activeCategory === cat ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-200 text-gray-500'}`}
-                                        title="Renomear"
-                                    >
-                                        <Edit2 size={10} />
-                                    </button>
-                                    <button 
-                                        onClick={(e) => deleteCategory(cat, e)}
-                                        className={`p-0.5 rounded ${activeCategory === cat ? 'hover:bg-red-500 text-white' : 'hover:bg-red-100 text-red-500'}`}
-                                        title="Excluir Pasta"
-                                    >
-                                        <Trash2 size={10} />
-                                    </button>
+                                    <button onClick={(e) => startRenameCategory(cat, e)} className="p-0.5 rounded hover:bg-white/20"><Edit2 size={10} /></button>
+                                    <button onClick={(e) => deleteCategory(cat, e)} className="p-0.5 rounded hover:bg-red-500"><Trash2 size={10} /></button>
                                 </div>
                             )}
                         </div>
@@ -309,61 +207,44 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
             </div>
         </div>
 
-        {/* File List */}
         <div className="flex-1 win95-sunken bg-white overflow-y-auto custom-scrollbar flex flex-col">
-            {/* Breadcrumb simples */}
             <div className="bg-gray-100 border-b border-gray-300 px-2 py-1 text-[10px] text-gray-500 font-mono flex items-center gap-1">
                 <HardDrive size={10} /> C:\Brain\Arquivos\{activeCategory}
             </div>
 
             {filteredFiles.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center opacity-30 text-[#808080]">
-                    <div className="w-16 h-16 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center mb-2">
-                        <FolderOpen size={32} />
-                    </div>
+                <div className="flex-1 flex flex-col items-center justify-center opacity-20 text-[#808080]">
+                    <FolderOpen size={48} />
                     <p className="mt-2 text-xs font-bold uppercase">Pasta Vazia</p>
-                    <p className="text-[10px]">Arraste arquivos ou use o botão Upload</p>
                 </div>
             ) : (
                 <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-gray-100 sticky top-0 font-bold uppercase border-b border-gray-300 z-10">
                     <tr>
-                        <th className="p-2 border-r w-8">Type</th>
+                        <th className="p-2 border-r w-8">#</th>
                         <th className="p-2 border-r">Nome do Arquivo</th>
-                        <th className="p-2 border-r w-24">Data</th>
-                        <th className="p-2 border-r w-20">Tam.</th>
+                        <th className="p-2 border-r w-24 text-center">Tamanho</th>
                         <th className="p-2 text-right w-24">Ações</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                     {filteredFiles.map(file => (
                         <tr key={file.id} className="hover:bg-blue-50 group">
-                            <td className="p-2 text-center">
-                                <File size={14} className="text-blue-600 mx-auto" />
-                            </td>
-                            <td className="p-2 font-bold">
-                                <div className="flex flex-col min-w-0">
-                                    <span className="truncate max-w-[200px] md:max-w-[300px]" title={file.name}>{file.name}</span>
+                            <td className="p-2 text-center"><File size={14} className="text-blue-600 mx-auto" /></td>
+                            <td className="p-2 font-bold min-w-0">
+                                <div className="flex flex-col">
+                                    <span className="truncate max-w-xs" title={file.name}>{file.name}</span>
                                     {activeCategory === 'Todos' && (
-                                        <div className="flex items-center gap-1 text-[9px] text-gray-400 font-normal">
-                                            <CornerDownRight size={8} /> {file.category || 'Geral'}
-                                        </div>
+                                        <span className="text-[9px] text-gray-400 font-normal uppercase italic">Pasta: {file.category || 'Geral'}</span>
                                     )}
                                 </div>
                             </td>
-                            <td className="p-2 text-[#555]">{new Date(file.uploadedAt).toLocaleDateString()}</td>
-                            <td className="p-2 font-mono text-[#555]">{formatSize(file.size)}</td>
+                            <td className="p-2 font-mono text-center text-[#555]">{formatSize(file.size)}</td>
                             <td className="p-2 text-right">
                                 <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => setFileToMove(file)} className="p-1 win95-raised hover:bg-white text-gray-700" title="Mover para outra pasta">
-                                        <ArrowRightLeft size={12} />
-                                    </button>
-                                    <button onClick={() => handleDownload(file)} className="p-1 win95-raised hover:bg-white text-blue-700" title="Baixar">
-                                        <Download size={12} />
-                                    </button>
-                                    <button onClick={() => handleDeleteFile(file.id)} className="p-1 win95-raised hover:bg-white text-red-600" title="Excluir">
-                                        <Trash2 size={12} />
-                                    </button>
+                                    <button onClick={() => setFileToMove(file)} className="p-1 win95-raised bg-win95-bg" title="Mover"><ArrowRightLeft size={12} /></button>
+                                    <button onClick={() => handleDownload(file)} className="p-1 win95-raised bg-win95-bg text-blue-700" title="Baixar"><Download size={12} /></button>
+                                    <button onClick={() => handleDeleteFile(file.id)} className="p-1 win95-raised bg-win95-bg text-red-600" title="Excluir"><Trash2 size={12} /></button>
                                 </div>
                             </td>
                         </tr>
@@ -374,7 +255,6 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
         </div>
       </div>
 
-      {/* MODAL DE MOVER ARQUIVO */}
       {fileToMove && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[1px]">
             <div className="bg-win95-bg w-72 win95-raised p-1 shadow-2xl">
@@ -383,24 +263,16 @@ const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: Sto
                     <button onClick={() => setFileToMove(null)} className="win95-raised bg-win95-bg text-black w-4 h-4 flex items-center justify-center text-[10px] font-bold">×</button>
                 </div>
                 <div className="p-2">
-                    <p className="text-[10px] mb-2 truncate font-bold">Arquivo: {fileToMove.name}</p>
-                    <p className="text-[10px] mb-1">Selecione o destino:</p>
+                    <p className="text-[10px] mb-2 truncate font-bold uppercase">Item: {fileToMove.name}</p>
                     <div className="max-h-40 overflow-y-auto win95-sunken bg-white p-1 mb-2">
                         {categories.filter(c => c !== 'Todos').map(cat => (
-                            <button
-                                key={cat}
-                                onClick={() => handleMoveFileConfirm(cat)}
-                                className={`w-full text-left px-2 py-1 text-xs flex items-center gap-2 hover:bg-blue-100 ${fileToMove.category === cat ? 'font-bold bg-gray-100 text-gray-500 cursor-default' : ''}`}
-                                disabled={fileToMove.category === cat}
-                            >
+                            <button key={cat} onClick={() => handleMoveFileConfirm(cat)} className={`w-full text-left px-2 py-1 text-xs flex items-center gap-2 hover:bg-blue-100 ${fileToMove.category === cat ? 'font-bold bg-gray-100 text-gray-500 cursor-default' : ''}`} disabled={fileToMove.category === cat}>
                                 <Folder size={12} className={fileToMove.category === cat ? 'text-gray-400' : 'text-yellow-500 fill-yellow-500'} />
-                                {cat} {fileToMove.category === cat && '(Atual)'}
+                                {cat}
                             </button>
                         ))}
                     </div>
-                    <div className="flex justify-end">
-                        <Button size="sm" onClick={() => setFileToMove(null)}>Cancelar</Button>
-                    </div>
+                    <div className="flex justify-end"><Button size="sm" onClick={() => setFileToMove(null)}>Cancelar</Button></div>
                 </div>
             </div>
         </div>
