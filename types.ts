@@ -47,6 +47,10 @@ export interface FlowConnection {
   to: string;
 }
 
+export interface FlowNodeWithHistory extends FlowNode {
+  history?: number[];
+}
+
 export interface FlowTemplate {
   id: string;
   name: string;
@@ -78,18 +82,6 @@ export interface UserEvent {
 export interface CalendarConfig {
   uf: string;
   city: string;
-}
-
-// Financial Types
-export type TransactionType = 'income' | 'expense';
-
-export interface FinancialTransaction {
-  id: string;
-  description: string;
-  amount: number;
-  type: TransactionType;
-  category: string;
-  date: string;
 }
 
 // Email Types
@@ -179,10 +171,6 @@ export interface DocTemplate {
   fields: string[];
   contentPattern: string;
 }
-
-/**
- * Fix: Added missing interfaces used by BrasilTools, ConsultationModule and CnpjQuery
- */
 
 // BrasilAPI / Consulta Types
 export interface CepData {
@@ -277,6 +265,36 @@ export interface FipeResult {
   MesReferencia: string;
 }
 
+export interface Signature {
+  id: string;
+  name: string;
+  dataUrl: string;
+  createdAt: string;
+}
+
+export interface StoredFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string;
+  uploadedAt: string;
+  category?: string;
+}
+
+// Financial Types
+// Added TransactionType and FinancialTransaction to fix type errors in FinancialModule.tsx
+export type TransactionType = 'income' | 'expense';
+
+export interface FinancialTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: TransactionType;
+  category: string;
+  date: string;
+}
+
 // Global App Data
 export interface AppData {
   kanban: KanbanState;
@@ -293,23 +311,6 @@ export interface AppData {
   signatures?: Signature[];
   personalFiles?: StoredFile[];
   hiddenTabs?: string[];
-  favoriteTemplateIds?: string[];
+  // Added transactions to AppData for persistence
   transactions?: FinancialTransaction[];
-}
-
-export interface Signature {
-  id: string;
-  name: string;
-  dataUrl: string;
-  createdAt: string;
-}
-
-export interface StoredFile {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  data: string;
-  uploadedAt: string;
-  category?: string;
 }

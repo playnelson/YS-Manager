@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Mail, FileSearch2, Languages, Link, FolderOpen, StickyNote, ClipboardList, Phone, Globe, FileText, PenTool, HardDrive, Calculator, Wallet } from 'lucide-react';
+import { Mail, FileSearch2, Link, StickyNote, ClipboardList, Phone, Globe, FileText, PenTool, HardDrive, Calculator, Wallet } from 'lucide-react';
 import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile, FinancialTransaction } from '../types';
 import { EmailManager } from './EmailManager';
 import { StickyNotesWall } from './StickyNotesWall';
@@ -12,8 +12,8 @@ import { DocumentGenerator } from './DocumentGenerator';
 import { SignatureManager } from './SignatureManager';
 import { PersonalFileManager } from './DocumentsModule';
 import { PricingCalculator } from './PricingCalculator';
+// Fix: Import FinancialModule
 import { FinancialModule } from './FinancialModule';
-import { Button } from './ui/Button';
 
 interface OfficeModuleProps {
   emails: EmailTemplate[];
@@ -34,11 +34,13 @@ interface OfficeModuleProps {
   onExtensionChange: (extensions: Extension[]) => void;
   personalFiles: StoredFile[];
   onFilesChange: (files: StoredFile[]) => void;
+  // Fix: add transactions to props
   transactions: FinancialTransaction[];
   onTransactionChange: (transactions: FinancialTransaction[]) => void;
 }
 
-type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'financas' | 'gerador' | 'assinador' | 'precificacao' | 'emails';
+// Fix: Add financas to SubTab
+type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'financas' | 'emails';
 
 export const OfficeModule: React.FC<OfficeModuleProps> = ({
   emails, onEmailChange,
@@ -51,6 +53,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   links, onLinkChange,
   extensions, onExtensionChange,
   personalFiles, onFilesChange,
+  // Fix: destruct transactions from props
   transactions, onTransactionChange
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('mural');
@@ -72,7 +75,6 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
 
   return (
     <div className="h-full flex flex-col gap-0 overflow-hidden bg-[#c0c0c0]">
-      {/* Barra de Abas do Escritório - Navegação Plana Completa sem Margens Inúteis */}
       <div className="flex gap-1 shrink-0 px-2 pt-2 border-b border-white overflow-x-auto no-scrollbar scroll-smooth">
         <NavTab id="mural" label="Mural" icon={<StickyNote size={14} />} />
         <NavTab id="notes" label="Anotações" icon={<FileText size={14} />} />
@@ -81,65 +83,54 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
         <NavTab id="extensions" label="Ramais" icon={<Phone size={14} />} />
         <div className="w-px h-6 bg-gray-400 mx-1 self-center opacity-50"></div>
         <NavTab id="arquivos" label="Arquivos" icon={<HardDrive size={14} />} />
-        <NavTab id="financas" label="Finanças" icon={<Wallet size={14} className="text-blue-700" />} />
         <NavTab id="gerador" label="Gerador" icon={<FileSearch2 size={14} />} />
         <NavTab id="assinador" label="Assinador" icon={<PenTool size={14} />} />
         <div className="w-px h-6 bg-gray-400 mx-1 self-center opacity-50"></div>
         <NavTab id="precificacao" label="Precificação" icon={<Calculator size={14} />} />
+        {/* Fix: Add financas NavTab */}
+        <NavTab id="financas" label="Finanças" icon={<Wallet size={14} />} />
         <NavTab id="emails" label="E-mails" icon={<Mail size={14} />} />
       </div>
 
-      {/* Área de Conteúdo Única e Integrada (sem margens m-1) */}
       <div className="flex-1 win95-sunken bg-white overflow-hidden border-2 border-white">
         <div className="h-full w-full bg-win95-bg">
-            
             {activeSubTab === 'mural' && (
                 <StickyNotesWall notes={postIts} onChange={onPostItChange} />
             )}
-
             {activeSubTab === 'notes' && (
                 <ImportantNotes notes={importantNotes} onChange={onNoteChange} />
             )}
-
             {activeSubTab === 'handoff' && (
                 <ShiftHandoffModule handoffs={handoffs} onChange={onHandoffChange} currentUser={currentUser} />
             )}
-
             {activeSubTab === 'directory' && (
                 <ProfessionalLinks links={links} onChange={onLinkChange} />
             )}
-
             {activeSubTab === 'extensions' && (
                 <ExtensionsDirectory extensions={extensions} onChange={onExtensionChange} />
             )}
-
             {activeSubTab === 'arquivos' && (
                 <PersonalFileManager files={personalFiles} onChange={onFilesChange} />
             )}
-
-            {activeSubTab === 'financas' && (
-                <FinancialModule transactions={transactions} onChange={onTransactionChange} />
-            )}
-
             {activeSubTab === 'gerador' && (
                 <DocumentGenerator />
             )}
-
             {activeSubTab === 'assinador' && (
                 <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />
             )}
-
             {activeSubTab === 'precificacao' && (
                 <PricingCalculator />
             )}
-
+            {/* Fix: Conditional render for FinancialModule */}
+            {activeSubTab === 'financas' && (
+                <FinancialModule transactions={transactions} onChange={onTransactionChange} />
+            )}
             {activeSubTab === 'emails' && (
                 <EmailManager emails={emails} onChange={onEmailChange} />
             )}
         </div>
       </div>
 
-      {/* Barra de Status Inferior do Escritório */}
       <div className="px-2 py-1 bg-win95-bg border-t border-white text-[9px] font-bold text-gray-500 uppercase flex justify-between items-center italic select-none shrink-0">
         <div className="flex gap-4">
            <span>Sessão: {activeSubTab.toUpperCase()}</span>
