@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Clock as ClockIcon, Briefcase, Search, Eye, EyeOff } from 'lucide-react';
-import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile } from './types';
+import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, FinancialTransaction } from './types';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarModule } from './components/CalendarModule';
 import { OfficeModule } from './components/OfficeModule';
@@ -52,6 +52,7 @@ const App: React.FC = () => {
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | undefined>(undefined);
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [personalFiles, setPersonalFiles] = useState<StoredFile[]>([]);
+  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -146,6 +147,7 @@ const App: React.FC = () => {
             if (parsed.signatures) setSignatures(parsed.signatures);
             if (parsed.personalFiles) setPersonalFiles(parsed.personalFiles);
             if (parsed.hiddenTabs) setHiddenTabs(parsed.hiddenTabs);
+            if (parsed.transactions) setTransactions(parsed.transactions);
           }
         } else {
           const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
@@ -164,6 +166,7 @@ const App: React.FC = () => {
             setSignatures(payload.signatures || []);
             setPersonalFiles(payload.personalFiles || []);
             setHiddenTabs(payload.hiddenTabs || []);
+            setTransactions(payload.transactions || []);
           }
         }
       } catch (err) {
@@ -179,7 +182,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs };
+      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, transactions };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -195,7 +198,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2000);
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, user, isDataLoaded]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, user, isDataLoaded, transactions]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -283,6 +286,8 @@ const App: React.FC = () => {
                   onExtensionChange={setExtensions}
                   personalFiles={personalFiles}
                   onFilesChange={setPersonalFiles}
+                  transactions={transactions}
+                  onTransactionChange={setTransactions}
                 />
               )}
               {activeTab === 'calendar' && (

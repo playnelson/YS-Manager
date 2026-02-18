@@ -80,6 +80,18 @@ export interface CalendarConfig {
   city: string;
 }
 
+// Financial Types
+export type TransactionType = 'income' | 'expense';
+
+export interface FinancialTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: TransactionType;
+  category: string;
+  date: string;
+}
+
 // Email Types
 export interface EmailTemplate {
   id: string;
@@ -168,51 +180,11 @@ export interface DocTemplate {
   contentPattern: string;
 }
 
-// External API Integration Types
-export interface CnpjSocio {
-  nome_socio: string;
-  qualificacao_socio: string;
-  data_entrada_sociedade: string | null;
-}
+/**
+ * Fix: Added missing interfaces used by BrasilTools, ConsultationModule and CnpjQuery
+ */
 
-export interface Cnae {
-  codigo: string;
-  descricao: string;
-}
-
-export interface CnpjData {
-  cnpj: string;
-  razao_social: string;
-  nome_fantasia: string | null;
-  situacao_cadastral: number;
-  descricao_situacao_cadastral: string;
-  identificador_matriz_filial: number;
-  descricao_matriz_filial: string;
-  data_inicio_atividade: string | null;
-  codigo_natureza_juridica: number;
-  porte: number;
-  descricao_porte: string;
-  capital_social: number;
-  logradouro: string;
-  numero: string;
-  complemento: string;
-  bairro: string;
-  cep: string;
-  uf: string;
-  municipio: string;
-  ddd_telefone_1: string | null;
-  ddd_telefone_2: string | null;
-  email: string | null;
-  cnae_fiscal: string;
-  cnae_fiscal_descricao: string;
-  descricao_tipo_de_logradouro: string;
-  opcao_pelo_simples: boolean | null;
-  data_opcao_pelo_simples: string | null;
-  opcao_pelo_mei: boolean | null;
-  qsa?: CnpjSocio[];
-  cnaes_secundarios?: Cnae[];
-}
-
+// BrasilAPI / Consulta Types
 export interface CepData {
   cep: string;
   state: string;
@@ -243,19 +215,56 @@ export interface CurrencyQuote {
   create_date: string;
 }
 
+export interface CnpjData {
+  cnpj: string;
+  razao_social: string;
+  nome_fantasia: string | null;
+  situacao_cadastral: number;
+  descricao_situacao_cadastral: string;
+  data_inicio_atividade: string | null;
+  uf: string;
+  municipio: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cep: string;
+  ddd_telefone_1: string | null;
+  ddd_telefone_2: string | null;
+  email: string | null;
+  capital_social: number;
+  porte: number;
+  descricao_porte?: string;
+  opcao_pelo_simples: boolean | null;
+  data_opcao_pelo_simples: string | null;
+  opcao_pelo_mei: boolean | null;
+  cnae_fiscal: string;
+  cnae_fiscal_descricao: string;
+  cnaes_secundarios?: Array<{ codigo: string, descricao: string }>;
+  qsa?: Array<{
+    nome_socio: string;
+    qualificacao_socio: string;
+    data_entrada_sociedade: string | null;
+  }>;
+  descricao_matriz_filial: string;
+  codigo_natureza_juridica: string;
+  descricao_tipo_de_logradouro: string;
+}
+
+// FIPE Types
 export interface FipeBrand {
-  codigo: string;
   nome: string;
+  codigo: string;
 }
 
 export interface FipeModel {
-  codigo: string;
   nome: string;
+  codigo: string;
 }
 
 export interface FipeYear {
-  codigo: string;
   nome: string;
+  codigo: string;
 }
 
 export interface FipeResult {
@@ -266,8 +275,6 @@ export interface FipeResult {
   Combustivel: string;
   CodigoFipe: string;
   MesReferencia: string;
-  TipoVeiculo: number;
-  SiglaCombustivel: string;
 }
 
 // Global App Data
@@ -286,7 +293,8 @@ export interface AppData {
   signatures?: Signature[];
   personalFiles?: StoredFile[];
   hiddenTabs?: string[];
-  favoriteTemplateIds?: string[]; // Novo campo para favoritos
+  favoriteTemplateIds?: string[];
+  transactions?: FinancialTransaction[];
 }
 
 export interface Signature {
