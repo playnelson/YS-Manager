@@ -5,7 +5,7 @@ export interface User {
   nick: string;
 }
 
-// Kanban Types (Refatorado para Trello-style)
+// Kanban Types
 export type KanbanPriority = 'low' | 'medium' | 'high';
 
 export interface KanbanCard {
@@ -98,7 +98,7 @@ export interface ProfessionalLink {
   title: string;
   url: string;
   category: string;
-  customIcon?: string; // Base64 ou URL customizada
+  customIcon?: string;
 }
 
 // Extension / Ramal Types
@@ -128,7 +128,7 @@ export interface PostIt {
   text: string;
   color: string;
   rotation: number;
-  createdAt?: string; // Data de criação ISO
+  createdAt?: string;
 }
 
 // Shift Manager Types
@@ -141,18 +141,18 @@ export interface ShiftSegment {
 }
 
 export interface ShiftConfig {
-  startDate: string; // Data de início do ciclo
+  startDate: string;
   segments: ShiftSegment[];
 }
 
-// Shift Handoff Types (Passagem de Serviço)
+// Shift Handoff Types
 export type HandoffStatus = 'ok' | 'warning' | 'critical';
 
 export interface ShiftHandoff {
   id: string;
   timestamp: string;
   userNick: string;
-  shiftPeriod: string; // Manhã, Tarde, Noite, Plantão A, etc.
+  shiftPeriod: string;
   status: HandoffStatus;
   occurrences: string;
   pendingItems: string;
@@ -162,99 +162,55 @@ export interface ShiftHandoff {
 export interface DocTemplate {
   id: string;
   name: string;
-  category: 'Financeiro' | 'Jurídico' | 'RH' | 'Pessoal' | 'IA' | 'Serviços';
+  category: 'Financeiro' | 'Jurídico' | 'RH' | 'Pessoal' | 'Comercial' | 'Imobiliário';
   description: string;
-  fields: string[]; // Nomes dos campos para preencher (ex: ['Nome', 'Valor'])
-  contentPattern: string; // Texto com placeholders {{Nome}}
+  fields: string[];
+  contentPattern: string;
 }
 
-// CNPJ Data Type (BrasilAPI Completo)
-export interface Cnae {
-  codigo: number;
-  descricao: string;
-}
-
-export interface Socio {
+// External API Integration Types
+export interface CnpjSocio {
   nome_socio: string;
-  cnpj_cpf_do_socio: string;
-  codigo_qualificacao_socio: number;
   qualificacao_socio: string;
-  data_entrada_sociedade: string;
-  faixa_etaria?: string;
+  data_entrada_sociedade: string | null;
+}
+
+export interface Cnae {
+  codigo: string;
+  descricao: string;
 }
 
 export interface CnpjData {
   cnpj: string;
-  identificador_matriz_filial: number;
-  descricao_matriz_filial: string;
   razao_social: string;
-  nome_fantasia: string;
+  nome_fantasia: string | null;
   situacao_cadastral: number;
   descricao_situacao_cadastral: string;
-  data_situacao_cadastral: string;
-  motivo_situacao_cadastral: number;
-  nome_cidade_exterior: string | null;
+  data_inicio_atividade: string | null;
   codigo_natureza_juridica: number;
-  data_inicio_atividade: string;
-  cnae_fiscal: number;
-  cnae_fiscal_descricao: string;
-  descricao_tipo_de_logradouro: string;
+  porte: number;
+  descricao_porte: string;
+  capital_social: number;
   logradouro: string;
   numero: string;
   complemento: string;
   bairro: string;
   cep: string;
   uf: string;
-  codigo_municipio: number;
   municipio: string;
-  ddd_telefone_1: string;
-  ddd_telefone_2: string;
-  ddd_fax: string;
+  ddd_telefone_1: string | null;
+  ddd_telefone_2: string | null;
   email: string | null;
-  qualificacao_do_responsavel: number;
-  capital_social: number;
-  porte: number;
-  descricao_porte: string;
+  cnae_fiscal: string;
+  cnae_fiscal_descricao: string;
+  descricao_tipo_de_logradouro: string;
   opcao_pelo_simples: boolean | null;
   data_opcao_pelo_simples: string | null;
-  data_exclusao_do_simples: string | null;
   opcao_pelo_mei: boolean | null;
-  situacao_especial: string | null;
-  data_situacao_especial: string | null;
-  cnaes_secundarios: Cnae[];
-  qsa: Socio[];
-  inscricao_estadual?: string; // Campo opcional, geralmente não retornado pela API federal
+  qsa?: CnpjSocio[];
+  cnaes_secundarios?: Cnae[];
 }
 
-// Vehicle FIPE Types
-export interface FipeBrand {
-  codigo: string;
-  nome: string;
-}
-
-export interface FipeModel {
-  codigo: number;
-  nome: string;
-}
-
-export interface FipeYear {
-  codigo: string;
-  nome: string;
-}
-
-export interface FipeResult {
-  TipoVeiculo: number;
-  Valor: string;
-  Marca: string;
-  Modelo: string;
-  AnoModelo: number;
-  Combustivel: string;
-  CodigoFipe: string;
-  MesReferencia: string;
-  SiglaCombustivel: string;
-}
-
-// Brasil Tools Types
 export interface CepData {
   cep: string;
   state: string;
@@ -285,23 +241,31 @@ export interface CurrencyQuote {
   create_date: string;
 }
 
-// Signature Types
-export interface Signature {
-  id: string;
-  name: string;
-  dataUrl: string; // Base64 PNG transparent
-  createdAt: string;
+export interface FipeBrand {
+  codigo: string;
+  nome: string;
 }
 
-// Personal File Type
-export interface StoredFile {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  data: string; // Base64
-  uploadedAt: string;
-  category?: string; // Categoria/Pasta do arquivo
+export interface FipeModel {
+  codigo: string;
+  nome: string;
+}
+
+export interface FipeYear {
+  codigo: string;
+  nome: string;
+}
+
+export interface FipeResult {
+  Valor: string;
+  Marca: string;
+  Modelo: string;
+  AnoModelo: number;
+  Combustivel: string;
+  CodigoFipe: string;
+  MesReferencia: string;
+  TipoVeiculo: number;
+  SiglaCombustivel: string;
 }
 
 // Global App Data
@@ -319,5 +283,23 @@ export interface AppData {
   shiftConfig?: ShiftConfig;
   signatures?: Signature[];
   personalFiles?: StoredFile[];
-  hiddenTabs?: string[]; 
+  hiddenTabs?: string[];
+  favoriteTemplateIds?: string[]; // Novo campo para favoritos
+}
+
+export interface Signature {
+  id: string;
+  name: string;
+  dataUrl: string;
+  createdAt: string;
+}
+
+export interface StoredFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string;
+  uploadedAt: string;
+  category?: string;
 }
