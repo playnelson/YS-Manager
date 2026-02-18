@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trello, GitMerge, MessageSquare, RefreshCw, StickyNote, Contrast, Calendar as CalendarIcon, Phone, Clock as ClockIcon, Briefcase, Search, Globe, Menu, Eye, EyeOff, GripHorizontal, LayoutGrid, FolderOpen } from 'lucide-react';
-import { AppData, KanbanState, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, KanbanColumn, ShiftHandoff, StoredFile } from './types';
-import { KanbanBoard } from './components/KanbanBoard';
+import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Clock as ClockIcon, Briefcase, Search, Eye, EyeOff } from 'lucide-react';
+import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile } from './types';
 import { FlowBuilder } from './components/FlowBuilder';
 import { CalendarModule } from './components/CalendarModule';
 import { OfficeModule } from './components/OfficeModule';
@@ -11,22 +10,12 @@ import { WhatsAppTool } from './components/WhatsAppTool';
 import { MessageLinker } from './components/MessageLinker';
 import { Auth } from './components/Auth';
 import { supabase } from './supabase';
-import { Button } from './components/ui/Button';
-
-const initialKanban: KanbanState = { 
-  columns: [
-    { id: 'col_1', title: 'A Fazer', cards: [] },
-    { id: 'col_2', title: 'Em Andamento', cards: [] },
-    { id: 'col_3', title: 'Concluído', cards: [] }
-  ]
-};
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
 const DEFAULT_TABS = [
   { id: 'office', label: 'Escritório', icon: <Briefcase size={16} /> },
   { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={16} /> },
-  { id: 'kanban', label: 'Tarefas', icon: <Trello size={16} /> },
   { id: 'flow', label: 'Fluxo', icon: <GitMerge size={16} /> },
   { id: 'consultas', label: 'Consultas', icon: <Search size={16} /> },
   { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={16} /> },
@@ -46,14 +35,11 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('office');
   const [tabs, setTabs] = useState(DEFAULT_TABS);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
-  const menuRef = useRef<HTMLDivElement>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR'));
   
-  const [kanbanData, setKanbanData] = useState<KanbanState>(initialKanban);
   const [flowData, setFlowData] = useState<FlowState>(initialFlow);
   const [calendarConfig, setCalendarConfig] = useState<CalendarConfig>({ uf: 'SP', city: 'São Paulo' });
   const [calendarEvents, setCalendarEvents] = useState<UserEvent[]>([]);
@@ -70,16 +56,6 @@ const App: React.FC = () => {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isInverted, setIsInverted] = useState(() => localStorage.getItem('ysoffice_inverted') === 'true');
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     const savedOrder = localStorage.getItem('ysoffice_tab_order');
@@ -157,21 +133,6 @@ const App: React.FC = () => {
           const saved = localStorage.getItem('ysoffice_demo_data');
           if (saved) {
             const parsed: any = JSON.parse(saved);
-            let safeKanban = initialKanban;
-            if (parsed.kanban) {
-               if (Array.isArray(parsed.kanban.columns)) {
-                  safeKanban = parsed.kanban;
-               } else if (parsed.kanban.todo) {
-                  safeKanban = {
-                    columns: [
-                      { id: 'todo', title: 'Pendentes', cards: parsed.kanban.todo || [] },
-                      { id: 'doing', title: 'Em Execução', cards: parsed.kanban.doing || [] },
-                      { id: 'done', title: 'Concluído', cards: parsed.kanban.done || [] }
-                    ]
-                  };
-               }
-            }
-            setKanbanData(safeKanban);
             if (parsed.flow) setFlowData({ ...initialFlow, ...parsed.flow });
             if (parsed.calendarConfig) setCalendarConfig(parsed.calendarConfig);
             if (parsed.calendarEvents) setCalendarEvents(parsed.calendarEvents);
@@ -190,21 +151,6 @@ const App: React.FC = () => {
           const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
           if (!error && data?.payload) {
             const payload = data.payload as any;
-            let safeKanban = initialKanban;
-            if (payload.kanban) {
-               if (Array.isArray(payload.kanban.columns)) {
-                  safeKanban = payload.kanban;
-               } else if (payload.kanban.todo) {
-                  safeKanban = {
-                    columns: [
-                      { id: 'todo', title: 'Pendentes', cards: payload.kanban.todo || [] },
-                      { id: 'doing', title: 'Em Execução', cards: payload.kanban.doing || [] },
-                      { id: 'done', title: 'Concluído', cards: payload.kanban.done || [] }
-                    ]
-                  };
-               }
-            }
-            setKanbanData(safeKanban);
             setFlowData({ ...initialFlow, ...(payload.flow || {}) });
             setCalendarConfig(payload.calendarConfig || { uf: 'SP', city: 'São Paulo' });
             setCalendarEvents(payload.calendarEvents || []);
@@ -233,7 +179,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs };
+      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -249,20 +195,13 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2000);
     return () => clearTimeout(timeout);
-  }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, user, isDataLoaded]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, user, isDataLoaded]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
     localStorage.removeItem('ysoffice_demo_session');
     setUser(null);
     setIsDataLoaded(false);
-  };
-
-  const toggleTabVisibility = (tabId: string) => {
-    setHiddenTabs(prev => {
-      if (prev.includes(tabId)) return prev.filter(id => id !== tabId);
-      return [...prev, tabId];
-    });
   };
 
   if (viewMessage) {
@@ -295,56 +234,6 @@ const App: React.FC = () => {
 
       <div className="flex-1 flex flex-col overflow-hidden win95-raised bg-gray-100 shadow-2xl">
         <div className="flex px-2 pt-2 bg-[#d1d5db] border-b border-gray-300 gap-1 items-end relative shrink-0">
-          <div ref={menuRef} className="relative z-50">
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className={`flex items-center gap-2 px-3 py-2 text-xs font-black uppercase rounded-t-lg transition-all duration-200 border-t-2 border-l-2 border-r-2 ${isMenuOpen ? 'bg-win95-blue text-white border-white shadow-xl' : 'bg-gray-300 text-black border-white hover:bg-gray-200'}`}
-            >
-              <LayoutGrid size={14} /> Iniciar
-            </button>
-            {isMenuOpen && (
-              <div className="absolute top-full left-0 w-64 win95-raised bg-win95-bg p-1 shadow-[4px_4px_10px_rgba(0,0,0,0.3)] animate-in slide-in-from-top-2 fade-in duration-100 border-2 border-win95-light">
-                 <div className="bg-[#000080] text-white px-2 py-4 mb-1 flex items-center gap-2">
-                    <span className="text-lg font-black italic transform -rotate-2 origin-left">Brain</span>
-                    <span className="text-[10px] uppercase tracking-widest opacity-80 mt-1">Professional</span>
-                 </div>
-                 <div className="flex flex-col gap-0.5 max-h-[400px] overflow-y-auto custom-scrollbar">
-                    {tabs.map(tab => {
-                      const isHidden = hiddenTabs.includes(tab.id);
-                      const isActive = activeTab === tab.id;
-                      return (
-                        <div key={tab.id} className="group flex items-center p-1 hover:bg-[#000080] hover:text-white transition-colors">
-                           <button 
-                             onClick={() => { setActiveTab(tab.id); setIsMenuOpen(false); }}
-                             className="flex-1 flex items-center gap-3 px-2 text-xs font-bold text-left"
-                           >
-                             <div className="w-6 h-6 flex items-center justify-center bg-white/20 rounded shadow-sm group-hover:bg-white/10">
-                               {tab.icon}
-                             </div>
-                             <span className={isActive ? 'underline decoration-2 underline-offset-2' : ''}>
-                               {tab.label}
-                             </span>
-                           </button>
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); toggleTabVisibility(tab.id); }}
-                             className="p-1.5 hover:bg-white/20 rounded text-gray-500 group-hover:text-white"
-                             title={isHidden ? "Mostrar na Barra" : "Esconder da Barra"}
-                           >
-                             {isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
-                           </button>
-                        </div>
-                      );
-                    })}
-                 </div>
-                 <div className="border-t border-white border-b border-[#808080] my-1 h-0.5"></div>
-                 <button onClick={handleLogout} className="w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-[#000080] hover:text-white text-xs font-bold transition-colors">
-                    <div className="w-6 h-6 bg-red-600 flex items-center justify-center text-white rounded"><div className="w-2 h-2 border-2 border-white rounded-full"></div></div>
-                    Encerrar Sessão
-                 </button>
-              </div>
-            )}
-          </div>
-          <div className="w-px h-6 bg-gray-400 mx-1 mb-1"></div>
           <div className="flex-1 flex overflow-x-auto no-scrollbar gap-1 items-end">
             {visibleTabs.map((tab, index) => (
               <div
@@ -406,7 +295,6 @@ const App: React.FC = () => {
                     onShiftConfigChange={setShiftConfig}
                 />
               )}
-              {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
               {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
               {activeTab === 'consultas' && <ConsultationModule />}
               {activeTab === 'whatsapp' && <WhatsAppTool />}
