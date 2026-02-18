@@ -13,7 +13,6 @@ import { Auth } from './components/Auth';
 import { supabase } from './supabase';
 import { Button } from './components/ui/Button';
 
-// Initial Kanban com estrutura Trello-like
 const initialKanban: KanbanState = { 
   columns: [
     { id: 'col_1', title: 'A Fazer', cards: [] },
@@ -24,7 +23,6 @@ const initialKanban: KanbanState = {
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 
-// Definição das Abas Principais (Consolidadas)
 const DEFAULT_TABS = [
   { id: 'office', label: 'Escritório', icon: <Briefcase size={16} /> },
   { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={16} /> },
@@ -35,7 +33,6 @@ const DEFAULT_TABS = [
 ];
 
 const App: React.FC = () => {
-  // --- Check for Secret Message URL ---
   const [viewMessage, setViewMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,23 +44,15 @@ const App: React.FC = () => {
   }, []);
 
   const [user, setUser] = useState<User | null>(null);
-  
-  // Estado das Abas (Ordem e Seleção)
   const [activeTab, setActiveTab] = useState('office');
   const [tabs, setTabs] = useState(DEFAULT_TABS);
-  
-  // Menu Cascata e Visibilidade
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
-  
-  // Drag and Drop State
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR'));
   
-  // Data States
   const [kanbanData, setKanbanData] = useState<KanbanState>(initialKanban);
   const [flowData, setFlowData] = useState<FlowState>(initialFlow);
   const [calendarConfig, setCalendarConfig] = useState<CalendarConfig>({ uf: 'SP', city: 'São Paulo' });
@@ -77,15 +66,11 @@ const App: React.FC = () => {
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | undefined>(undefined);
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [personalFiles, setPersonalFiles] = useState<StoredFile[]>([]);
-  
-  // System States
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  
   const [isInverted, setIsInverted] = useState(() => localStorage.getItem('ysoffice_inverted') === 'true');
 
-  // Fechar menu ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -96,19 +81,14 @@ const App: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Carregar ordem das abas do localStorage
   useEffect(() => {
     const savedOrder = localStorage.getItem('ysoffice_tab_order');
     if (savedOrder) {
       try {
         const parsedOrder = JSON.parse(savedOrder) as string[];
-        
-        // Filtra abas que ainda existem no sistema novo
         const reorderedTabs = parsedOrder
           .map(id => DEFAULT_TABS.find(t => t.id === id))
           .filter(Boolean) as typeof DEFAULT_TABS;
-        
-        // Adiciona abas novas que podem não estar no storage antigo
         const missingTabs = DEFAULT_TABS.filter(t => !parsedOrder.includes(t.id));
         setTabs([...reorderedTabs, ...missingTabs]);
       } catch (e) {
@@ -117,19 +97,14 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Salvar ordem das abas
   const handleSort = () => {
     if (dragItem.current === null || dragOverItem.current === null) return;
-    
     const _tabs = [...tabs];
     const draggedItemContent = _tabs[dragItem.current];
-    
     _tabs.splice(dragItem.current, 1);
     _tabs.splice(dragOverItem.current, 0, draggedItemContent);
-    
     dragItem.current = null;
     dragOverItem.current = null;
-    
     setTabs(_tabs);
     localStorage.setItem('ysoffice_tab_order', JSON.stringify(_tabs.map(t => t.id)));
   };
@@ -148,7 +123,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    (supabase.auth as any).getSession().then(({ data: { session } }: any) => {
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
       if (session?.user) {
         setUser({ id: session.user.id, nick: session.user.user_metadata.username || session.user.email?.split('@')[0] || 'Usuário' });
       } else {
@@ -156,7 +131,7 @@ const App: React.FC = () => {
         if (demoSession) setUser(JSON.parse(demoSession));
       }
     });
-    const { data: { subscription } } = (supabase.auth as any).onAuthStateChange((_event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (session?.user) setUser({ id: session.user.id, nick: session.user.user_metadata.username || 'Usuário' });
     }) as any;
     return () => subscription.unsubscribe();
@@ -182,14 +157,11 @@ const App: React.FC = () => {
           const saved = localStorage.getItem('ysoffice_demo_data');
           if (saved) {
             const parsed: any = JSON.parse(saved);
-            
-            // Migração de Dados Kanban (Old -> New)
             let safeKanban = initialKanban;
             if (parsed.kanban) {
                if (Array.isArray(parsed.kanban.columns)) {
                   safeKanban = parsed.kanban;
                } else if (parsed.kanban.todo) {
-                  // Migrar estrutura antiga
                   safeKanban = {
                     columns: [
                       { id: 'todo', title: 'Pendentes', cards: parsed.kanban.todo || [] },
@@ -199,7 +171,6 @@ const App: React.FC = () => {
                   };
                }
             }
-            
             setKanbanData(safeKanban);
             if (parsed.flow) setFlowData({ ...initialFlow, ...parsed.flow });
             if (parsed.calendarConfig) setCalendarConfig(parsed.calendarConfig);
@@ -219,8 +190,6 @@ const App: React.FC = () => {
           const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
           if (!error && data?.payload) {
             const payload = data.payload as any;
-
-            // Migração de Dados Kanban (Old -> New) no Supabase
             let safeKanban = initialKanban;
             if (payload.kanban) {
                if (Array.isArray(payload.kanban.columns)) {
@@ -235,7 +204,6 @@ const App: React.FC = () => {
                   };
                }
             }
-
             setKanbanData(safeKanban);
             setFlowData({ ...initialFlow, ...(payload.flow || {}) });
             setCalendarConfig(payload.calendarConfig || { uf: 'SP', city: 'São Paulo' });
@@ -284,7 +252,7 @@ const App: React.FC = () => {
   }, [kanbanData, flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, user, isDataLoaded]);
 
   const handleLogout = async () => {
-    if (user?.id !== 'demo_user_id') await (supabase.auth as any).signOut();
+    if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
     localStorage.removeItem('ysoffice_demo_session');
     setUser(null);
     setIsDataLoaded(false);
@@ -297,19 +265,17 @@ const App: React.FC = () => {
     });
   };
 
-  // --- SE MENSAGEM VIA URL FOR DETECTADA, RENDERIZA O LEITOR ---
   if (viewMessage) {
     return <MessageLinker mode="view" encodedMessage={viewMessage} />;
   }
 
   if (!user) return <Auth onLogin={setUser} />;
 
-  // Filter only visible tabs for the top bar
   const visibleTabs = tabs.filter(t => !hiddenTabs.includes(t.id));
 
   return (
     <div className="flex flex-col h-screen bg-win95-bg p-4 font-sans text-gray-800">
-      <div className="flex justify-between items-center px-2 mb-4">
+      <div className="flex justify-between items-center px-2 mb-4 shrink-0">
         <div className="flex items-center gap-4">
            <button onClick={() => setActiveTab('calendar')} className="flex items-center gap-2 group">
              <div className="win95-sunken px-3 py-1.5 bg-white flex items-center gap-2 group-hover:border-blue-300 transition-colors">
@@ -328,10 +294,7 @@ const App: React.FC = () => {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden win95-raised bg-gray-100 shadow-2xl">
-        {/* Modern Tabs Bar with Start Menu */}
-        <div className="flex px-2 pt-2 bg-[#d1d5db] border-b border-gray-300 gap-1 items-end relative">
-          
-          {/* Botão Menu Iniciar / Navegação */}
+        <div className="flex px-2 pt-2 bg-[#d1d5db] border-b border-gray-300 gap-1 items-end relative shrink-0">
           <div ref={menuRef} className="relative z-50">
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -339,19 +302,16 @@ const App: React.FC = () => {
             >
               <LayoutGrid size={14} /> Iniciar
             </button>
-
             {isMenuOpen && (
               <div className="absolute top-full left-0 w-64 win95-raised bg-win95-bg p-1 shadow-[4px_4px_10px_rgba(0,0,0,0.3)] animate-in slide-in-from-top-2 fade-in duration-100 border-2 border-win95-light">
                  <div className="bg-[#000080] text-white px-2 py-4 mb-1 flex items-center gap-2">
                     <span className="text-lg font-black italic transform -rotate-2 origin-left">Brain</span>
                     <span className="text-[10px] uppercase tracking-widest opacity-80 mt-1">Professional</span>
                  </div>
-                 
                  <div className="flex flex-col gap-0.5 max-h-[400px] overflow-y-auto custom-scrollbar">
                     {tabs.map(tab => {
                       const isHidden = hiddenTabs.includes(tab.id);
                       const isActive = activeTab === tab.id;
-                      
                       return (
                         <div key={tab.id} className="group flex items-center p-1 hover:bg-[#000080] hover:text-white transition-colors">
                            <button 
@@ -365,7 +325,6 @@ const App: React.FC = () => {
                                {tab.label}
                              </span>
                            </button>
-                           
                            <button 
                              onClick={(e) => { e.stopPropagation(); toggleTabVisibility(tab.id); }}
                              className="p-1.5 hover:bg-white/20 rounded text-gray-500 group-hover:text-white"
@@ -377,9 +336,7 @@ const App: React.FC = () => {
                       );
                     })}
                  </div>
-                 
                  <div className="border-t border-white border-b border-[#808080] my-1 h-0.5"></div>
-                 
                  <button onClick={handleLogout} className="w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-[#000080] hover:text-white text-xs font-bold transition-colors">
                     <div className="w-6 h-6 bg-red-600 flex items-center justify-center text-white rounded"><div className="w-2 h-2 border-2 border-white rounded-full"></div></div>
                     Encerrar Sessão
@@ -387,10 +344,7 @@ const App: React.FC = () => {
               </div>
             )}
           </div>
-
           <div className="w-px h-6 bg-gray-400 mx-1 mb-1"></div>
-
-          {/* Visible Tabs List */}
           <div className="flex-1 flex overflow-x-auto no-scrollbar gap-1 items-end">
             {visibleTabs.map((tab, index) => (
               <div
@@ -419,9 +373,7 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex-1 overflow-hidden relative bg-white">
-            <div className="absolute inset-0 overflow-auto p-4 bg-gray-50">
-              
-              {/* Módulo Escritório: Centralizando todas as ferramentas solicitadas */}
+            <div className="absolute inset-0 overflow-auto bg-white">
               {activeTab === 'office' && (
                 <OfficeModule 
                   emails={emails}
@@ -444,7 +396,6 @@ const App: React.FC = () => {
                   onFilesChange={setPersonalFiles}
                 />
               )}
-              
               {activeTab === 'calendar' && (
                 <CalendarModule 
                     calendarConfig={calendarConfig}
@@ -455,7 +406,6 @@ const App: React.FC = () => {
                     onShiftConfigChange={setShiftConfig}
                 />
               )}
-
               {activeTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={setKanbanData} />}
               {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
               {activeTab === 'consultas' && <ConsultationModule />}
@@ -463,8 +413,7 @@ const App: React.FC = () => {
             </div>
         </div>
         
-        {/* Footer Status Bar */}
-        <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none">
+        <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none shrink-0">
            <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.3 - Office Integrated</span>
            <span className="flex items-center gap-1 font-mono">
              <ClockIcon size={10} /> {currentTime}

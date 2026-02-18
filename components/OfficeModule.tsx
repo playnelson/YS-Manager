@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Mail, FileSearch2, Languages, Link, FolderOpen, StickyNote, ClipboardList, Phone, Globe, FileText, PenTool, HardDrive } from 'lucide-react';
+import { Mail, FileSearch2, Languages, Link, FolderOpen, StickyNote, ClipboardList, Phone, Globe, FileText, PenTool, HardDrive, Calculator } from 'lucide-react';
 import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile } from '../types';
 import { EmailManager } from './EmailManager';
 import { StickyNotesWall } from './StickyNotesWall';
@@ -11,6 +11,7 @@ import { ExtensionsDirectory } from './ExtensionsDirectory';
 import { DocumentGenerator } from './DocumentGenerator';
 import { SignatureManager } from './SignatureManager';
 import { PersonalFileManager } from './DocumentsModule';
+import { PricingCalculator } from './PricingCalculator';
 import { Button } from './ui/Button';
 
 interface OfficeModuleProps {
@@ -34,8 +35,7 @@ interface OfficeModuleProps {
   onFilesChange: (files: StoredFile[]) => void;
 }
 
-// Todas as sessões solicitadas agora em nível plano
-type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'emails';
+type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'emails';
 
 export const OfficeModule: React.FC<OfficeModuleProps> = ({
   emails, onEmailChange,
@@ -68,23 +68,24 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
 
   return (
     <div className="h-full flex flex-col gap-0 overflow-hidden bg-[#c0c0c0]">
-      {/* Barra de Abas do Escritório - 9 Sessões Planas */}
+      {/* Barra de Abas do Escritório - Navegação Plana Completa sem Margens Inúteis */}
       <div className="flex gap-1 shrink-0 px-2 pt-2 border-b border-white overflow-x-auto no-scrollbar scroll-smooth">
         <NavTab id="mural" label="Mural" icon={<StickyNote size={14} />} />
         <NavTab id="notes" label="Anotações" icon={<FileText size={14} />} />
         <NavTab id="handoff" label="Passagem" icon={<ClipboardList size={14} />} />
         <NavTab id="directory" label="Diretório" icon={<Globe size={14} />} />
         <NavTab id="extensions" label="Ramais" icon={<Phone size={14} />} />
-        <div className="w-px h-6 bg-gray-400 mx-1 self-center"></div>
+        <div className="w-px h-6 bg-gray-400 mx-1 self-center opacity-50"></div>
         <NavTab id="arquivos" label="Arquivos" icon={<HardDrive size={14} />} />
         <NavTab id="gerador" label="Gerador" icon={<FileSearch2 size={14} />} />
         <NavTab id="assinador" label="Assinador" icon={<PenTool size={14} />} />
-        <div className="w-px h-6 bg-gray-400 mx-1 self-center"></div>
+        <div className="w-px h-6 bg-gray-400 mx-1 self-center opacity-50"></div>
+        <NavTab id="precificacao" label="Precificação" icon={<Calculator size={14} />} />
         <NavTab id="emails" label="E-mails" icon={<Mail size={14} />} />
       </div>
 
-      {/* Área de Conteúdo Única */}
-      <div className="flex-1 win95-sunken bg-white overflow-hidden border-2 border-white m-1 mt-0">
+      {/* Área de Conteúdo Única e Integrada (sem margens m-1) */}
+      <div className="flex-1 win95-sunken bg-white overflow-hidden border-2 border-white">
         <div className="h-full w-full bg-win95-bg">
             
             {activeSubTab === 'mural' && (
@@ -119,6 +120,10 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
                 <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />
             )}
 
+            {activeSubTab === 'precificacao' && (
+                <PricingCalculator />
+            )}
+
             {activeSubTab === 'emails' && (
                 <EmailManager emails={emails} onChange={onEmailChange} />
             )}
@@ -126,11 +131,11 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
       </div>
 
       {/* Barra de Status Inferior do Escritório */}
-      <div className="px-2 py-1 bg-win95-bg border-t border-white text-[9px] font-bold text-gray-500 uppercase flex justify-between items-center italic select-none">
+      <div className="px-2 py-1 bg-win95-bg border-t border-white text-[9px] font-bold text-gray-500 uppercase flex justify-between items-center italic select-none shrink-0">
         <div className="flex gap-4">
            <span>Sessão: {activeSubTab.toUpperCase()}</span>
            <span>•</span>
-           <span>Brain Office v2.5</span>
+           <span>Brain Office v2.7</span>
         </div>
         <div className="flex gap-4">
            <span>Documentos: {personalFiles.length}</span>
