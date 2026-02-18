@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Briefcase, Search } from 'lucide-react';
-import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, FinancialTransaction } from './types';
+import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile } from './types';
 import { Auth } from './components/Auth';
 import { MessageLinker } from './components/MessageLinker';
 import { DigitalClock } from './components/DigitalClock';
@@ -54,8 +54,6 @@ const App: React.FC = () => {
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | undefined>(undefined);
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [personalFiles, setPersonalFiles] = useState<StoredFile[]>([]);
-  // Added financial transactions state
-  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -136,8 +134,6 @@ const App: React.FC = () => {
             if (parsed.signatures) setSignatures(parsed.signatures);
             if (parsed.personalFiles) setPersonalFiles(parsed.personalFiles);
             if (parsed.hiddenTabs) setHiddenTabs(parsed.hiddenTabs);
-            // Load financial transactions for demo user
-            if (parsed.transactions) setTransactions(parsed.transactions);
           }
         } else {
           const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
@@ -156,8 +152,6 @@ const App: React.FC = () => {
             setSignatures(payload.signatures || []);
             setPersonalFiles(payload.personalFiles || []);
             setHiddenTabs(payload.hiddenTabs || []);
-            // Load financial transactions from supabase
-            setTransactions(payload.transactions || []);
           }
         }
       } catch (err) { console.error(err); } 
@@ -169,8 +163,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      // Include transactions in the payload
-      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, transactions };
+      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -182,7 +175,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2500); // Maior intervalo para menos carga
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, transactions, user, isDataLoaded]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, user, isDataLoaded]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -259,8 +252,6 @@ const App: React.FC = () => {
                     currentUser={user} links={links} onLinkChange={setLinks}
                     extensions={extensions} onExtensionChange={setExtensions}
                     personalFiles={personalFiles} onFilesChange={setPersonalFiles}
-                    // Pass transactions state and setter to OfficeModule
-                    transactions={transactions} onTransactionChange={setTransactions}
                   />
                 )}
                 {activeTab === 'calendar' && (

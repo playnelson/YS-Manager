@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Mail, FileSearch2, Link, StickyNote, ClipboardList, Phone, Globe, FileText, PenTool, HardDrive, Calculator, Wallet } from 'lucide-react';
-import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile, FinancialTransaction } from '../types';
+import { Mail, FileSearch2, Link, StickyNote, ClipboardList, Phone, Globe, FileText, PenTool, HardDrive, Calculator } from 'lucide-react';
+import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile } from '../types';
 import { EmailManager } from './EmailManager';
 import { StickyNotesWall } from './StickyNotesWall';
 import { ImportantNotes } from './ImportantNotes';
@@ -12,8 +12,6 @@ import { DocumentGenerator } from './DocumentGenerator';
 import { SignatureManager } from './SignatureManager';
 import { PersonalFileManager } from './DocumentsModule';
 import { PricingCalculator } from './PricingCalculator';
-// Fix: Import FinancialModule
-import { FinancialModule } from './FinancialModule';
 
 interface OfficeModuleProps {
   emails: EmailTemplate[];
@@ -34,13 +32,9 @@ interface OfficeModuleProps {
   onExtensionChange: (extensions: Extension[]) => void;
   personalFiles: StoredFile[];
   onFilesChange: (files: StoredFile[]) => void;
-  // Fix: add transactions to props
-  transactions: FinancialTransaction[];
-  onTransactionChange: (transactions: FinancialTransaction[]) => void;
 }
 
-// Fix: Add financas to SubTab
-type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'financas' | 'emails';
+type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'emails';
 
 export const OfficeModule: React.FC<OfficeModuleProps> = ({
   emails, onEmailChange,
@@ -52,9 +46,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   currentUser,
   links, onLinkChange,
   extensions, onExtensionChange,
-  personalFiles, onFilesChange,
-  // Fix: destruct transactions from props
-  transactions, onTransactionChange
+  personalFiles, onFilesChange
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('mural');
 
@@ -87,8 +79,6 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
         <NavTab id="assinador" label="Assinador" icon={<PenTool size={14} />} />
         <div className="w-px h-6 bg-gray-400 mx-1 self-center opacity-50"></div>
         <NavTab id="precificacao" label="Precificação" icon={<Calculator size={14} />} />
-        {/* Fix: Add financas NavTab */}
-        <NavTab id="financas" label="Finanças" icon={<Wallet size={14} />} />
         <NavTab id="emails" label="E-mails" icon={<Mail size={14} />} />
       </div>
 
@@ -120,10 +110,6 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
             )}
             {activeSubTab === 'precificacao' && (
                 <PricingCalculator />
-            )}
-            {/* Fix: Conditional render for FinancialModule */}
-            {activeSubTab === 'financas' && (
-                <FinancialModule transactions={transactions} onChange={onTransactionChange} />
             )}
             {activeSubTab === 'emails' && (
                 <EmailManager emails={emails} onChange={onEmailChange} />

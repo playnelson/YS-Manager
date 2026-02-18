@@ -265,6 +265,19 @@ export interface FipeResult {
   MesReferencia: string;
 }
 
+// Financial Types
+// Added TransactionType and FinancialTransaction definitions
+export type TransactionType = 'income' | 'expense';
+
+export interface FinancialTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: TransactionType;
+  category: string;
+  date: string;
+}
+
 export interface Signature {
   id: string;
   name: string;
@@ -282,19 +295,6 @@ export interface StoredFile {
   category?: string;
 }
 
-// Financial Types
-// Added TransactionType and FinancialTransaction to fix type errors in FinancialModule.tsx
-export type TransactionType = 'income' | 'expense';
-
-export interface FinancialTransaction {
-  id: string;
-  description: string;
-  amount: number;
-  type: TransactionType;
-  category: string;
-  date: string;
-}
-
 // Global App Data
 export interface AppData {
   kanban: KanbanState;
@@ -310,7 +310,7 @@ export interface AppData {
   shiftConfig?: ShiftConfig;
   signatures?: Signature[];
   personalFiles?: StoredFile[];
+  // Added financialTransactions to support FinancialModule storage
+  financialTransactions?: FinancialTransaction[];
   hiddenTabs?: string[];
-  // Added transactions to AppData for persistence
-  transactions?: FinancialTransaction[];
 }
