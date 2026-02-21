@@ -1,7 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
-import { MessageCircle, Smartphone, Globe, Monitor, Zap, User, History, Clock, Trash2, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  MessageCircle, Smartphone, Globe, Monitor, Zap, User, History, 
+  Clock, Trash2, RotateCcw, QrCode, Copy, Check, Send, 
+  Plus, FileText, Share2, ExternalLink
+} from 'lucide-react';
 import { Button } from './ui/Button';
+import { QRCodeCanvas } from 'qrcode.react';
 
 interface HistoryItem {
   id: string;
@@ -12,11 +17,31 @@ interface HistoryItem {
   method: 'api' | 'web' | 'app';
 }
 
+interface Template {
+  id: string;
+  title: string;
+  content: string;
+}
+
+const DEFAULT_TEMPLATES: Template[] = [
+  { id: '1', title: 'Saudação Inicial', content: 'Olá! Gostaria de mais informações sobre seus serviços.' },
+  { id: '2', title: 'Agendamento', content: 'Olá, gostaria de agendar um horário. Quais são as datas disponíveis?' },
+  { id: '3', title: 'Orçamento', content: 'Olá! Poderia me enviar um orçamento para este serviço?' },
+  { id: '4', title: 'Confirmação', content: 'Olá, estou confirmando nosso compromisso para amanhã.' },
+];
+
 export const WhatsAppTool: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [openMethod, setOpenMethod] = useState<'api' | 'web' | 'app'>('api');
+  const [copied, setCopied] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>(() => {
+    const saved = localStorage.getItem('ysoffice_whatsapp_templates');
+    return saved ? JSON.parse(saved) : DEFAULT_TEMPLATES;
+  });
+  
   const [history, setHistory] = useState<HistoryItem[]>(() => {
     const saved = localStorage.getItem('ysoffice_whatsapp_history');
     return saved ? JSON.parse(saved) : [];
@@ -27,28 +52,25 @@ export const WhatsAppTool: React.FC = () => {
     localStorage.setItem('ysoffice_whatsapp_history', JSON.stringify(history));
   }, [history]);
 
+  useEffect(() => {
+    localStorage.setItem('ysoffice_whatsapp_templates', JSON.stringify(templates));
+  }, [templates]);
+
   // Formatação Automática de Telefone
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, ''); // Remove não números
     
-    // Limita a 11 dígitos (DDD + 9 + 8 dígitos)
     if (value.length > 11) value = value.slice(0, 11);
 
-    // Aplica máscara (XX) XXXXX-XXXX
     if (value.length > 2) {
       value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
     }
     if (value.length > 10) {
       value = `${value.slice(0, 10)}-${value.slice(10)}`;
-    } else if (value.length > 9 && value.length <= 10) {
-      // Ajuste para números fixos ou incompletos se necessário, mas foca no celular
-      // Formato (XX) XXXX-XXXX para fixo seria outra lógica, mas aqui assumimos celular principal
-      // Para manter simples e funcional para celular:
     }
 
     setPhone(value);
 
-    // Tenta encontrar identificação no histórico
     const rawNum = value.replace(/\D/g, '');
     if (rawNum.length >= 10) {
       const found = history.find(h => h.phone.replace(/\D/g, '') === rawNum);
@@ -58,54 +80,55 @@ export const WhatsAppTool: React.FC = () => {
     }
   };
 
+  const getFinalUrl = () => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    let finalPhone = cleanPhone;
+    if (finalPhone.length <= 11) {
+      finalPhone = '55' + finalPhone;
+    }
+    const textParam = encodeURIComponent(message);
+    
+    switch (openMethod) {
+      case 'web':
+        return `https://web.whatsapp.com/send?phone=${finalPhone}&text=${textParam}`;
+      case 'app':
+        return `whatsapp://send?phone=${finalPhone}&text=${textParam}`;
+      case 'api':
+      default:
+        return `https://wa.me/${finalPhone}?text=${textParam}`;
+    }
+  };
+
   const handleLaunch = () => {
     if (!phone) return;
     
     const cleanPhone = phone.replace(/\D/g, '');
-    
-    // Validação básica
     if (cleanPhone.length < 10) {
       alert("Número inválido. Digite DDD + Número.");
       return;
     }
 
-    let finalPhone = cleanPhone;
-    if (finalPhone.length <= 11) {
-      finalPhone = '55' + finalPhone;
-    } else if (finalPhone.length > 11 && !finalPhone.startsWith('55')) {
-      // Já tem DDI mas não é 55? Mantém. Se não, assume 55.
-    }
-
-    const textParam = encodeURIComponent(message);
-    let url = '';
-
-    switch (openMethod) {
-      case 'web':
-        url = `https://web.whatsapp.com/send?phone=${finalPhone}&text=${textParam}`;
-        break;
-      case 'app':
-        url = `whatsapp://send?phone=${finalPhone}&text=${textParam}`;
-        break;
-      case 'api':
-      default:
-        url = `https://wa.me/${finalPhone}?text=${textParam}`;
-        break;
-    }
+    const url = getFinalUrl();
 
     // Adicionar ao Histórico
     const newItem: HistoryItem = {
       id: Date.now().toString(),
       name: name || 'Sem identificação',
-      phone: phone, // Salva formatado
+      phone: phone,
       message,
       timestamp: new Date().toISOString(),
       method: openMethod
     };
 
-    // Remove duplicatas exatas recentes para não poluir, ou apenas adiciona no topo
-    setHistory(prev => [newItem, ...prev].slice(0, 50)); // Mantém os últimos 50
-
+    setHistory(prev => [newItem, ...prev].slice(0, 50));
     window.open(url, '_blank');
+  };
+
+  const copyLink = () => {
+    const url = `https://wa.me/${phone.replace(/\D/g, '').length <= 11 ? '55' + phone.replace(/\D/g, '') : phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const loadFromHistory = (item: HistoryItem) => {
@@ -121,102 +144,201 @@ export const WhatsAppTool: React.FC = () => {
     }
   };
 
+  const applyTemplate = (content: string) => {
+    setMessage(content);
+  };
+
   return (
     <div className="h-full flex gap-2 bg-[#c0c0c0] p-1 overflow-hidden">
-      {/* Esquerda: Formulário de Envio (Centralizado e Limitado) */}
-      <div className="flex-1 flex flex-col items-center pt-6 overflow-y-auto bg-[#808080]/5">
-        <div className="win95-raised bg-win95-bg border border-white p-1 w-full max-w-[400px] shadow-xl">
-          <div className="bg-[#000080] text-white p-2 flex items-center gap-2 text-xs font-bold uppercase mb-1 select-none">
-            <Smartphone size={14} />
-            <span>Nova Mensagem</span>
+      {/* Esquerda: Formulário e Ferramentas */}
+      <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar p-1">
+        
+        <div className="win95-raised bg-win95-bg border border-white p-1 w-full shadow-md">
+          <div className="bg-[#000080] text-white p-1.5 flex items-center justify-between text-xs font-bold uppercase mb-1">
+            <div className="flex items-center gap-2">
+              <Smartphone size={14} />
+              <span>Gerador de Link e Mensagem</span>
+            </div>
           </div>
           
-          <div className="p-4 space-y-4">
-            
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-[#444]">Identificação (Nome do Contato)</label>
-              <div className="flex items-center gap-2">
-                <div className="win95-sunken bg-gray-100 p-1.5 border border-gray-400">
-                  <User size={14} className="text-gray-500" />
+          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-[#444]">Nome do Contato</label>
+                <div className="flex items-center gap-2">
+                  <div className="win95-sunken bg-gray-100 p-1.5 border border-gray-400">
+                    <User size={14} className="text-gray-500" />
+                  </div>
+                  <input 
+                    type="text"
+                    className="flex-1 px-3 py-1.5 border border-gray-400 win95-sunken bg-white text-sm outline-none focus:bg-yellow-50"
+                    placeholder="Ex: João Silva"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                  />
                 </div>
-                <input 
-                  type="text"
-                  className="flex-1 px-3 py-1.5 border border-gray-400 win95-sunken bg-white text-sm outline-none focus:bg-yellow-50"
-                  placeholder="Ex: João Silva (Cliente)"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-[#444]">Número do WhatsApp</label>
+                <div className="flex gap-2">
+                  <div className="win95-sunken bg-gray-100 px-3 py-2 text-sm text-gray-500 font-bold flex items-center border border-gray-400 select-none">
+                    +55
+                  </div>
+                  <input 
+                    type="tel"
+                    className="flex-1 px-3 py-2 border border-gray-400 win95-sunken bg-white text-lg font-mono font-bold outline-none focus:bg-yellow-50"
+                    placeholder="(00) 00000-0000"
+                    value={phone}
+                    onChange={handlePhoneChange}
+                    maxLength={15}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-[#444]">Mensagem</label>
+                <textarea 
+                  className="w-full px-3 py-2 border border-gray-400 win95-sunken bg-white text-sm outline-none resize-none focus:bg-yellow-50"
+                  rows={4}
+                  placeholder="Digite sua mensagem aqui..."
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
                 />
               </div>
-            </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-[#444]">Número (Automático)</label>
               <div className="flex gap-2">
-                <div className="win95-sunken bg-gray-100 px-3 py-2 text-sm text-gray-500 font-bold flex items-center border border-gray-400 select-none">
-                  +55
+                <Button 
+                  onClick={handleLaunch}
+                  className="flex-1 h-10"
+                  icon={<Send size={16} />}
+                >
+                  ENVIAR AGORA
+                </Button>
+                <button 
+                  onClick={copyLink}
+                  className={`win95-btn px-3 flex items-center gap-2 ${copied ? 'text-green-700' : ''}`}
+                  title="Copiar Link wa.me"
+                >
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  <span className="text-[10px] font-bold uppercase">Link</span>
+                </button>
+                <button 
+                  onClick={() => setShowQR(!showQR)}
+                  className={`win95-btn px-3 flex items-center gap-2 ${showQR ? 'win95-sunken bg-white' : ''}`}
+                  title="Gerar QR Code"
+                >
+                  <QrCode size={16} />
+                  <span className="text-[10px] font-bold uppercase">QR</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {showQR ? (
+                <div className="win95-sunken bg-white p-4 flex flex-col items-center justify-center h-full min-h-[250px]">
+                  <div className="text-[10px] font-bold uppercase text-gray-500 mb-4">Aponte a câmera para escanear</div>
+                  {phone ? (
+                    <div className="p-2 border-4 border-black bg-white">
+                      <QRCodeCanvas 
+                        value={`https://wa.me/${phone.replace(/\D/g, '').length <= 11 ? '55' + phone.replace(/\D/g, '') : phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`}
+                        size={180}
+                        level="H"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-400 text-xs italic">
+                      Insira um número para gerar o QR Code
+                    </div>
+                  )}
+                  <div className="mt-4 text-[9px] text-center text-gray-500">
+                    O QR Code abrirá o WhatsApp diretamente com este contato e mensagem.
+                  </div>
                 </div>
-                <input 
-                  type="tel"
-                  className="flex-1 px-3 py-2 border border-gray-400 win95-sunken bg-white text-lg font-mono font-bold outline-none focus:bg-yellow-50"
-                  placeholder="(00) 00000-0000"
-                  value={phone}
-                  onChange={handlePhoneChange}
-                  maxLength={15}
-                />
+              ) : (
+                <div className="flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[10px] font-bold uppercase text-[#444]">Modelos de Mensagem</label>
+                    <button className="text-blue-700 hover:underline text-[9px] font-bold uppercase flex items-center gap-1">
+                      <Plus size={10} /> Novo
+                    </button>
+                  </div>
+                  <div className="win95-sunken bg-white flex-1 overflow-y-auto p-2 space-y-2 max-h-[250px]">
+                    {templates.map(t => (
+                      <div 
+                        key={t.id} 
+                        onClick={() => applyTemplate(t.content)}
+                        className="p-2 border border-gray-200 hover:bg-blue-50 cursor-pointer group relative"
+                      >
+                        <div className="font-bold text-[10px] text-blue-800 mb-1 flex items-center gap-1">
+                          <FileText size={10} /> {t.title}
+                        </div>
+                        <div className="text-[9px] text-gray-600 line-clamp-2 italic">
+                          "{t.content}"
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-gray-100 p-2 border-t border-gray-400 flex gap-4">
+             <div className="flex items-center gap-2">
+               <span className="text-[9px] font-bold uppercase text-gray-500">Método:</span>
+               <div className="flex gap-1">
+                 {['api', 'web', 'app'].map(m => (
+                   <button 
+                     key={m}
+                     onClick={() => setOpenMethod(m as any)}
+                     className={`px-2 py-0.5 text-[9px] font-bold uppercase border ${openMethod === m ? 'win95-sunken bg-white text-blue-700' : 'win95-raised bg-win95-bg'}`}
+                   >
+                     {m}
+                   </button>
+                 ))}
+               </div>
+             </div>
+             <div className="flex-1"></div>
+             <div className="flex items-center gap-1 text-[9px] text-gray-400 italic">
+               <Zap size={10} /> Envio rápido habilitado
+             </div>
+          </div>
+        </div>
+
+        {/* Dicas e Atalhos */}
+        <div className="win95-raised bg-win95-bg border border-white p-3 shadow-sm">
+          <h4 className="text-[10px] font-bold uppercase text-win95-blue mb-2 flex items-center gap-1">
+            <Zap size={12} /> Dicas de Produtividade
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-[9px] text-gray-600 flex gap-2">
+              <div className="win95-sunken bg-white p-1 h-fit"><Globe size={12} /></div>
+              <div>
+                <span className="font-bold block text-black">WhatsApp Web</span>
+                Ideal para quando você já está logado no navegador.
               </div>
             </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-[#444]">Método de Envio</label>
-              <div className="grid grid-cols-3 gap-2">
-                <button 
-                  onClick={() => setOpenMethod('api')}
-                  className={`flex flex-col items-center justify-center p-2 border-2 text-[9px] font-bold gap-1 active:translate-x-[1px] active:translate-y-[1px] ${openMethod === 'api' ? 'win95-sunken bg-white border-gray-400 text-blue-800' : 'win95-raised bg-win95-bg border-white text-black'}`}
-                >
-                  <Zap size={12} />
-                  <span>Automático</span>
-                </button>
-                <button 
-                  onClick={() => setOpenMethod('web')}
-                  className={`flex flex-col items-center justify-center p-2 border-2 text-[9px] font-bold gap-1 active:translate-x-[1px] active:translate-y-[1px] ${openMethod === 'web' ? 'win95-sunken bg-white border-gray-400 text-green-800' : 'win95-raised bg-win95-bg border-white text-black'}`}
-                >
-                  <Globe size={12} />
-                  <span>Web</span>
-                </button>
-                <button 
-                  onClick={() => setOpenMethod('app')}
-                  className={`flex flex-col items-center justify-center p-2 border-2 text-[9px] font-bold gap-1 active:translate-x-[1px] active:translate-y-[1px] ${openMethod === 'app' ? 'win95-sunken bg-white border-gray-400 text-purple-800' : 'win95-raised bg-win95-bg border-white text-black'}`}
-                >
-                  <Monitor size={12} />
-                  <span>App</span>
-                </button>
+            <div className="text-[9px] text-gray-600 flex gap-2">
+              <div className="win95-sunken bg-white p-1 h-fit"><Monitor size={12} /></div>
+              <div>
+                <span className="font-bold block text-black">WhatsApp Desktop</span>
+                Abre diretamente o aplicativo instalado no seu Windows.
               </div>
             </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase text-[#444]">Mensagem</label>
-              <textarea 
-                className="w-full px-3 py-2 border border-gray-400 win95-sunken bg-white text-sm outline-none resize-none focus:bg-yellow-50"
-                rows={4}
-                placeholder="Digite aqui..."
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-              />
+            <div className="text-[9px] text-gray-600 flex gap-2">
+              <div className="win95-sunken bg-white p-1 h-fit"><ExternalLink size={12} /></div>
+              <div>
+                <span className="font-bold block text-black">Link Direto</span>
+                Gere links curtos para colocar em bios de redes sociais ou sites.
+              </div>
             </div>
-
-            <Button 
-              onClick={handleLaunch}
-              className="w-full h-10"
-              icon={<MessageCircle size={16} />}
-            >
-              ENVIAR MENSAGEM
-            </Button>
           </div>
         </div>
       </div>
 
       {/* Direita: Histórico */}
-      <div className="w-72 flex flex-col bg-win95-bg win95-raised p-1 h-full">
+      <div className="w-72 flex flex-col bg-win95-bg win95-raised p-1 h-full shrink-0">
         <div className="flex items-center justify-between bg-[#000080] text-white p-1 mb-1 px-2">
            <div className="flex items-center gap-1 text-[10px] font-bold uppercase">
              <History size={12} /> Histórico Recente

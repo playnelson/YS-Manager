@@ -134,29 +134,53 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
 
   useEffect(() => {
     if (activeTab === 'routing' || activeTab === 'map') {
-      const rawKey = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY;
+      const rawKey = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || (process as any).env?.VITE_GOOGLE_MAPS_API_KEY;
       const apiKey = rawKey?.trim();
       
-      console.log('Google Maps API Key detected:', apiKey ? 'Yes (starts with ' + apiKey.substring(0, 4) + ')' : 'No');
+      if (apiKey) {
+        console.log('--- Google Maps Debug ---');
+        console.log('Key Length:', apiKey.length);
+        console.log('Key Start:', apiKey.substring(0, 6));
+        console.log('Key End:', apiKey.substring(apiKey.length - 4));
+        console.log('-------------------------');
+      }
       
-      if (!apiKey) return;
+      if (!apiKey) {
+        console.warn('VITE_GOOGLE_MAPS_API_KEY not found in environment');
+        return;
+      }
 
       // Global handler for Google Maps authentication errors
       (window as any).gm_authFailure = () => {
         console.error('Google Maps Authentication Failed (InvalidKeyMapError)');
-        const mapErrorEvent = new CustomEvent('google-maps-auth-error');
-        window.dispatchEvent(mapErrorEvent);
+        setAuthError(true);
+        // Force a state update to show the error UI
+        window.dispatchEvent(new CustomEvent('google-maps-auth-error'));
       };
 
-      if (!window.google) {
+      if (!(window as any).google) {
+        // Check if script already exists to prevent multiple loads
+        const existingScript = document.getElementById('google-maps-script');
+        if (existingScript) {
+          // If it exists but google is not defined, it might have failed or still loading
+          return;
+        }
+
         const script = document.createElement('script');
+        script.id = 'google-maps-script';
         script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMapsCallback`;
         script.async = true;
         script.defer = true;
         
         (window as any).initGoogleMapsCallback = () => {
           console.log('Google Maps Script Loaded Successfully');
+          setAuthError(false);
           initAutocomplete();
+        };
+
+        script.onerror = () => {
+          console.error('Failed to load Google Maps script');
+          setAuthError(true);
         };
 
         document.head.appendChild(script);
@@ -265,8 +289,15 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
   }, [showMap, activeTab, routes]);
 
   const [authError, setAuthError] = useState(false);
+  const [maskedKey, setMaskedKey] = useState('');
 
   useEffect(() => {
+    const rawKey = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || (process as any).env?.VITE_GOOGLE_MAPS_API_KEY;
+    if (rawKey) {
+      const key = rawKey.trim();
+      setMaskedKey(`${key.substring(0, 6)}...${key.substring(key.length - 4)} (Tam: ${key.length})`);
+    }
+    
     const handleError = () => setAuthError(true);
     window.addEventListener('google-maps-auth-error', handleError);
     return () => window.removeEventListener('google-maps-auth-error', handleError);
@@ -469,11 +500,31 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                           <div className="font-bold">
                             {authError ? 'Chave de API Inválida' : 'Chave de API não configurada'}
                           </div>
-                          <div className="text-xs opacity-80 mt-1">
-                            {authError 
-                              ? 'O Google retornou InvalidKeyMapError. Verifique se a Maps JavaScript API está ativada no Console do Google Cloud.' 
-                              : 'Configure VITE_GOOGLE_MAPS_API_KEY no arquivo .env para habilitar o mapa real.'}
+                          <div className="text-xs opacity-80 mt-1 mb-4 text-left space-y-3">
+                            <p className="font-bold text-orange-300">O Google retornou InvalidKeyMapError. Por favor, verifique este checklist no seu Console do Google Cloud:</p>
+                            <ul className="list-decimal pl-5 space-y-2">
+                              <li>
+                                <span className="font-bold">Ativar APIs:</span> Vá em "Biblioteca" e ative <strong>Maps JavaScript API</strong> E <strong>Places API</strong>.
+                              </li>
+                              <li>
+                                <span className="font-bold">Faturamento (Billing):</span> O Google Maps exige um cartão de crédito vinculado ao projeto, mesmo para uso gratuito. Verifique se o faturamento está <strong>Ativo</strong>.
+                              </li>
+                              <li>
+                                <span className="font-bold">Restrições:</span> Na tela de Credenciais, verifique se a chave não possui restrições de "Referenciadores HTTP" que bloqueiam domínios externos.
+                              </li>
+                            </ul>
+                            <div className="p-2 bg-black/30 rounded border border-white/10 font-mono text-[9px] mt-2">
+                              Chave em uso: {maskedKey}
+                            </div>
                           </div>
+                          {authError && (
+                            <button 
+                              onClick={() => window.location.reload()}
+                              className="win95-btn px-4 py-1 bg-white text-black text-[10px] font-bold uppercase"
+                            >
+                              Tentar Novamente
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
