@@ -137,7 +137,7 @@ export const PdfManager: React.FC = () => {
   };
 
   const downloadBlob = (bytes: Uint8Array, filename: string, type: string) => {
-    const blob = new Blob([bytes], { type });
+    const blob = new Blob([bytes as any], { type });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

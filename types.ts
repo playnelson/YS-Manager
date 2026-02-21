@@ -312,5 +312,40 @@ export interface AppData {
   personalFiles?: StoredFile[];
   // Added financialTransactions to support FinancialModule storage
   financialTransactions?: FinancialTransaction[];
+  logistics?: LogisticsState;
   hiddenTabs?: string[];
+}
+
+// Logistics Types
+export interface FreightTable {
+  id: string;
+  name: string;
+  fuelPrice: number;
+  avgConsumption: number;
+  driverPerDieum: number;
+  insuranceRate: number; // percentage
+  updatedAt: string;
+}
+
+export interface LogisticsChecklist {
+  id: string;
+  title: string;
+  items: { id: string; label: string; completed: boolean }[];
+  updatedAt: string;
+}
+
+export interface SavedRoute {
+  id: string;
+  origin: string;
+  destination: string;
+  distance: number;
+  duration: number;
+  stops: number;
+  createdAt: string;
+}
+
+export interface LogisticsState {
+  freightTables: FreightTable[];
+  checklists: LogisticsChecklist[];
+  savedRoutes?: SavedRoute[];
 }

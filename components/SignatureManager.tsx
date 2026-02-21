@@ -355,7 +355,7 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
       }
 
       const pdfBytes = await pdfDocLib.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = `assinado_${pdfFile.name}`;

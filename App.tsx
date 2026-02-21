@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Briefcase, Search } from 'lucide-react';
-import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile } from './types';
+import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Briefcase, Search, Truck } from 'lucide-react';
+import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState } from './types';
 import { Auth } from './components/Auth';
 import { MessageLinker } from './components/MessageLinker';
 import { DigitalClock } from './components/DigitalClock';
@@ -14,13 +14,16 @@ const CalendarModule = lazy(() => import('./components/CalendarModule').then(m =
 const FlowBuilder = lazy(() => import('./components/FlowBuilder').then(m => ({ default: m.FlowBuilder })));
 const ConsultationModule = lazy(() => import('./components/ConsultationModule').then(m => ({ default: m.ConsultationModule })));
 const WhatsAppTool = lazy(() => import('./components/WhatsAppTool').then(m => ({ default: m.WhatsAppTool })));
+const LogisticsModule = lazy(() => import('./components/LogisticsModule').then(m => ({ default: m.LogisticsModule })));
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
+const initialLogistics: LogisticsState = { freightTables: [], checklists: [] };
 
 const DEFAULT_TABS = [
   { id: 'office', label: 'Escritório', icon: <Briefcase size={16} /> },
   { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={16} /> },
   { id: 'flow', label: 'Fluxo', icon: <GitMerge size={16} /> },
+  { id: 'logistics', label: 'Logística', icon: <Truck size={16} /> },
   { id: 'consultas', label: 'Consultas', icon: <Search size={16} /> },
   { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={16} /> },
 ];
@@ -54,6 +57,7 @@ const App: React.FC = () => {
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | undefined>(undefined);
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [personalFiles, setPersonalFiles] = useState<StoredFile[]>([]);
+  const [logisticsData, setLogisticsData] = useState<LogisticsState>(initialLogistics);
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -133,6 +137,7 @@ const App: React.FC = () => {
             if (parsed.shiftConfig) setShiftConfig(parsed.shiftConfig);
             if (parsed.signatures) setSignatures(parsed.signatures);
             if (parsed.personalFiles) setPersonalFiles(parsed.personalFiles);
+            if (parsed.logistics) setLogisticsData(parsed.logistics);
             if (parsed.hiddenTabs) setHiddenTabs(parsed.hiddenTabs);
           }
         } else {
@@ -151,6 +156,7 @@ const App: React.FC = () => {
             setShiftConfig(payload.shiftConfig);
             setSignatures(payload.signatures || []);
             setPersonalFiles(payload.personalFiles || []);
+            setLogisticsData(payload.logistics || initialLogistics);
             setHiddenTabs(payload.hiddenTabs || []);
           }
         }
@@ -163,7 +169,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs };
+      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -175,7 +181,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2500); // Maior intervalo para menos carga
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, hiddenTabs, user, isDataLoaded]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -262,6 +268,7 @@ const App: React.FC = () => {
                   />
                 )}
                 {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
+                {activeTab === 'logistics' && <LogisticsModule data={logisticsData} onChange={setLogisticsData} />}
                 {activeTab === 'consultas' && <ConsultationModule />}
                 {activeTab === 'whatsapp' && <WhatsAppTool />}
               </Suspense>
