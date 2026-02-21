@@ -1,11 +1,18 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calculator, Search, Book, CheckSquare, Anchor, Truck, 
   MapPin, Scale, Plus, Trash2, Save, Info, ChevronRight,
-  Globe, Box, FileText, CheckCircle2, AlertCircle, Navigation
+  Globe, Box, FileText, CheckCircle2, AlertCircle, Navigation,
+  Clock, Map as MapIcon, Layers
 } from 'lucide-react';
 import { LogisticsState, FreightTable, LogisticsChecklist } from '../types';
+
+declare global {
+  interface Window {
+    google: any;
+  }
+}
 
 interface LogisticsModuleProps {
   data: LogisticsState;
@@ -111,6 +118,160 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
     }
   };
 
+  // --- Routing State ---
+  const [routingOrigin, setRoutingOrigin] = useState('');
+  const [routingDestination, setRoutingDestination] = useState('');
+  const [routes, setRoutes] = useState<any[]>([]);
+  const [loadingRoutes, setLoadingRoutes] = useState(false);
+  const [vehicleType, setVehicleType] = useState('truck');
+  const [axles, setAxles] = useState(3);
+  const [showMap, setShowMap] = useState(false);
+  
+  const originRef = useRef<HTMLInputElement>(null);
+  const destinationRef = useRef<HTMLInputElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const directionsRendererRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (activeTab === 'routing' || activeTab === 'map') {
+      const rawKey = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY;
+      const apiKey = rawKey?.trim();
+      
+      console.log('Google Maps API Key detected:', apiKey ? 'Yes (starts with ' + apiKey.substring(0, 4) + ')' : 'No');
+      
+      if (!apiKey) return;
+
+      // Global handler for Google Maps authentication errors
+      (window as any).gm_authFailure = () => {
+        console.error('Google Maps Authentication Failed (InvalidKeyMapError)');
+        const mapErrorEvent = new CustomEvent('google-maps-auth-error');
+        window.dispatchEvent(mapErrorEvent);
+      };
+
+      if (!window.google) {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMapsCallback`;
+        script.async = true;
+        script.defer = true;
+        
+        (window as any).initGoogleMapsCallback = () => {
+          console.log('Google Maps Script Loaded Successfully');
+          initAutocomplete();
+        };
+
+        document.head.appendChild(script);
+      } else {
+        initAutocomplete();
+      }
+    }
+  }, [activeTab]);
+
+  const initAutocomplete = () => {
+    if (!window.google || !originRef.current || !destinationRef.current) return;
+
+    const options = {
+      types: ['(cities)'],
+      componentRestrictions: { country: 'br' }
+    };
+
+    const originAutocomplete = new window.google.maps.places.Autocomplete(originRef.current, options);
+    const destAutocomplete = new window.google.maps.places.Autocomplete(destinationRef.current, options);
+
+    originAutocomplete.addListener('place_changed', () => {
+      const place = originAutocomplete.getPlace();
+      if (place.formatted_address) setRoutingOrigin(place.formatted_address);
+    });
+
+    destAutocomplete.addListener('place_changed', () => {
+      const place = destAutocomplete.getPlace();
+      if (place.formatted_address) setRoutingDestination(place.formatted_address);
+    });
+  };
+
+  const calculateRoutes = () => {
+    if (!window.google || !routingOrigin || !routingDestination) return;
+    setLoadingRoutes(true);
+
+    const directionsService = new window.google.maps.DirectionsService();
+    
+    directionsService.route(
+      {
+        origin: routingOrigin,
+        destination: routingDestination,
+        travelMode: window.google.maps.TravelMode.DRIVING,
+        provideRouteAlternatives: true,
+      },
+      (result: any, status: string) => {
+        setLoadingRoutes(false);
+        if (status === 'OK') {
+          setRoutes(result.routes);
+          if (directionsRendererRef.current) {
+            directionsRendererRef.current.setDirections(result);
+          }
+        } else {
+          alert('Erro ao calcular rotas: ' + status);
+        }
+      }
+    );
+  };
+
+  useEffect(() => {
+    if ((showMap || activeTab === 'map') && mapRef.current && window.google) {
+      const isSupportMap = activeTab === 'map';
+      
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: isSupportMap ? { lat: -23.5505, lng: -46.6333 } : { lat: -15.7801, lng: -47.9292 },
+        zoom: isSupportMap ? 10 : 4,
+        styles: [
+          { featureType: "poi", elementType: "all", visibility: "off" }
+        ]
+      });
+
+      if (isSupportMap) {
+        // Simulated Support Points
+        const points = [
+          { lat: -23.56, lng: -46.65, title: 'Posto Graal - KM 240', type: 'fuel' },
+          { lat: -23.54, lng: -46.62, title: 'Borracharia 24h - KM 255', type: 'repair' },
+          { lat: -23.58, lng: -46.68, title: 'Balança ANTT - KM 280', type: 'scale' },
+        ];
+
+        points.forEach(p => {
+          new window.google.maps.Marker({
+            position: { lat: p.lat, lng: p.lng },
+            map: map,
+            title: p.title,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: p.type === 'fuel' ? '#2563eb' : p.type === 'repair' ? '#f97316' : '#22c55e',
+              fillOpacity: 1,
+              strokeWeight: 2,
+              strokeColor: '#ffffff',
+            }
+          });
+        });
+      } else {
+        const renderer = new window.google.maps.DirectionsRenderer({
+          map: map,
+          suppressMarkers: false,
+        });
+        directionsRendererRef.current = renderer;
+        // If we already have routes, render the first one
+        if (routes.length > 0) {
+          renderer.setDirections({ routes: routes, request: {} } as any);
+        }
+      }
+    }
+  }, [showMap, activeTab, routes]);
+
+  const [authError, setAuthError] = useState(false);
+
+  useEffect(() => {
+    const handleError = () => setAuthError(true);
+    window.addEventListener('google-maps-auth-error', handleError);
+    return () => window.removeEventListener('google-maps-auth-error', handleError);
+  }, []);
+
   // --- Checklists State ---
   const [newChecklistTitle, setNewChecklistTitle] = useState('');
   
@@ -203,71 +364,196 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
             <div className="lg:col-span-2 space-y-6">
               <div className="win95-raised p-6 bg-white">
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><Navigation size={20} /> Roteirizador Inteligente</h3>
+                
+                {authError && (
+                  <div className="mb-4 p-4 win95-raised bg-red-50 border-red-500 text-red-700 text-xs flex gap-3 items-center">
+                    <AlertCircle className="shrink-0" size={20} />
+                    <div>
+                      <div className="font-bold">Erro de Autenticação do Google Maps</div>
+                      <p>A chave de API fornecida é inválida ou não tem permissão para usar a Maps JavaScript API.</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold">Origem (CEP ou Cidade)</label>
-                    <input type="text" className="win95-sunken p-2 outline-none" placeholder="Ex: Santos, SP" />
+                    <label className="text-[10px] font-bold uppercase text-gray-400">Origem (Cidade/CEP)</label>
+                    <div className="relative">
+                      <input 
+                        ref={originRef}
+                        type="text" 
+                        className="win95-sunken p-3 w-full outline-none pl-10" 
+                        placeholder="Digite a origem..." 
+                        value={routingOrigin}
+                        onChange={e => setRoutingOrigin(e.target.value)}
+                      />
+                      <MapPin className="absolute left-3 top-3.5 text-win95-blue" size={18} />
+                    </div>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold">Destino (CEP ou Cidade)</label>
-                    <input type="text" className="win95-sunken p-2 outline-none" placeholder="Ex: Cuiabá, MT" />
+                    <label className="text-[10px] font-bold uppercase text-gray-400">Destino (Cidade/CEP)</label>
+                    <div className="relative">
+                      <input 
+                        ref={destinationRef}
+                        type="text" 
+                        className="win95-sunken p-3 w-full outline-none pl-10" 
+                        placeholder="Digite o destino..." 
+                        value={routingDestination}
+                        onChange={e => setRoutingDestination(e.target.value)}
+                      />
+                      <Navigation className="absolute left-3 top-3.5 text-win95-blue" size={18} />
+                    </div>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-400">Tipo de Veículo</label>
+                    <select 
+                      className="win95-sunken p-2 outline-none"
+                      value={vehicleType}
+                      onChange={e => setVehicleType(e.target.value)}
+                    >
+                      <option value="truck">Caminhão Simples</option>
+                      <option value="semi">Carreta (Sider/Baú)</option>
+                      <option value="bitrem">Bitrem / Rodotrem</option>
+                      <option value="van">VUC / Van</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-400">Número de Eixos</label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="range" min="2" max="9" 
+                        className="flex-1 accent-win95-blue"
+                        value={axles}
+                        onChange={e => setAxles(Number(e.target.value))}
+                      />
+                      <span className="win95-sunken px-3 py-1 font-bold text-win95-blue w-12 text-center">{axles}</span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-4 mb-6">
                   <label className="flex items-center gap-2 text-xs cursor-pointer">
                     <input type="checkbox" className="accent-win95-blue" defaultChecked /> Evitar estradas não pavimentadas
                   </label>
                   <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <input type="checkbox" className="accent-win95-blue" defaultChecked /> Restrição para Carretas/Bitrens
-                  </label>
-                  <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <input type="checkbox" className="accent-win95-blue" defaultChecked /> Aplicar Lei do Motorista
+                    <input type="checkbox" className="accent-win95-blue" defaultChecked /> Restrição para Carretas
                   </label>
                 </div>
-                <button className="win95-btn w-full py-3 bg-win95-blue text-white font-bold">Calcular Rotas Otimizadas</button>
+
+                <div className="flex gap-2">
+                  <button 
+                    onClick={calculateRoutes}
+                    disabled={loadingRoutes}
+                    className="win95-btn flex-1 py-3 bg-win95-blue text-white font-bold flex items-center justify-center gap-2"
+                  >
+                    {loadingRoutes ? 'Calculando...' : <><Navigation size={18} /> Calcular 3 Rotas</>}
+                  </button>
+                  <button 
+                    onClick={() => setShowMap(!showMap)}
+                    className={`win95-btn px-4 py-3 flex items-center gap-2 ${showMap ? 'bg-win95-blue text-white' : 'bg-white text-win95-blue'}`}
+                  >
+                    <MapIcon size={18} /> {showMap ? 'Ocultar Mapa' : 'Ver Mapa'}
+                  </button>
+                </div>
+
+                {showMap && (
+                  <div className="mt-6 win95-sunken h-[400px] bg-gray-200 relative overflow-hidden">
+                    <div ref={mapRef} className="w-full h-full" />
+                    {(authError || !(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY) && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white p-6 text-center">
+                        <div>
+                          <AlertCircle className="mx-auto mb-2 text-orange-400" size={32} />
+                          <div className="font-bold">
+                            {authError ? 'Chave de API Inválida' : 'Chave de API não configurada'}
+                          </div>
+                          <div className="text-xs opacity-80 mt-1">
+                            {authError 
+                              ? 'O Google retornou InvalidKeyMapError. Verifique se a Maps JavaScript API está ativada no Console do Google Cloud.' 
+                              : 'Configure VITE_GOOGLE_MAPS_API_KEY no arquivo .env para habilitar o mapa real.'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 
                 <div className="mt-8 space-y-4">
-                  <div className="win95-raised p-4 border-l-4 border-green-500 bg-green-50/30">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="bg-green-500 text-white text-[10px] px-2 py-0.5 font-bold rounded">ROTA 1 - MAIS RÁPIDA</span>
-                      <span className="font-mono font-bold text-green-700">1.240 km</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-[9px] text-gray-400 uppercase">Tempo Direção</div>
-                        <div className="font-bold">14h 30min</div>
+                  {routes.map((route, idx) => {
+                    const distanceKm = Math.round(route.legs[0].distance.value / 1000);
+                    const durationSec = route.legs[0].duration.value;
+                    const hours = Math.floor(durationSec / 3600);
+                    const minutes = Math.floor((durationSec % 3600) / 60);
+                    
+                    // Lei do Motorista: 30min a cada 5h30
+                    const drivingHours = durationSec / 3600;
+                    const stops = Math.floor(drivingHours / 5.5);
+                    const totalDurationWithStops = durationSec + (stops * 1800);
+                    const totalHours = Math.floor(totalDurationWithStops / 3600);
+                    const totalMinutes = Math.floor((totalDurationWithStops % 3600) / 60);
+
+                    return (
+                      <div key={idx} className={`win95-raised p-4 border-l-4 bg-white transition-all hover:shadow-md ${idx === 0 ? 'border-green-500' : 'border-blue-400 opacity-80'}`}>
+                        <div className="flex justify-between items-start mb-2">
+                          <span className={`text-white text-[10px] px-2 py-0.5 font-bold rounded ${idx === 0 ? 'bg-green-500' : 'bg-blue-400'}`}>
+                            ROTA {idx + 1} {idx === 0 ? '- RECOMENDADA' : ''}
+                          </span>
+                          <span className="font-mono font-bold text-gray-700">{distanceKm} km</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <div className="text-[9px] text-gray-400 uppercase">Tempo Direção</div>
+                            <div className="font-bold text-xs">{hours}h {minutes}min</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] text-gray-400 uppercase">Paradas (Lei)</div>
+                            <div className="font-bold text-xs">{stops} paradas</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] text-gray-400 uppercase">Tempo Total</div>
+                            <div className="font-bold text-win95-blue text-xs">{totalHours}h {totalMinutes}min</div>
+                          </div>
+                        </div>
+                        <div className="mt-3 text-[10px] text-gray-500 flex items-center gap-1 italic">
+                          <Info size={10} /> Via {route.summary || 'Principais Rodovias'}
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-[9px] text-gray-400 uppercase">Paradas (Lei)</div>
-                        <div className="font-bold">3 paradas</div>
-                      </div>
-                      <div>
-                        <div className="text-[9px] text-gray-400 uppercase">Tempo Total</div>
-                        <div className="font-bold text-win95-blue">26h 15min</div>
-                      </div>
+                    );
+                  })}
+                  
+                  {routes.length === 0 && !loadingRoutes && (
+                    <div className="text-center py-10 text-gray-400 italic text-sm">
+                      Insira origem e destino para calcular as rotas.
                     </div>
-                  </div>
-                  <div className="win95-raised p-4 border-l-4 border-blue-500 opacity-60">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="bg-blue-500 text-white text-[10px] px-2 py-0.5 font-bold rounded">ROTA 2 - MENOR PEDÁGIO</span>
-                      <span className="font-mono font-bold text-blue-700">1.310 km</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
+            
             <div className="space-y-4">
               <div className="win95-raised p-4 bg-white">
-                <h4 className="font-bold text-xs mb-3 flex items-center gap-2"><AlertCircle size={14} className="text-orange-500" /> Lei do Motorista (13.103/15)</h4>
-                <ul className="text-[10px] space-y-2 text-gray-600">
-                  <li className="flex gap-2"><ChevronRight size={10} className="shrink-0 mt-0.5" /> Máximo 5h30 ininterruptas de direção.</li>
-                  <li className="flex gap-2"><ChevronRight size={10} className="shrink-0 mt-0.5" /> Descanso obrigatório de 30min a cada 6h.</li>
-                  <li className="flex gap-2"><ChevronRight size={10} className="shrink-0 mt-0.5" /> Repouso diário de 11h (pode ser fracionado).</li>
-                </ul>
+                <h4 className="font-bold text-xs mb-3 flex items-center gap-2"><Clock size={14} className="text-win95-blue" /> Lei do Motorista (13.103/15)</h4>
+                <div className="space-y-3">
+                  <div className="win95-sunken p-2 bg-blue-50/50">
+                    <div className="text-[10px] font-bold text-blue-700 mb-1">Jornada de Trabalho</div>
+                    <p className="text-[9px] text-gray-600">O tempo de direção é calculado automaticamente com base na legislação vigente, adicionando 30min de descanso a cada 5h30 de volante.</p>
+                  </div>
+                  <ul className="text-[10px] space-y-2 text-gray-600">
+                    <li className="flex gap-2"><ChevronRight size={10} className="shrink-0 mt-0.5" /> Máximo 5h30 ininterruptas de direção.</li>
+                    <li className="flex gap-2"><ChevronRight size={10} className="shrink-0 mt-0.5" /> Descanso obrigatório de 30min a cada 6h.</li>
+                    <li className="flex gap-2"><ChevronRight size={10} className="shrink-0 mt-0.5" /> Repouso diário de 11h (pode ser fracionado).</li>
+                  </ul>
+                </div>
               </div>
+              
               <div className="win95-raised p-4 bg-win95-blue text-white">
-                <h4 className="font-bold text-xs mb-2">Dica de Rota</h4>
-                <p className="text-[10px] opacity-90">A BR-163 possui restrição de tráfego para veículos especiais neste período. Recomendamos a rota via BR-364.</p>
+                <h4 className="font-bold text-xs mb-2 flex items-center gap-2"><Layers size={14} /> Configuração do Veículo</h4>
+                <div className="text-[10px] space-y-2 opacity-90">
+                  <p>As rotas levam em conta o perfil do veículo selecionado ({vehicleType === 'truck' ? 'Caminhão' : 'Carreta'}) com {axles} eixos.</p>
+                  <p>O custo por eixo em pedágios será refletido no cálculo de custos operacionais.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -291,19 +577,28 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
               <div className="text-[10px] text-gray-400 italic">Dados baseados em redes colaborativas</div>
             </div>
             <div className="win95-sunken flex-1 bg-gray-200 relative overflow-hidden flex items-center justify-center">
-              <div className="text-center space-y-4">
-                <MapPin size={48} className="mx-auto text-win95-blue animate-bounce" />
-                <div>
-                  <div className="font-bold text-lg">Mapa de Apoio Logístico</div>
-                  <div className="text-sm text-gray-500">Integração com Google Maps API aguardando chave...</div>
+              <div ref={mapRef} className="absolute inset-0 w-full h-full" />
+              {(authError || !(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY) && (
+                <div className="text-center space-y-4 z-10 bg-white/80 p-8 win95-raised">
+                  <MapPin size={48} className="mx-auto text-win95-blue animate-bounce" />
+                  <div>
+                    <div className="font-bold text-lg">
+                      {authError ? 'Erro de Autenticação' : 'Mapa de Apoio Logístico'}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {authError 
+                        ? 'Chave de API inválida (InvalidKeyMapError). Verifique as configurações no Google Cloud.' 
+                        : 'Integração com Google Maps API aguardando chave...'}
+                    </div>
+                  </div>
+                  <div className="win95-raised p-4 bg-white max-w-sm mx-auto text-left text-xs space-y-2">
+                    <div className="font-bold border-b pb-1 mb-2">Próximos Pontos (Simulação):</div>
+                    <div className="flex justify-between"><span>Posto Graal (KM 240)</span> <span className="text-green-600 font-bold">ABERTO</span></div>
+                    <div className="flex justify-between"><span>Borracharia do Zé (KM 255)</span> <span className="text-blue-600 font-bold">24H</span></div>
+                    <div className="flex justify-between"><span>Balança ANTT (KM 280)</span> <span className="text-orange-600 font-bold">ATIVA</span></div>
+                  </div>
                 </div>
-                <div className="win95-raised p-4 bg-white max-w-sm mx-auto text-left text-xs space-y-2">
-                  <div className="font-bold border-b pb-1 mb-2">Próximos Pontos (Simulação):</div>
-                  <div className="flex justify-between"><span>Posto Graal (KM 240)</span> <span className="text-green-600 font-bold">ABERTO</span></div>
-                  <div className="flex justify-between"><span>Borracharia do Zé (KM 255)</span> <span className="text-blue-600 font-bold">24H</span></div>
-                  <div className="flex justify-between"><span>Balança ANTT (KM 280)</span> <span className="text-orange-600 font-bold">ATIVA</span></div>
-                </div>
-              </div>
+              )}
               {/* Overlay de UI do Mapa */}
               <div className="absolute bottom-4 right-4 flex flex-col gap-2">
                 <button className="win95-btn w-10 h-10 flex items-center justify-center bg-white text-xl font-bold">+</button>
