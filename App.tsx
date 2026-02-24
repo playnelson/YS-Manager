@@ -1,6 +1,21 @@
 
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Briefcase, Search, Truck, Archive, Brain, X } from 'lucide-react';
+import { 
+  IconGitMerge, 
+  IconMessageDots, 
+  IconRefresh, 
+  IconContrast, 
+  IconCalendar, 
+  IconBriefcase, 
+  IconSearch, 
+  IconTruck, 
+  IconArchive, 
+  IconBrain, 
+  IconX, 
+  IconSettings, 
+  IconUser,
+  IconLogout
+} from '@tabler/icons-react';
 import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState } from './types';
 import { Auth } from './components/Auth';
 import { MessageLinker } from './components/MessageLinker';
@@ -14,6 +29,7 @@ const CalendarModule = lazy(() => import('./components/CalendarModule').then(m =
 const FlowBuilder = lazy(() => import('./components/FlowBuilder').then(m => ({ default: m.FlowBuilder })));
 const ConsultationModule = lazy(() => import('./components/ConsultationModule').then(m => ({ default: m.ConsultationModule })));
 const WhatsAppTool = lazy(() => import('./components/WhatsAppTool').then(m => ({ default: m.WhatsAppTool })));
+const SettingsModule = lazy(() => import('./components/SettingsModule').then(m => ({ default: m.SettingsModule })));
 const LogisticsModule = lazy(() => import('./components/LogisticsModule').then(m => ({ default: m.LogisticsModule })));
 const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m => ({ default: m.WarehouseModule })));
 const AISecretary = lazy(() => import('./components/AISecretary').then(m => ({ default: m.AISecretary })));
@@ -22,13 +38,13 @@ const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 const initialLogistics: LogisticsState = { freightTables: [], checklists: [] };
 
 const DEFAULT_TABS = [
-  { id: 'office', label: 'Escritório', icon: <Briefcase size={16} /> },
-  { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={16} /> },
-  { id: 'flow', label: 'Fluxo', icon: <GitMerge size={16} /> },
-  { id: 'logistics', label: 'Logística', icon: <Truck size={16} /> },
-  { id: 'warehouse', label: 'Almoxarifado', icon: <Archive size={16} /> },
-  { id: 'consultas', label: 'Consultas', icon: <Search size={16} /> },
-  { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={16} /> },
+  { id: 'office', label: 'Escritório', icon: <IconBriefcase size={16} /> },
+  { id: 'calendar', label: 'Calendário', icon: <IconCalendar size={16} /> },
+  { id: 'flow', label: 'Fluxo', icon: <IconGitMerge size={16} /> },
+  { id: 'logistics', label: 'Logística', icon: <IconTruck size={16} /> },
+  { id: 'warehouse', label: 'Almoxarifado', icon: <IconArchive size={16} /> },
+  { id: 'consultas', label: 'Consultas', icon: <IconSearch size={16} /> },
+  { id: 'whatsapp', label: 'WhatsApp', icon: <IconMessageDots size={16} /> },
 ];
 
 const App: React.FC = () => {
@@ -48,6 +64,7 @@ const App: React.FC = () => {
   const dragOverItem = useRef<number | null>(null);
   
   const [isSecretaryOpen, setIsSecretaryOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   // Estados de Dados
   const [flowData, setFlowData] = useState<FlowState>(initialFlow);
@@ -103,14 +120,26 @@ const App: React.FC = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }: any) => {
       if (session?.user) {
-        setUser({ id: session.user.id, nick: session.user.user_metadata.username || session.user.email?.split('@')[0] || 'Usuário' });
+        setUser({ 
+          id: session.user.id, 
+          nick: session.user.user_metadata.username || session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'Usuário',
+          photoUrl: session.user.user_metadata.avatar_url,
+          googleAccessToken: session.provider_token
+        });
       } else {
         const demoSession = localStorage.getItem('ysoffice_demo_session');
         if (demoSession) setUser(JSON.parse(demoSession));
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      if (session?.user) setUser({ id: session.user.id, nick: session.user.user_metadata.username || 'Usuário' });
+      if (session?.user) {
+        setUser({ 
+          id: session.user.id, 
+          nick: session.user.user_metadata.username || session.user.user_metadata.full_name || 'Usuário',
+          photoUrl: session.user.user_metadata.avatar_url,
+          googleAccessToken: session.provider_token
+        });
+      }
     }) as any;
     return () => subscription.unsubscribe();
   }, []);
@@ -196,6 +225,7 @@ const App: React.FC = () => {
   };
 
   if (viewMessage) return <MessageLinker mode="view" encodedMessage={viewMessage} />;
+
   if (!user) return <Auth onLogin={setUser} />;
 
   const visibleTabs = tabs.filter(t => !hiddenTabs.includes(t.id));
@@ -206,16 +236,28 @@ const App: React.FC = () => {
         <div className="flex items-center gap-4">
            <button onClick={() => setActiveTab('calendar')} className="flex items-center gap-2 group">
              <div className="win95-sunken px-3 py-1.5 bg-white flex items-center gap-2 group-hover:border-blue-300 transition-colors">
-               <CalendarIcon size={16} className="text-win95-blue" />
+               <IconCalendar size={16} className="text-win95-blue" />
                <span className="font-semibold text-sm text-gray-700">{getFullDate()}</span>
              </div>
            </button>
-           {isSyncing && <RefreshCw size={14} className="animate-spin text-win95-blue" />}
+           {isSyncing && <IconRefresh size={14} className="animate-spin text-win95-blue" />}
         </div>
         <div className="flex items-center gap-4 text-xs font-medium bg-white/50 px-3 py-1.5 rounded-full shadow-sm border border-white/50">
-           <span className="text-gray-600">Usuário: <b className="text-gray-900">{user.nick}</b></span>
+           <button 
+             onClick={() => setIsSettingsOpen(true)}
+             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+           >
+             <div className="w-6 h-6 win95-sunken bg-white overflow-hidden flex items-center justify-center border border-win95-shadow">
+               {user.photoUrl ? (
+                 <img src={user.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+               ) : (
+                 <IconUser size={14} className="text-gray-400" />
+               )}
+             </div>
+             <span className="text-gray-600">Olá, <b className="text-gray-900">{user.nick}</b></span>
+           </button>
            <div className="h-4 w-px bg-gray-300"></div>
-           <button onClick={() => setIsInverted(!isInverted)} className="hover:text-blue-600 transition-colors" title="Modo Escuro"><Contrast size={16} /></button>
+           <button onClick={() => setIsInverted(!isInverted)} className="hover:text-blue-600 transition-colors" title="Modo Escuro"><IconContrast size={16} /></button>
            <button onClick={handleLogout} className="hover:text-red-600 transition-colors font-bold">Sair</button>
         </div>
       </div>
@@ -270,6 +312,7 @@ const App: React.FC = () => {
                     calendarConfig={calendarConfig} onCalendarConfigChange={setCalendarConfig}
                     events={calendarEvents} onEventsChange={setCalendarEvents}
                     shiftConfig={shiftConfig} onShiftConfigChange={setShiftConfig}
+                    googleAccessToken={user.googleAccessToken}
                   />
                 )}
                 {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
@@ -288,6 +331,22 @@ const App: React.FC = () => {
               <Suspense fallback={<LoadingPlaceholder />}>
                 <AISecretary 
                   onClose={() => setIsSecretaryOpen(false)}
+                  onCreatePostIt={(text, color) => {
+                    const colors: Record<string, string> = {
+                      yellow: '#fef3c7',
+                      blue: '#dbeafe',
+                      green: '#dcfce7',
+                      pink: '#fce7f3'
+                    };
+                    const newPostIt: PostIt = {
+                      id: Date.now().toString(),
+                      text,
+                      color: colors[color] || colors.yellow,
+                      rotation: Math.random() * 6 - 3,
+                      createdAt: new Date().toISOString()
+                    };
+                    setPostIts(prev => [...prev, newPostIt]);
+                  }}
                   onAddNote={(content) => {
                     const newNote: ImportantNote = { 
                       id: Date.now().toString(), 
@@ -333,7 +392,7 @@ const App: React.FC = () => {
               border-2 border-white
             `}
           >
-            {isSecretaryOpen ? <X className="text-white" size={24} /> : <Brain className="text-yellow-400" size={28} />}
+            {isSecretaryOpen ? <IconX className="text-white" size={24} /> : <IconBrain className="text-yellow-400" size={28} />}
             {!isSecretaryOpen && (
               <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center animate-bounce">
                 <span className="text-[10px] text-white font-bold">1</span>
@@ -341,6 +400,35 @@ const App: React.FC = () => {
             )}
           </button>
         </div>
+
+        {/* Settings Modal */}
+        {isSettingsOpen && (
+          <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="w-full max-w-2xl bg-win95-bg win95-raised p-1 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="bg-win95-blue text-white px-2 py-1 text-sm font-bold flex justify-between items-center mb-2">
+                <span className="flex items-center gap-2"><IconSettings size={16} /> Configurações do Sistema</span>
+                <button 
+                  onClick={() => setIsSettingsOpen(false)} 
+                  className="win95-raised bg-win95-bg text-black w-5 h-5 flex items-center justify-center text-xs font-black"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="max-h-[80vh] overflow-y-auto custom-scrollbar">
+                <Suspense fallback={<LoadingPlaceholder />}>
+                  <SettingsModule 
+                    user={user} 
+                    onUpdateUser={setUser} 
+                    onLogout={() => {
+                      setIsSettingsOpen(false);
+                      handleLogout();
+                    }} 
+                  />
+                </Suspense>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none shrink-0">
            <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.5 - Optimized Engine</span>

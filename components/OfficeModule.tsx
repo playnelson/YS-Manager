@@ -1,6 +1,17 @@
 
 import React, { useState } from 'react';
-import { Mail, FileSearch2, Link, StickyNote, ClipboardList, Phone, Globe, FileText, PenTool, HardDrive, Calculator } from 'lucide-react';
+import { 
+  IconMail, 
+  IconFileSearch, 
+  IconNote, 
+  IconClipboardList, 
+  IconPhone, 
+  IconGlobe, 
+  IconFileText, 
+  IconWriting, 
+  IconFolder, 
+  IconCalculator 
+} from '@tabler/icons-react';
 import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile } from '../types';
 import { EmailManager } from './EmailManager';
 import { StickyNotesWall } from './StickyNotesWall';
@@ -36,6 +47,21 @@ interface OfficeModuleProps {
 
 type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'emails';
 
+const NavTab = ({ id, label, icon, activeSubTab, onClick }: { id: SubTab, label: string, icon: React.ReactNode, activeSubTab: SubTab, onClick: (id: SubTab) => void }) => (
+  <button 
+    onClick={() => onClick(id)} 
+    className={`
+      flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase transition-all border-t-2 border-l-2 border-r-2 rounded-t-md whitespace-nowrap
+      ${activeSubTab === id 
+        ? 'bg-win95-bg border-white border-b-win95-bg relative z-10 -mb-[2px] text-blue-800 shadow-sm' 
+        : 'bg-[#c0c0c0] border-gray-400 text-gray-600 hover:bg-[#d0d0d0]'}
+    `}
+  >
+    {icon}
+    <span>{label}</span>
+  </button>
+);
+
 export const OfficeModule: React.FC<OfficeModuleProps> = ({
   emails, onEmailChange,
   signatures, onSignatureChange,
@@ -50,36 +76,21 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('mural');
 
-  const NavTab = ({ id, label, icon }: { id: SubTab, label: string, icon: React.ReactNode }) => (
-    <button 
-      onClick={() => setActiveSubTab(id)} 
-      className={`
-        flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase transition-all border-t-2 border-l-2 border-r-2 rounded-t-md whitespace-nowrap
-        ${activeSubTab === id 
-          ? 'bg-win95-bg border-white border-b-win95-bg relative z-10 -mb-[2px] text-blue-800 shadow-sm' 
-          : 'bg-[#c0c0c0] border-gray-400 text-gray-600 hover:bg-[#d0d0d0]'}
-      `}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-
   return (
     <div className="h-full flex flex-col gap-0 overflow-hidden bg-[#c0c0c0]">
       <div className="flex gap-1 shrink-0 px-2 pt-2 border-b border-white overflow-x-auto no-scrollbar scroll-smooth">
-        <NavTab id="mural" label="Mural" icon={<StickyNote size={14} />} />
-        <NavTab id="notes" label="Anotações" icon={<FileText size={14} />} />
-        <NavTab id="handoff" label="Passagem" icon={<ClipboardList size={14} />} />
-        <NavTab id="directory" label="Diretório" icon={<Globe size={14} />} />
-        <NavTab id="extensions" label="Ramais" icon={<Phone size={14} />} />
+        <NavTab id="mural" label="Mural" icon={<IconNote size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
+        <NavTab id="notes" label="Anotações" icon={<IconFileText size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
+        <NavTab id="handoff" label="Passagem" icon={<IconClipboardList size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
+        <NavTab id="directory" label="Diretório" icon={<IconGlobe size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
+        <NavTab id="extensions" label="Ramais" icon={<IconPhone size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
         <div className="w-px h-6 bg-gray-400 mx-1 self-center opacity-50"></div>
-        <NavTab id="arquivos" label="Arquivos" icon={<HardDrive size={14} />} />
-        <NavTab id="gerador" label="Gerador" icon={<FileSearch2 size={14} />} />
-        <NavTab id="assinador" label="Assinador" icon={<PenTool size={14} />} />
+        <NavTab id="arquivos" label="Arquivos" icon={<IconFolder size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
+        <NavTab id="gerador" label="Gerador" icon={<IconFileSearch size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
+        <NavTab id="assinador" label="Assinador" icon={<IconWriting size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
         <div className="w-px h-6 bg-gray-400 mx-1 self-center opacity-50"></div>
-        <NavTab id="precificacao" label="Precificação" icon={<Calculator size={14} />} />
-        <NavTab id="emails" label="E-mails" icon={<Mail size={14} />} />
+        <NavTab id="precificacao" label="Precificação" icon={<IconCalculator size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
+        <NavTab id="emails" label="E-mails" icon={<IconMail size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
       </div>
 
       <div className="flex-1 win95-sunken bg-white overflow-hidden border-2 border-white">

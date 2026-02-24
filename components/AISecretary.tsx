@@ -1,18 +1,18 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  MessageSquare, 
-  Send, 
-  Bot, 
-  User, 
-  Zap, 
-  Sparkles, 
-  Terminal,
-  Brain,
-  Command,
-  X,
-  Loader2
-} from 'lucide-react';
+  IconMessageDots, 
+  IconSend, 
+  IconRobot, 
+  IconUser, 
+  IconBolt, 
+  IconSparkles, 
+  IconTerminal,
+  IconBrain,
+  IconCommand,
+  IconX,
+  IconLoader2
+} from '@tabler/icons-react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { Button } from './ui/Button';
 
@@ -29,6 +29,7 @@ interface AISecretaryProps {
   onNavigate: (tabId: string) => void;
   onSendWhatsApp: (phone: string, message: string) => void;
   onClose: () => void;
+  onCreatePostIt: (text: string, color: string) => void;
 }
 
 export const AISecretary: React.FC<AISecretaryProps> = ({ 
@@ -37,7 +38,8 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
   onSearchInventory, 
   onNavigate,
   onSendWhatsApp,
-  onClose
+  onClose,
+  onCreatePostIt
 }) => {
   const [messages, setMessages] = useState<Message[]>(() => {
     const saved = localStorage.getItem('ysoffice_ai_messages');
@@ -74,7 +76,7 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: (process as any).env.GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       
       const tools = [
         {
@@ -122,7 +124,7 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
                 properties: {
                   tabId: { 
                     type: Type.STRING, 
-                    description: "ID da aba (office, calendar, flow, logistics, consultas, whatsapp, warehouse)." 
+                    description: "ID da aba (office, calendar, flow, logistics, warehouse, consultas, whatsapp)." 
                   }
                 },
                 required: ["tabId"]
@@ -139,19 +141,43 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
                 },
                 required: ["phone", "message"]
               }
+            },
+            {
+              name: "create_post_it",
+              description: "Cria um post-it (lembrete visual) na tela inicial.",
+              parameters: {
+                type: Type.OBJECT,
+                properties: {
+                  text: { type: Type.STRING, description: "Texto do post-it." },
+                  color: { type: Type.STRING, description: "Cor (yellow, blue, green, pink)." }
+                },
+                required: ["text"]
+              }
             }
           ]
         }
       ];
 
+      const now = new Date();
+      const contextPrompt = `CONTEXTO ATUAL:
+Data de Hoje: ${now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+Hora Atual: ${now.toLocaleTimeString('pt-BR')}
+Sistema: Brain v2.5 (Gestão de Escritório, Logística e Almoxarifado)
+
+INSTRUÇÕES:
+Você é a Secretária IA 'Brainy'. Você tem controle total sobre as funções do site através de ferramentas.
+Se o usuário pedir algo relativo (ex: 'amanhã', 'dia 25'), use a data de hoje para calcular.
+Sempre confirme as ações realizadas de forma amigável.
+Se não puder fazer algo, explique o porquê e sugira uma alternativa dentro das abas disponíveis.`;
+
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         contents: messages.concat(userMsg).map(m => ({
           role: m.role === 'user' ? 'user' : 'model',
           parts: [{ text: m.content }]
         })),
         config: {
-          systemInstruction: "Você é uma secretária virtual eficiente e prestativa integrada a um sistema de escritório (Brain v2.5). Seu objetivo é ajudar o usuário a gerenciar o dia a dia. Você pode criar notas, agendar eventos, consultar estoque e navegar pelo sistema. Seja concisa, profissional e amigável. Se o usuário pedir para fazer algo que você tem uma ferramenta, use a ferramenta primeiro e depois confirme a ação.",
+          systemInstruction: contextPrompt,
           tools: tools as any
         }
       });
@@ -181,6 +207,9 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
           } else if (call.name === 'prepare_whatsapp') {
             onSendWhatsApp(call.args.phone as string, call.args.message as string);
             finalResponseText = `Preparei a mensagem de WhatsApp para ${call.args.phone}. Navegando para a aba de WhatsApp...`;
+          } else if (call.name === 'create_post_it') {
+            onCreatePostIt(call.args.text as string, (call.args.color as string) || 'yellow');
+            finalResponseText = `Post-it criado com sucesso: "${call.args.text}"`;
           }
         }
       }
@@ -222,7 +251,7 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
         {/* Title Bar */}
         <div className="bg-[#000080] text-white p-1.5 flex items-center justify-between text-xs font-bold uppercase mb-1 select-none">
           <div className="flex items-center gap-2">
-            <Brain size={14} className="text-yellow-400" />
+            <IconBrain size={14} className="text-yellow-400" />
             <span>Secretária IA - Assistente Virtual</span>
           </div>
           <div className="flex items-center gap-1">
@@ -240,7 +269,7 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[80%] flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                 <div className={`w-8 h-8 shrink-0 flex items-center justify-center rounded shadow-sm ${msg.role === 'user' ? 'bg-blue-100 text-blue-700' : 'bg-win95-blue text-white'}`}>
-                  {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                  {msg.role === 'user' ? <IconUser size={16} /> : <IconRobot size={16} />}
                 </div>
                 <div className={`p-3 text-sm shadow-sm border ${msg.role === 'user' ? 'bg-blue-50 border-blue-200 rounded-l-lg rounded-br-lg' : 'bg-gray-50 border-gray-200 rounded-r-lg rounded-bl-lg'}`}>
                   <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
@@ -255,10 +284,10 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
             <div className="flex justify-start">
               <div className="max-w-[80%] flex gap-3 items-center">
                 <div className="w-8 h-8 shrink-0 flex items-center justify-center rounded shadow-sm bg-win95-blue text-white">
-                  <Bot size={16} />
+                  <IconRobot size={16} />
                 </div>
                 <div className="p-3 bg-gray-50 border border-gray-200 rounded-r-lg rounded-bl-lg flex items-center gap-2">
-                  <Loader2 size={16} className="animate-spin text-blue-600" />
+                  <IconLoader2 size={16} className="animate-spin text-blue-600" />
                   <span className="text-xs italic text-gray-500">Processando solicitação...</span>
                 </div>
               </div>
@@ -270,7 +299,7 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
         <div className="p-3 bg-win95-bg border-t border-white flex gap-2 items-end">
           <div className="flex-1 flex flex-col gap-1">
             <div className="flex items-center gap-2 text-[9px] font-bold uppercase text-gray-500 ml-1">
-              <Command size={10} /> Digite seu comando ou dúvida
+              <IconCommand size={10} /> Digite seu comando ou dúvida
             </div>
             <textarea 
               className="w-full win95-sunken bg-white p-2 text-sm outline-none resize-none focus:bg-yellow-50"
@@ -291,7 +320,7 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
             disabled={isLoading || !input.trim()}
             className={`win95-btn h-12 px-4 flex items-center gap-2 font-bold text-xs ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <Send size={16} />
+            <IconSend size={16} />
             <span>ENVIAR</span>
           </button>
         </div>
@@ -299,11 +328,11 @@ export const AISecretary: React.FC<AISecretaryProps> = ({
         {/* Status Bar */}
         <div className="bg-gray-200 p-1 px-2 border-t border-gray-400 flex justify-between items-center text-[9px] text-gray-500">
           <div className="flex items-center gap-2">
-            <Zap size={10} className="text-yellow-600" />
+            <IconBolt size={10} className="text-yellow-600" />
             <span>Gemini 1.5 Flash Ativo</span>
           </div>
           <div className="flex items-center gap-2">
-            <Sparkles size={10} className="text-blue-600" />
+            <IconSparkles size={10} className="text-blue-600" />
             <span>IA Generativa Integrada</span>
           </div>
         </div>

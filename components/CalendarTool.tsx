@@ -1,6 +1,24 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, Loader2, Info, Plus, Trash2, Calendar as CalendarIcon, Bell, Users, Cake, Target, Sun, Moon, Coffee, Clock } from 'lucide-react';
+import { 
+  IconChevronLeft, 
+  IconChevronRight, 
+  IconMapPin, 
+  IconLoader2, 
+  IconInfoCircle, 
+  IconPlus, 
+  IconTrash, 
+  IconCalendar, 
+  IconBell, 
+  IconUsers, 
+  IconCake, 
+  IconTarget, 
+  IconSun, 
+  IconMoon, 
+  IconCoffee, 
+  IconClock, 
+  IconBrandGoogle 
+} from '@tabler/icons-react';
 import { CalendarConfig, Holiday, UserEvent, ShiftConfig } from '../types';
 import { Button } from './ui/Button';
 
@@ -179,10 +197,10 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
   const eventIcons = {
-    holiday: <Target size={12} className="text-red-600" />,
-    meeting: <Users size={12} className="text-blue-600" />,
-    reminder: <Bell size={12} className="text-yellow-600" />,
-    birthday: <Cake size={12} className="text-pink-600" />
+    holiday: <IconTarget size={12} className="text-red-600" />,
+    meeting: <IconUsers size={12} className="text-blue-600" />,
+    reminder: <IconBell size={12} className="text-yellow-600" />,
+    birthday: <IconCake size={12} className="text-pink-600" />
   };
 
   return (
@@ -190,7 +208,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
       {/* Barra de Ferramentas */}
       <div className="win95-raised p-1.5 flex flex-wrap items-center gap-3 bg-win95-bg border-b-2 border-win95-shadow">
         <div className="flex items-center gap-2 px-2 border-r border-win95-shadow">
-          <MapPin size={14} className="text-win95-blue" />
+          <IconMapPin size={14} className="text-win95-blue" />
           <select 
             className="win95-sunken px-1 py-0.5 text-[11px] outline-none bg-white text-black font-bold h-6" 
             value={config.uf} 
@@ -207,11 +225,11 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
         </div>
 
         <div className="flex items-center gap-1">
-          <Button size="sm" className="w-8 h-7" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}><ChevronLeft size={16} /></Button>
+          <Button size="sm" className="w-8 h-7" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}><IconChevronLeft size={16} /></Button>
           <div className="win95-sunken px-6 py-1 bg-white min-w-[140px] text-center font-black text-xs text-black uppercase tracking-tight h-7 flex items-center justify-center">
             {monthNames[month]} {year}
           </div>
-          <Button size="sm" className="w-8 h-7" onClick={() => setCurrentDate(new Date(year, month + 1, 1))}><ChevronRight size={16} /></Button>
+          <Button size="sm" className="w-8 h-7" onClick={() => setCurrentDate(new Date(year, month + 1, 1))}><IconChevronRight size={16} /></Button>
         </div>
 
         <div className="flex-1"></div>
@@ -219,7 +237,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
         <div className="flex items-center gap-2 px-2">
            {isLoading ? (
              <div className="flex items-center gap-1">
-               <Loader2 size={14} className="animate-spin text-win95-blue" />
+               <IconLoader2 size={14} className="animate-spin text-win95-blue" />
                <span className="text-[9px] font-bold text-win95-blue">Buscando Feriados...</span>
              </div>
            ) : (
@@ -272,7 +290,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                      {/* Indicador de Turno */}
                      {shift && (
                         <div className={`text-[7px] font-black uppercase px-1 flex items-center gap-1 mb-0.5 ${isWork ? (isNight ? 'text-indigo-800' : 'text-blue-800') : 'text-gray-500 italic'}`}>
-                           {isWork ? (isNight ? <Moon size={8}/> : <Sun size={8}/>) : <Coffee size={8}/>}
+                           {isWork ? (isNight ? <IconMoon size={8}/> : <IconSun size={8}/>) : <IconCoffee size={8}/>}
                            <span className="truncate">{isWork ? shift.startTime : 'FOLGA'}</span>
                         </div>
                      )}
@@ -299,7 +317,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
           <div className="win95-raised p-0 bg-win95-bg flex-1 flex flex-col overflow-hidden">
             <div className="bg-win95-blue text-white px-2 py-1 text-[11px] font-black uppercase flex justify-between items-center shadow-md">
               <div className="flex items-center gap-2">
-                <CalendarIcon size={12} />
+                <IconCalendar size={12} />
                 <span>Agenda Detalhada</span>
               </div>
               <button 
@@ -307,7 +325,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                 className="win95-raised bg-win95-bg text-black p-0.5 hover:bg-white active:shadow-none"
                 title="Adicionar Evento"
               >
-                <Plus size={12} />
+                <IconPlus size={12} />
               </button>
             </div>
             
@@ -325,7 +343,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                 {selectedData.shift && (
                     <div className={`win95-raised p-2 border-l-[6px] shadow-sm ${selectedData.shift.type === 'work' ? (parseInt(selectedData.shift.startTime?.split(':')[0] || '0') >= 18 ? 'bg-[#2a2a4a] text-white border-l-indigo-500' : 'bg-blue-50 text-black border-l-blue-600') : 'bg-gray-100 text-gray-500 border-l-gray-400'}`}>
                         <div className="flex items-center gap-1 mb-1 border-b border-white/20 pb-1">
-                             {selectedData.shift.type === 'work' ? (parseInt(selectedData.shift.startTime?.split(':')[0] || '0') >= 18 ? <Moon size={12} /> : <Sun size={12} />) : <Coffee size={12}/>}
+                             {selectedData.shift.type === 'work' ? (parseInt(selectedData.shift.startTime?.split(':')[0] || '0') >= 18 ? <IconMoon size={12} /> : <IconSun size={12} />) : <IconCoffee size={12}/>}
                              <span className="text-[10px] font-black uppercase">{selectedData.shift.type === 'work' ? 'Turno de Trabalho' : 'Dia de Folga'}</span>
                         </div>
                         {selectedData.shift.type === 'work' ? (
@@ -342,7 +360,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
 
                 {selectedData.hols.length === 0 && selectedData.evs.length === 0 && !selectedData.shift && (
                   <div className="flex flex-col items-center justify-center py-10 opacity-30 grayscale">
-                    <Info size={32} />
+                    <IconInfoCircle size={32} />
                     <span className="text-[9px] font-bold uppercase mt-2">Sem compromissos</span>
                   </div>
                 )}
@@ -350,7 +368,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                 {selectedData.hols.map((h, i) => (
                   <div key={i} className="win95-raised bg-[#fff5f5] p-2 border-l-[6px] border-l-red-700 shadow-sm">
                     <div className="flex items-center gap-1 mb-1">
-                      <Target size={10} className="text-red-700" />
+                      <IconTarget size={10} className="text-red-700" />
                       <span className="text-[9px] font-black text-red-800 uppercase">Feriado {h.type === 'national' ? 'Nacional' : 'Estadual'}</span>
                     </div>
                     <div className="text-[11px] font-black text-black leading-tight uppercase">{h.name}</div>
@@ -358,18 +376,20 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                 ))}
 
                 {selectedData.evs.map((e) => (
-                  <div key={e.id} className="win95-raised bg-white p-2 border-l-[6px] border-l-win95-blue group relative hover:shadow-md transition-shadow">
+                  <div key={e.id} className={`win95-raised p-2 border-l-[6px] group relative hover:shadow-md transition-shadow ${e.id.startsWith('google_') ? 'bg-blue-50 border-l-blue-400' : 'bg-white border-l-win95-blue'}`}>
                     <div className="flex justify-between items-start mb-1">
                       <div className="flex items-center gap-1">
-                        {eventIcons[e.type]}
-                        <span className="text-[9px] font-black uppercase text-win95-shadow">{e.type}</span>
+                        {e.id.startsWith('google_') ? <IconBrandGoogle size={10} className="text-blue-600" /> : eventIcons[e.type]}
+                        <span className="text-[9px] font-black uppercase text-win95-shadow">{e.id.startsWith('google_') ? 'Google' : e.type}</span>
                       </div>
-                      <button 
-                        onClick={() => deleteEvent(e.id)} 
-                        className="win95-raised bg-win95-bg p-0.5 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 size={10} />
-                      </button>
+                      {!e.id.startsWith('google_') && (
+                        <button 
+                          onClick={() => deleteEvent(e.id)} 
+                          className="win95-raised bg-win95-bg p-0.5 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <IconTrash size={10} />
+                        </button>
+                      )}
                     </div>
                     <div className="text-[11px] font-black text-black leading-tight uppercase mb-1">{e.title}</div>
                     {e.description && <div className="text-[9px] text-[#444] leading-relaxed border-t border-win95-bg pt-1">{e.description}</div>}
@@ -391,7 +411,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
         <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-[1px]">
           <div className="bg-win95-bg w-full max-w-xs win95-raised p-1 shadow-2xl">
             <div className="bg-win95-blue text-white px-2 py-1 text-xs font-bold flex justify-between items-center mb-4 shadow-sm">
-              <span className="flex items-center gap-2"><Plus size={12} /> Novo Compromisso</span>
+              <span className="flex items-center gap-2"><IconPlus size={12} /> Novo Compromisso</span>
               <button onClick={() => setIsAddModalOpen(false)} className="win95-raised bg-win95-bg text-black w-5 h-5 flex items-center justify-center text-xs font-black">×</button>
             </div>
             <form onSubmit={handleAddEvent} className="px-3 pb-4 space-y-4">

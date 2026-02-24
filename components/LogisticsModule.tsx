@@ -1,11 +1,29 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Calculator, Search, Book, CheckSquare, Anchor, Truck, 
-  MapPin, Scale, Plus, Trash2, Save, Info, ChevronRight,
-  Globe, Box, FileText, CheckCircle2, AlertCircle, Navigation,
-  Clock, Map as MapIcon, Layers
-} from 'lucide-react';
+  IconCalculator, 
+  IconSearch, 
+  IconBook, 
+  IconChecklist, 
+  IconAnchor, 
+  IconTruck, 
+  IconMapPin, 
+  IconScale, 
+  IconPlus, 
+  IconTrash, 
+  IconDeviceFloppy, 
+  IconInfoCircle, 
+  IconChevronRight,
+  IconGlobe, 
+  IconBox, 
+  IconFileText, 
+  IconCircleCheck, 
+  IconAlertCircle, 
+  IconNavigation,
+  IconClock, 
+  IconMap, 
+  IconStack
+} from '@tabler/icons-react';
 import { LogisticsState, FreightTable, LogisticsChecklist } from '../types';
 
 declare global {
@@ -366,25 +384,25 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
       {/* Navigation */}
       <div className="flex gap-2 overflow-x-auto pb-2 shrink-0">
         <button onClick={() => setActiveTab('costs')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'costs' ? 'bg-win95-blue text-white' : ''}`}>
-          <Calculator size={16} /> Custos e Tabelas
+          <IconCalculator size={16} /> Custos e Tabelas
         </button>
         <button onClick={() => setActiveTab('search')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'search' ? 'bg-win95-blue text-white' : ''}`}>
-          <Globe size={16} /> CEP e Portos
+          <IconGlobe size={16} /> CEP e Portos
         </button>
         <button onClick={() => setActiveTab('tools')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'tools' ? 'bg-win95-blue text-white' : ''}`}>
-          <Book size={16} /> Glossário e Conversor
+          <IconBook size={16} /> Glossário e Conversor
         </button>
         <button onClick={() => setActiveTab('checklists')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'checklists' ? 'bg-win95-blue text-white' : ''}`}>
-          <CheckSquare size={16} /> Checklists
+          <IconChecklist size={16} /> Checklists
         </button>
         <button onClick={() => setActiveTab('routing')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'routing' ? 'bg-win95-blue text-white' : ''}`}>
-          <Navigation size={16} /> Roteirizador
+          <IconNavigation size={16} /> Roteirizador
         </button>
         <button onClick={() => setActiveTab('map')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'map' ? 'bg-win95-blue text-white' : ''}`}>
-          <MapPin size={16} /> Mapa de Apoio
+          <IconMapPin size={16} /> Mapa de Apoio
         </button>
         <button onClick={() => setActiveTab('scales')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'scales' ? 'bg-win95-blue text-white' : ''}`}>
-          <Scale size={16} /> Balança e Cubagem
+          <IconScale size={16} /> Balança e Cubagem
         </button>
       </div>
 
@@ -394,11 +412,11 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               <div className="win95-raised p-6 bg-white">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><Navigation size={20} /> Roteirizador Inteligente</h3>
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconNavigation size={20} /> Roteirizador Inteligente</h3>
                 
                 {authError && (
                   <div className="mb-4 p-4 win95-raised bg-red-50 border-red-500 text-red-700 text-xs flex gap-3 items-center">
-                    <AlertCircle className="shrink-0" size={20} />
+                    <IconAlertCircle className="shrink-0" size={20} />
                     <div>
                       <div className="font-bold">Erro de Autenticação do Google Maps</div>
                       <p>A chave de API fornecida é inválida ou não tem permissão para usar a Maps JavaScript API.</p>
@@ -418,7 +436,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                         value={routingOrigin}
                         onChange={e => setRoutingOrigin(e.target.value)}
                       />
-                      <MapPin className="absolute left-3 top-3.5 text-win95-blue" size={18} />
+                      <IconMapPin className="absolute left-3 top-3.5 text-win95-blue" size={18} />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
@@ -432,7 +450,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                         value={routingDestination}
                         onChange={e => setRoutingDestination(e.target.value)}
                       />
-                      <Navigation className="absolute left-3 top-3.5 text-win95-blue" size={18} />
+                      <IconNavigation className="absolute left-3 top-3.5 text-win95-blue" size={18} />
                     </div>
                   </div>
                 </div>
@@ -480,13 +498,13 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                     disabled={loadingRoutes}
                     className="win95-btn flex-1 py-3 bg-win95-blue text-white font-bold flex items-center justify-center gap-2"
                   >
-                    {loadingRoutes ? 'Calculando...' : <><Navigation size={18} /> Calcular 3 Rotas</>}
+                    {loadingRoutes ? 'Calculando...' : <><IconNavigation size={18} /> Calcular 3 Rotas</>}
                   </button>
                   <button 
                     onClick={() => setShowMap(!showMap)}
                     className={`win95-btn px-4 py-3 flex items-center gap-2 ${showMap ? 'bg-win95-blue text-white' : 'bg-white text-win95-blue'}`}
                   >
-                    <MapIcon size={18} /> {showMap ? 'Ocultar Mapa' : 'Ver Mapa'}
+                    <IconMap size={18} /> {showMap ? 'Ocultar Mapa' : 'Ver Mapa'}
                   </button>
                 </div>
 
@@ -496,7 +514,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                     {(authError || !(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY) && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white p-6 text-center">
                         <div>
-                          <AlertCircle className="mx-auto mb-2 text-orange-400" size={32} />
+                          <IconAlertCircle className="mx-auto mb-2 text-orange-400" size={32} />
                           <div className="font-bold">
                             {authError ? 'Chave de API Inválida' : 'Chave de API não configurada'}
                           </div>
@@ -568,7 +586,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                           </div>
                         </div>
                         <div className="mt-3 text-[10px] text-gray-500 flex items-center gap-1 italic">
-                          <Info size={10} /> Via {route.summary || 'Principais Rodovias'}
+                          <IconInfoCircle size={10} /> Via {route.summary || 'Principais Rodovias'}
                         </div>
                       </div>
                     );
@@ -585,22 +603,22 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
             
             <div className="space-y-4">
               <div className="win95-raised p-4 bg-white">
-                <h4 className="font-bold text-xs mb-3 flex items-center gap-2"><Clock size={14} className="text-win95-blue" /> Lei do Motorista (13.103/15)</h4>
+                <h4 className="font-bold text-xs mb-3 flex items-center gap-2"><IconClock size={14} className="text-win95-blue" /> Lei do Motorista (13.103/15)</h4>
                 <div className="space-y-3">
                   <div className="win95-sunken p-2 bg-blue-50/50">
                     <div className="text-[10px] font-bold text-blue-700 mb-1">Jornada de Trabalho</div>
                     <p className="text-[9px] text-gray-600">O tempo de direção é calculado automaticamente com base na legislação vigente, adicionando 30min de descanso a cada 5h30 de volante.</p>
                   </div>
                   <ul className="text-[10px] space-y-2 text-gray-600">
-                    <li className="flex gap-2"><ChevronRight size={10} className="shrink-0 mt-0.5" /> Máximo 5h30 ininterruptas de direção.</li>
-                    <li className="flex gap-2"><ChevronRight size={10} className="shrink-0 mt-0.5" /> Descanso obrigatório de 30min a cada 6h.</li>
-                    <li className="flex gap-2"><ChevronRight size={10} className="shrink-0 mt-0.5" /> Repouso diário de 11h (pode ser fracionado).</li>
+                    <li className="flex gap-2"><IconChevronRight size={10} className="shrink-0 mt-0.5" /> Máximo 5h30 ininterruptas de direção.</li>
+                    <li className="flex gap-2"><IconChevronRight size={10} className="shrink-0 mt-0.5" /> Descanso obrigatório de 30min a cada 6h.</li>
+                    <li className="flex gap-2"><IconChevronRight size={10} className="shrink-0 mt-0.5" /> Repouso diário de 11h (pode ser fracionado).</li>
                   </ul>
                 </div>
               </div>
               
               <div className="win95-raised p-4 bg-win95-blue text-white">
-                <h4 className="font-bold text-xs mb-2 flex items-center gap-2"><Layers size={14} /> Configuração do Veículo</h4>
+                <h4 className="font-bold text-xs mb-2 flex items-center gap-2"><IconStack size={14} /> Configuração do Veículo</h4>
                 <div className="text-[10px] space-y-2 opacity-90">
                   <p>As rotas levam em conta o perfil do veículo selecionado ({vehicleType === 'truck' ? 'Caminhão' : 'Carreta'}) com {axles} eixos.</p>
                   <p>O custo por eixo em pedágios será refletido no cálculo de custos operacionais.</p>
@@ -631,7 +649,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
               <div ref={mapRef} className="absolute inset-0 w-full h-full" />
               {(authError || !(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY) && (
                 <div className="text-center space-y-4 z-10 bg-white/80 p-8 win95-raised">
-                  <MapPin size={48} className="mx-auto text-win95-blue animate-bounce" />
+                  <IconMapPin size={48} className="mx-auto text-win95-blue animate-bounce" />
                   <div>
                     <div className="font-bold text-lg">
                       {authError ? 'Erro de Autenticação' : 'Mapa de Apoio Logístico'}
@@ -663,7 +681,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         {activeTab === 'scales' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="win95-raised p-6 bg-white">
-              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-win95-blue"><Scale size={20} /> Lei da Balança (Pesos Permitidos)</h3>
+              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-win95-blue"><IconScale size={20} /> Lei da Balança (Pesos Permitidos)</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-2">
                   {[
@@ -685,14 +703,14 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                   ))}
                 </div>
                 <div className="p-3 bg-orange-50 border border-orange-200 rounded text-[10px] text-orange-700 flex gap-2">
-                  <Info size={14} className="shrink-0" />
+                  <IconInfoCircle size={14} className="shrink-0" />
                   <span>Atenção: Tolerância de 5% no PBT e 10% no peso por eixo. Valores podem variar conforme a configuração de eixos.</span>
                 </div>
               </div>
             </div>
 
             <div className="win95-raised p-6 bg-white">
-              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-win95-blue"><Box size={20} /> Cubicagem de Carreta Sider</h3>
+              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-win95-blue"><IconBox size={20} /> Cubicagem de Carreta Sider</h3>
               <div className="space-y-4">
                 <div className="win95-sunken p-4 bg-gray-50 mb-4">
                   <div className="text-xs font-bold mb-2 uppercase text-gray-400">Dimensões Padrão Sider (13.5m)</div>
@@ -736,7 +754,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               <div className="win95-raised p-6 bg-white">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><Calculator size={20} /> Calculadora de Operação</h3>
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconCalculator size={20} /> Calculadora de Operação</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <h4 className="text-xs font-bold text-gray-400 uppercase border-b pb-1">Terrestre</h4>
@@ -803,7 +821,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                       value={tableName} onChange={e => setTableName(e.target.value)}
                     />
                     <button onClick={handleSaveTable} className="win95-btn px-3 py-2 bg-win95-blue text-white flex items-center gap-1">
-                      <Save size={14} /> Salvar
+                      <IconDeviceFloppy size={14} /> Salvar
                     </button>
                   </div>
                 </div>
@@ -812,7 +830,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
 
             <div className="space-y-4">
               <div className="win95-raised p-4 bg-white h-full">
-                <h3 className="font-bold text-sm mb-4 flex items-center gap-2"><FileText size={16} /> Tabelas Salvas</h3>
+                <h3 className="font-bold text-sm mb-4 flex items-center gap-2"><IconFileText size={16} /> Tabelas Salvas</h3>
                 <div className="space-y-2">
                   {data.freightTables?.map(t => (
                     <div key={t.id} className="win95-raised p-2 text-xs flex justify-between items-center hover:bg-gray-50 cursor-pointer" onClick={() => loadTable(t)}>
@@ -824,7 +842,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                         onClick={(e) => { e.stopPropagation(); onChange({...data, freightTables: data.freightTables.filter(x => x.id !== t.id)}) }}
                         className="text-gray-300 hover:text-red-500"
                       >
-                        <Trash2 size={14} />
+                        <IconTrash size={14} />
                       </button>
                     </div>
                   ))}
@@ -841,7 +859,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         {activeTab === 'search' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="win95-raised p-6 bg-white">
-              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><MapPin size={20} /> Busca de CEP (Terra)</h3>
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconMapPin size={20} /> Busca de CEP (Terra)</h3>
               <div className="flex gap-2 mb-4">
                 <input 
                   type="text" placeholder="00000-000" 
@@ -850,7 +868,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                   onKeyDown={e => e.key === 'Enter' && searchCep()}
                 />
                 <button onClick={searchCep} className="win95-btn px-6 bg-win95-blue text-white" disabled={loadingCep}>
-                  {loadingCep ? '...' : <Search size={20} />}
+                  {loadingCep ? '...' : <IconSearch size={20} />}
                 </button>
               </div>
               {cepResult && (
@@ -864,14 +882,14 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
             </div>
 
             <div className="win95-raised p-6 bg-white">
-              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><Anchor size={20} /> Códigos Portuários (Mar)</h3>
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconAnchor size={20} /> Códigos Portuários (Mar)</h3>
               <div className="relative mb-4">
                 <input 
                   type="text" placeholder="Buscar cidade ou porto... (ex: Santos)" 
                   className="win95-sunken p-3 w-full outline-none pl-10"
                   value={portSearch} onChange={e => setPortSearch(e.target.value)}
                 />
-                <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                <IconSearch size={18} className="absolute left-3 top-3.5 text-gray-400" />
               </div>
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
                 {PORT_CODES.filter(p => p.city.toLowerCase().includes(portSearch.toLowerCase()) || p.code.toLowerCase().includes(portSearch.toLowerCase())).map(p => (
@@ -895,7 +913,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         {activeTab === 'tools' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="win95-raised p-6 bg-white">
-              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><Book size={20} /> Glossário Técnico</h3>
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconBook size={20} /> Glossário Técnico</h3>
               <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                 {GLOSSARY.map(g => (
                   <div key={g.term} className="border-b border-gray-100 pb-2 last:border-0">
@@ -907,7 +925,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
             </div>
 
             <div className="win95-raised p-6 bg-white">
-              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><Scale size={20} /> Conversor de Unidades</h3>
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconScale size={20} /> Conversor de Unidades</h3>
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold">Valor</label>
@@ -955,10 +973,10 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
             <div className="win95-raised p-4 bg-white flex flex-wrap gap-4 items-center">
               <h3 className="font-bold text-sm mr-4">Gerar Checklist:</h3>
               <button onClick={() => handleAddChecklist('maritime')} className="win95-btn px-4 py-2 flex items-center gap-2 bg-blue-50 text-blue-700">
-                <Anchor size={14} /> Marítimo
+                <IconAnchor size={14} /> Marítimo
               </button>
               <button onClick={() => handleAddChecklist('land')} className="win95-btn px-4 py-2 flex items-center gap-2 bg-orange-50 text-orange-700">
-                <Truck size={14} /> Terrestre
+                <IconTruck size={14} /> Terrestre
               </button>
               <div className="flex-1 min-w-[200px] flex gap-2">
                 <input 
@@ -967,7 +985,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                   value={newChecklistTitle} onChange={e => setNewChecklistTitle(e.target.value)}
                 />
                 <button onClick={() => handleAddChecklist('custom')} className="win95-btn px-4 py-2 bg-gray-100">
-                  <Plus size={14} /> Criar
+                  <IconPlus size={14} /> Criar
                 </button>
               </div>
             </div>
@@ -977,10 +995,10 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                 <div key={list.id} className="win95-raised p-4 bg-white flex flex-col">
                   <div className="flex justify-between items-start mb-4">
                     <h4 className="font-black text-win95-blue uppercase text-xs flex items-center gap-2">
-                      <CheckCircle2 size={14} /> {list.title}
+                      <IconCircleCheck size={14} /> {list.title}
                     </h4>
                     <button onClick={() => onChange({...data, checklists: data.checklists.filter(x => x.id !== list.id)})} className="text-gray-300 hover:text-red-500">
-                      <Trash2 size={14} />
+                      <IconTrash size={14} />
                     </button>
                   </div>
                   <div className="space-y-2 flex-1">

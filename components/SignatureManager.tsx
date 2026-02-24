@@ -246,6 +246,7 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
   const [addDate, setAddDate] = useState(false);
   const [dateText, setDateText] = useState(new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}));
   const [isDragging, setIsDragging] = useState(false);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -283,6 +284,7 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
       
       canvas.width = viewport.width;
       canvas.height = viewport.height;
+      setCanvasSize({ width: viewport.width, height: viewport.height });
 
       await page.render({ canvasContext: context, viewport }).promise;
     };
@@ -445,7 +447,7 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
 
       <div className="flex-1 win95-sunken bg-gray-500 overflow-auto flex items-center justify-center p-4 relative" onMouseMove={handleDragMove} onMouseUp={handleDragEnd} onMouseLeave={handleDragEnd}>
          {pdfFile ? (
-           <div ref={containerRef} className="relative shadow-2xl" style={{ width: canvasRef.current?.width, height: canvasRef.current?.height }}>
+           <div ref={containerRef} className="relative shadow-2xl" style={{ width: canvasSize.width, height: canvasSize.height }}>
              <canvas ref={canvasRef} className="block bg-white" />
              {selectedSig && (
                <div onMouseDown={handleDragStart} style={{ position: 'absolute', left: sigPos.x, top: sigPos.y, width: sigWidth, cursor: isDragging ? 'grabbing' : 'grab', border: '1px dashed rgba(0,0,255,0.3)' }} className="group flex flex-col">

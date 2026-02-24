@@ -73,7 +73,7 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     saveHistory();
     const newNode: FlowNode = {
       ...(clipboardNode as FlowNode),
-      id: `node_${Date.now()}`,
+      id: `node_${Math.random().toString(36).substr(2, 9)}`,
       x: (clipboardNode.x || 0) + 20,
       y: (clipboardNode.y || 0) + 20,
       calculatedValue: null
@@ -85,6 +85,15 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
   const copyToSystemClipboard = (val: number | undefined | null) => {
     if (val === undefined || val === null) return;
     navigator.clipboard.writeText(val.toString());
+  };
+
+  const removeNode = (id: string) => {
+    if (viewMode) return;
+    saveHistory();
+    const newNodes = data.nodes.filter(n => n.id !== id);
+    const newConnections = data.connections.filter(c => c.from !== id && c.to !== id);
+    onChange({ ...data, nodes: newNodes, connections: newConnections });
+    if (selectedNodeId === id) setSelectedNodeId(null);
   };
 
   useEffect(() => {
@@ -130,7 +139,7 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     if (viewMode) return;
     saveHistory();
     const newNode: FlowNode = {
-      id: `node_${Date.now()}`,
+      id: `node_${Math.random().toString(36).substr(2, 9)}`,
       type,
       x: 50 + Math.random() * 100,
       y: 50 + Math.random() * 100,
@@ -149,18 +158,9 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     onChange({ ...data, nodes: newNodes });
   };
 
-  const removeNode = (id: string) => {
-    if (viewMode) return;
-    saveHistory();
-    const newNodes = data.nodes.filter(n => n.id !== id);
-    const newConnections = data.connections.filter(c => c.from !== id && c.to !== id);
-    onChange({ ...data, nodes: newNodes, connections: newConnections });
-    if (selectedNodeId === id) setSelectedNodeId(null);
-  };
-
   const saveTemplate = () => {
     if (!templateName.trim()) return alert("Digite um nome para o modelo.");
-    const newTemplate: FlowTemplate = { id: `tpl_${Date.now()}`, name: templateName, nodes: data.nodes, connections: data.connections };
+    const newTemplate: FlowTemplate = { id: `tpl_${Math.random().toString(36).substr(2, 9)}`, name: templateName, nodes: data.nodes, connections: data.connections };
     onChange({ ...data, templates: [...(data.templates || []), newTemplate] });
     setTemplateName('');
     setIsTemplatesOpen(false);
@@ -267,7 +267,7 @@ export const FlowBuilder: React.FC<FlowBuilderProps> = ({ data, onChange }) => {
     if (connectSource && connectSource !== nodeId) {
        if (!data.connections.some(c => c.from === connectSource && c.to === nodeId)) {
          saveHistory();
-         onChange({ ...data, connections: [...data.connections, { id: `c_${Date.now()}`, from: connectSource, to: nodeId }] });
+         onChange({ ...data, connections: [...data.connections, { id: `c_${Math.random().toString(36).substr(2, 9)}`, from: connectSource, to: nodeId }] });
        }
        setConnectSource(null); setIsConnecting(false);
     }

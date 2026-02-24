@@ -1,6 +1,16 @@
 
 import React, { useState } from 'react';
-import { User as UserIcon, Lock, Key, HelpCircle, UserPlus, LogIn, Loader2, Mail } from 'lucide-react';
+import { 
+  IconUser, 
+  IconLock, 
+  IconKey, 
+  IconHelp, 
+  IconUserPlus, 
+  IconLogin, 
+  IconLoader2, 
+  IconMail, 
+  IconBrandGoogle 
+} from '@tabler/icons-react';
 import { User } from '../types';
 import { supabase } from '../supabase';
 import { Button } from './ui/Button';
@@ -17,6 +27,29 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
+          redirectTo: window.location.origin
+        }
+      });
+      if (oauthError) throw oauthError;
+    } catch (err: any) {
+      console.error(err);
+      setError('Erro ao entrar com Google: ' + err.message);
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +76,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         if (data.user) {
           if (data.session) {
             // Login automático (se confirmação de email estiver desligada no Supabase)
-            onLogin({ id: data.user.id, nick: nickname });
+            onLogin({ id: data.user.id, nick: nickname, photoUrl: data.user.user_metadata.avatar_url });
           } else {
             // Aguardando confirmação de email
             setSuccessMsg(`Conta criada! Verifique a caixa de entrada de ${email} para confirmar seu cadastro.`);
@@ -64,8 +97,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
         if (data.user) {
           // Tenta pegar o username dos metadados, ou usa a parte antes do @ do email como fallback
-          const displayNick = data.user.user_metadata.username || email.split('@')[0];
-          onLogin({ id: data.user.id, nick: displayNick });
+          const displayNick = data.user.user_metadata.username || data.user.user_metadata.full_name || email.split('@')[0];
+          const photoUrl = data.user.user_metadata.avatar_url;
+          onLogin({ id: data.user.id, nick: displayNick, photoUrl });
         }
       }
     } catch (err: any) {
@@ -98,9 +132,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           <div className="flex gap-4 mb-4">
             <div className="pt-2">
                {isRegistering ? (
-                 <Mail size={48} className="text-[#808080]" strokeWidth={1.5} />
+                 <IconMail size={48} className="text-[#808080]" strokeWidth={1.5} />
                ) : (
-                 <Key size={48} className="text-[#808080]" strokeWidth={1.5} />
+                 <IconKey size={48} className="text-[#808080]" strokeWidth={1.5} />
                )}
             </div>
             <div className="flex-1">
@@ -166,10 +200,22 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   {isRegistering && <p className="text-[10px] text-gray-600">Mínimo de 6 caracteres.</p>}
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4">
-                    <Button type="submit" disabled={loading} className="min-w-[80px]">
-                       {loading ? <Loader2 className="animate-spin" size={14} /> : (isRegistering ? 'CADASTRAR' : 'ENTRAR')}
+                <div className="flex flex-col gap-2 pt-4">
+                    <Button type="submit" disabled={loading} className="w-full">
+                       {loading ? <IconLoader2 className="animate-spin" size={14} /> : (isRegistering ? 'CADASTRAR COM E-MAIL' : 'ENTRAR COM E-MAIL')}
                     </Button>
+                    
+                    {!isRegistering && (
+                      <button 
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        disabled={loading}
+                        className="w-full win95-raised bg-white p-2 flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors border border-gray-400"
+                      >
+                        <IconBrandGoogle size={16} className="text-[#4285F4]" />
+                        <span className="text-xs font-bold text-black uppercase">Entrar com Google</span>
+                      </button>
+                    )}
                 </div>
               </form>
             </div>
@@ -190,9 +236,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   className="text-xs font-bold text-[#000080] hover:underline focus:outline-dotted flex items-center gap-1"
                >
                   {isRegistering ? (
-                    <><LogIn size={12}/> Já tenho conta</>
+                    <><IconLogin size={12}/> Já tenho conta</>
                   ) : (
-                    <><UserPlus size={12}/> Criar conta com E-mail</>
+                    <><IconUserPlus size={12}/> Criar conta com E-mail</>
                   )}
                </button>
                

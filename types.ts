@@ -3,6 +3,8 @@
 export interface User {
   id: string;
   nick: string;
+  photoUrl?: string;
+  googleAccessToken?: string;
 }
 
 // Kanban Types
