@@ -1,21 +1,6 @@
 
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { 
-  IconGitMerge, 
-  IconMessageDots, 
-  IconRefresh, 
-  IconContrast, 
-  IconCalendar, 
-  IconBriefcase, 
-  IconSearch, 
-  IconTruck, 
-  IconArchive, 
-  IconBrain, 
-  IconX, 
-  IconSettings, 
-  IconUser,
-  IconLogout
-} from '@tabler/icons-react';
+import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Briefcase, Search, Truck, Settings } from 'lucide-react';
 import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState } from './types';
 import { Auth } from './components/Auth';
 import { MessageLinker } from './components/MessageLinker';
@@ -29,22 +14,18 @@ const CalendarModule = lazy(() => import('./components/CalendarModule').then(m =
 const FlowBuilder = lazy(() => import('./components/FlowBuilder').then(m => ({ default: m.FlowBuilder })));
 const ConsultationModule = lazy(() => import('./components/ConsultationModule').then(m => ({ default: m.ConsultationModule })));
 const WhatsAppTool = lazy(() => import('./components/WhatsAppTool').then(m => ({ default: m.WhatsAppTool })));
-const SettingsModule = lazy(() => import('./components/SettingsModule').then(m => ({ default: m.SettingsModule })));
 const LogisticsModule = lazy(() => import('./components/LogisticsModule').then(m => ({ default: m.LogisticsModule })));
-const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m => ({ default: m.WarehouseModule })));
-const AISecretary = lazy(() => import('./components/AISecretary').then(m => ({ default: m.AISecretary })));
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 const initialLogistics: LogisticsState = { freightTables: [], checklists: [] };
 
 const DEFAULT_TABS = [
-  { id: 'office', label: 'Escritório', icon: <IconBriefcase size={16} /> },
-  { id: 'calendar', label: 'Calendário', icon: <IconCalendar size={16} /> },
-  { id: 'flow', label: 'Fluxo', icon: <IconGitMerge size={16} /> },
-  { id: 'logistics', label: 'Logística', icon: <IconTruck size={16} /> },
-  { id: 'warehouse', label: 'Almoxarifado', icon: <IconArchive size={16} /> },
-  { id: 'consultas', label: 'Consultas', icon: <IconSearch size={16} /> },
-  { id: 'whatsapp', label: 'WhatsApp', icon: <IconMessageDots size={16} /> },
+  { id: 'office', label: 'Escritório', icon: <Briefcase size={16} /> },
+  { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={16} /> },
+  { id: 'flow', label: 'Fluxo', icon: <GitMerge size={16} /> },
+  { id: 'logistics', label: 'Logística', icon: <Truck size={16} /> },
+  { id: 'consultas', label: 'Consultas', icon: <Search size={16} /> },
+  { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={16} /> },
 ];
 
 const App: React.FC = () => {
@@ -60,11 +41,9 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('office');
   const [tabs, setTabs] = useState(DEFAULT_TABS);
   const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
+  const [isTabsDropdownOpen, setIsTabsDropdownOpen] = useState(false);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-  
-  const [isSecretaryOpen, setIsSecretaryOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   // Estados de Dados
   const [flowData, setFlowData] = useState<FlowState>(initialFlow);
@@ -111,6 +90,26 @@ const App: React.FC = () => {
     localStorage.setItem('ysoffice_tab_order', JSON.stringify(_tabs.map(t => t.id)));
   };
 
+  const toggleTabVisibility = (tabId: string) => {
+    setHiddenTabs(prev => {
+      const isHidden = prev.includes(tabId);
+      if (isHidden) {
+        // Se a aba estiver oculta, mostre-a (remova de hiddenTabs)
+        // E se for a aba ativa, não faça nada. Se não, mude a aba ativa para ela.
+        if (activeTab !== tabId) setActiveTab(tabId);
+        return prev.filter(id => id !== tabId);
+      } else {
+        // Se a aba estiver visível, oculte-a (adicione a hiddenTabs)
+        // Se for a aba ativa, mude para a primeira aba visível
+        if (activeTab === tabId) {
+          const nextVisibleTab = tabs.find(t => !prev.includes(t.id) && t.id !== tabId);
+          if (nextVisibleTab) setActiveTab(nextVisibleTab.id);
+        }
+        return [...prev, tabId];
+      }
+    });
+  };
+
   const getFullDate = () => {
     const date = new Date();
     const formatted = date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -120,26 +119,14 @@ const App: React.FC = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }: any) => {
       if (session?.user) {
-        setUser({ 
-          id: session.user.id, 
-          nick: session.user.user_metadata.username || session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'Usuário',
-          photoUrl: session.user.user_metadata.avatar_url,
-          googleAccessToken: session.provider_token
-        });
+        setUser({ id: session.user.id, nick: session.user.user_metadata.username || session.user.email?.split('@')[0] || 'Usuário' });
       } else {
         const demoSession = localStorage.getItem('ysoffice_demo_session');
         if (demoSession) setUser(JSON.parse(demoSession));
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      if (session?.user) {
-        setUser({ 
-          id: session.user.id, 
-          nick: session.user.user_metadata.username || session.user.user_metadata.full_name || 'Usuário',
-          photoUrl: session.user.user_metadata.avatar_url,
-          googleAccessToken: session.provider_token
-        });
-      }
+      if (session?.user) setUser({ id: session.user.id, nick: session.user.user_metadata.username || 'Usuário' });
     }) as any;
     return () => subscription.unsubscribe();
   }, []);
@@ -225,7 +212,6 @@ const App: React.FC = () => {
   };
 
   if (viewMessage) return <MessageLinker mode="view" encodedMessage={viewMessage} />;
-
   if (!user) return <Auth onLogin={setUser} />;
 
   const visibleTabs = tabs.filter(t => !hiddenTabs.includes(t.id));
@@ -236,28 +222,16 @@ const App: React.FC = () => {
         <div className="flex items-center gap-4">
            <button onClick={() => setActiveTab('calendar')} className="flex items-center gap-2 group">
              <div className="win95-sunken px-3 py-1.5 bg-white flex items-center gap-2 group-hover:border-blue-300 transition-colors">
-               <IconCalendar size={16} className="text-win95-blue" />
+               <CalendarIcon size={16} className="text-win95-blue" />
                <span className="font-semibold text-sm text-gray-700">{getFullDate()}</span>
              </div>
            </button>
-           {isSyncing && <IconRefresh size={14} className="animate-spin text-win95-blue" />}
+           {isSyncing && <RefreshCw size={14} className="animate-spin text-win95-blue" />}
         </div>
         <div className="flex items-center gap-4 text-xs font-medium bg-white/50 px-3 py-1.5 rounded-full shadow-sm border border-white/50">
-           <button 
-             onClick={() => setIsSettingsOpen(true)}
-             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-           >
-             <div className="w-6 h-6 win95-sunken bg-white overflow-hidden flex items-center justify-center border border-win95-shadow">
-               {user.photoUrl ? (
-                 <img src={user.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
-               ) : (
-                 <IconUser size={14} className="text-gray-400" />
-               )}
-             </div>
-             <span className="text-gray-600">Olá, <b className="text-gray-900">{user.nick}</b></span>
-           </button>
+           <span className="text-gray-600">Usuário: <b className="text-gray-900">{user.nick}</b></span>
            <div className="h-4 w-px bg-gray-300"></div>
-           <button onClick={() => setIsInverted(!isInverted)} className="hover:text-blue-600 transition-colors" title="Modo Escuro"><IconContrast size={16} /></button>
+           <button onClick={() => setIsInverted(!isInverted)} className="hover:text-blue-600 transition-colors" title="Modo Escuro"><Contrast size={16} /></button>
            <button onClick={handleLogout} className="hover:text-red-600 transition-colors font-bold">Sair</button>
         </div>
       </div>
@@ -289,6 +263,38 @@ const App: React.FC = () => {
               </div>
             ))}
           </div>
+          <div className="relative">
+            <button 
+              onClick={() => setIsTabsDropdownOpen(!isTabsDropdownOpen)}
+              className="p-2 rounded-t-md hover:bg-gray-200 transition-colors"
+              title="Gerenciar abas"
+            >
+              <Settings size={16} className="text-gray-600" />
+            </button>
+            {isTabsDropdownOpen && (
+              <div 
+                className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-300 rounded-md shadow-lg z-20 win95-raised p-1"
+                onMouseLeave={() => setIsTabsDropdownOpen(false)}
+              >
+                <div className="px-2 py-1 text-xs font-bold text-gray-700 border-b border-gray-200 mb-1">Exibir Abas</div>
+                <ul>
+                  {DEFAULT_TABS.map(tab => (
+                    <li key={tab.id}>
+                      <label className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-800 hover:bg-blue-100 rounded-sm cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={!hiddenTabs.includes(tab.id)}
+                          onChange={() => toggleTabVisibility(tab.id)}
+                          className="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="flex-1 select-none">{tab.label}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 overflow-hidden relative bg-white">
@@ -312,123 +318,15 @@ const App: React.FC = () => {
                     calendarConfig={calendarConfig} onCalendarConfigChange={setCalendarConfig}
                     events={calendarEvents} onEventsChange={setCalendarEvents}
                     shiftConfig={shiftConfig} onShiftConfigChange={setShiftConfig}
-                    googleAccessToken={user.googleAccessToken}
                   />
                 )}
                 {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
                 {activeTab === 'logistics' && <LogisticsModule data={logisticsData} onChange={setLogisticsData} />}
-                {activeTab === 'warehouse' && <WarehouseModule />}
                 {activeTab === 'consultas' && <ConsultationModule />}
                 {activeTab === 'whatsapp' && <WhatsAppTool />}
               </Suspense>
             </div>
         </div>
-
-        {/* Floating AI Secretary Bubble */}
-        <div className="fixed bottom-12 right-6 z-[100] flex flex-col items-end gap-3">
-          {isSecretaryOpen && (
-            <div className="w-[400px] h-[550px] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-              <Suspense fallback={<LoadingPlaceholder />}>
-                <AISecretary 
-                  onClose={() => setIsSecretaryOpen(false)}
-                  onCreatePostIt={(text, color) => {
-                    const colors: Record<string, string> = {
-                      yellow: '#fef3c7',
-                      blue: '#dbeafe',
-                      green: '#dcfce7',
-                      pink: '#fce7f3'
-                    };
-                    const newPostIt: PostIt = {
-                      id: Date.now().toString(),
-                      text,
-                      color: colors[color] || colors.yellow,
-                      rotation: Math.random() * 6 - 3,
-                      createdAt: new Date().toISOString()
-                    };
-                    setPostIts(prev => [...prev, newPostIt]);
-                  }}
-                  onAddNote={(content) => {
-                    const newNote: ImportantNote = { 
-                      id: Date.now().toString(), 
-                      title: 'Nota da IA',
-                      content, 
-                      category: 'Geral',
-                      priority: 'normal',
-                      updatedAt: new Date().toISOString() 
-                    };
-                    setImportantNotes(prev => [newNote, ...(prev || [])]);
-                  }}
-                  onAddEvent={(title, date, time) => {
-                    const newEvent: UserEvent = { 
-                      id: Date.now().toString(), 
-                      title, 
-                      date, 
-                      type: 'meeting', 
-                      description: `Horário: ${time}. Agendado via Secretária IA` 
-                    };
-                    setCalendarEvents(prev => [...(prev || []), newEvent]);
-                  }}
-                  onSearchInventory={(query) => {
-                    const inv = JSON.parse(localStorage.getItem('ysoffice_warehouse_inventory') || '[]');
-                    return inv.filter((i: any) => 
-                      i.name.toLowerCase().includes(query.toLowerCase()) || 
-                      i.category.toLowerCase().includes(query.toLowerCase())
-                    );
-                  }}
-                  onNavigate={(tabId) => setActiveTab(tabId)}
-                  onSendWhatsApp={(phone, message) => {
-                    sessionStorage.setItem('ysoffice_pending_wa', JSON.stringify({ phone, message }));
-                    setActiveTab('whatsapp');
-                  }}
-                />
-              </Suspense>
-            </div>
-          )}
-          <button 
-            onClick={() => setIsSecretaryOpen(!isSecretaryOpen)}
-            className={`
-              w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 active:scale-90
-              ${isSecretaryOpen ? 'bg-red-600 rotate-90' : 'bg-win95-blue hover:scale-110'}
-              border-2 border-white
-            `}
-          >
-            {isSecretaryOpen ? <IconX className="text-white" size={24} /> : <IconBrain className="text-yellow-400" size={28} />}
-            {!isSecretaryOpen && (
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center animate-bounce">
-                <span className="text-[10px] text-white font-bold">1</span>
-              </div>
-            )}
-          </button>
-        </div>
-
-        {/* Settings Modal */}
-        {isSettingsOpen && (
-          <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="w-full max-w-2xl bg-win95-bg win95-raised p-1 shadow-2xl animate-in zoom-in-95 duration-200">
-              <div className="bg-win95-blue text-white px-2 py-1 text-sm font-bold flex justify-between items-center mb-2">
-                <span className="flex items-center gap-2"><IconSettings size={16} /> Configurações do Sistema</span>
-                <button 
-                  onClick={() => setIsSettingsOpen(false)} 
-                  className="win95-raised bg-win95-bg text-black w-5 h-5 flex items-center justify-center text-xs font-black"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="max-h-[80vh] overflow-y-auto custom-scrollbar">
-                <Suspense fallback={<LoadingPlaceholder />}>
-                  <SettingsModule 
-                    user={user} 
-                    onUpdateUser={setUser} 
-                    onLogout={() => {
-                      setIsSettingsOpen(false);
-                      handleLogout();
-                    }} 
-                  />
-                </Suspense>
-              </div>
-            </div>
-          </div>
-        )}
         
         <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none shrink-0">
            <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.5 - Optimized Engine</span>
