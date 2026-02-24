@@ -47,6 +47,18 @@ export const WhatsAppTool: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  useEffect(() => {
+    const pending = sessionStorage.getItem('ysoffice_pending_wa');
+    if (pending) {
+      try {
+        const { phone, message } = JSON.parse(pending);
+        setPhone(phone);
+        setMessage(message);
+        sessionStorage.removeItem('ysoffice_pending_wa');
+      } catch (e) { console.error(e); }
+    }
+  }, []);
+
   // Salvar histórico no localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem('ysoffice_whatsapp_history', JSON.stringify(history));
