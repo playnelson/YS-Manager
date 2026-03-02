@@ -39,7 +39,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             access_type: 'offline',
             prompt: 'consent',
           },
-          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
+          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly',
           redirectTo: window.location.origin
         }
       });

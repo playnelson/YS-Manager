@@ -122,14 +122,26 @@ const App: React.FC = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }: any) => {
       if (session?.user) {
-        setUser({ id: session.user.id, nick: session.user.user_metadata.username || session.user.email?.split('@')[0] || 'Usuário' });
+        setUser({
+          id: session.user.id,
+          nick: session.user.user_metadata.username || session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'Usuário',
+          photoUrl: session.user.user_metadata.avatar_url,
+          googleAccessToken: session.provider_token
+        });
       } else {
         const demoSession = localStorage.getItem('ysoffice_demo_session');
         if (demoSession) setUser(JSON.parse(demoSession));
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      if (session?.user) setUser({ id: session.user.id, nick: session.user.user_metadata.username || 'Usuário' });
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          nick: session.user.user_metadata.username || session.user.user_metadata.full_name || 'Usuário',
+          photoUrl: session.user.user_metadata.avatar_url,
+          googleAccessToken: session.provider_token
+        });
+      }
     }) as any;
     return () => subscription.unsubscribe();
   }, []);
@@ -336,6 +348,7 @@ const App: React.FC = () => {
             <SharedDocumentsModule
               driveFiles={driveFiles}
               onDriveFilesChange={setDriveFiles}
+              currentUser={user}
             />
           )}
         </Suspense>

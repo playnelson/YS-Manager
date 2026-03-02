@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Cloud, Download, RefreshCw, File, LogIn, ExternalLink, Trash2, Search, Filter } from 'lucide-react';
 import { Button } from './ui/Button';
+import { User } from '../types';
 
 declare global {
     interface Window {
@@ -27,9 +28,10 @@ interface DriveFile {
 interface SharedDocumentsModuleProps {
     driveFiles: DriveFile[];
     onDriveFilesChange: (files: DriveFile[]) => void;
+    currentUser: User | null;
 }
 
-export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ driveFiles, onDriveFilesChange }) => {
+export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ driveFiles, onDriveFilesChange, currentUser }) => {
     const [isGapiLoaded, setIsGapiLoaded] = useState(false);
     const [isGsiLoaded, setIsGsiLoaded] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -37,7 +39,7 @@ export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ dr
     const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // 1. Inicializar GAPI e GIS
+    // 1. Inicializar GAPI e capturar token do Supabase
     useEffect(() => {
         const initGapi = async () => {
             try {
@@ -46,6 +48,12 @@ export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ dr
                     discoveryDocs: [DISCOVERY_DOC],
                 });
                 setIsGapiLoaded(true);
+
+                // Se já temos um token vindo do login do site (Supabase/Google)
+                if (currentUser?.googleAccessToken) {
+                    window.gapi.client.setToken({ access_token: currentUser.googleAccessToken });
+                    setIsAuthenticated(true);
+                }
             } catch (err) {
                 console.error('Erro ao inicializar GAPI:', err);
             }
@@ -73,9 +81,16 @@ export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ dr
 
         if (window.gapi) initGapi();
         if (window.google) initGsi();
-    }, []);
+    }, [currentUser]);
 
-    // 2. Listar Arquivos
+    // 2. Chamar listagem quando autenticado
+    useEffect(() => {
+        if (isAuthenticated && isGapiLoaded) {
+            listDriveFiles();
+        }
+    }, [isAuthenticated, isGapiLoaded]);
+
+    // 3. Listar Arquivos
     const listDriveFiles = useCallback(async () => {
         if (!isAuthenticated) return;
         setIsLoading(true);
