@@ -180,11 +180,26 @@ export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ dr
                     {!isAuthenticated ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-[#808080] p-8 text-center">
                             <Cloud size={64} className="opacity-20 mb-4" />
-                            <h3 className="text-sm font-bold uppercase mb-2">Conecte-se para começar</h3>
-                            <p className="text-[10px] max-w-xs leading-relaxed italic">
-                                Acesse seus documentos diretamente do Google Drive de forma segura.
-                                Os arquivos não são armazenados localmente.
-                            </p>
+                            {currentUser?.id !== 'demo_user_id' && !currentUser?.googleAccessToken ? (
+                                <>
+                                    <h3 className="text-sm font-bold uppercase mb-2 text-win95-blue">Vincule sua conta Google</h3>
+                                    <p className="text-[10px] max-w-xs leading-relaxed italic mb-4">
+                                        Para acessar seus documentos, você precisa "acoplar" sua conta atual ao seu perfil do Google.
+                                        Isso é feito de forma segura e unificada.
+                                    </p>
+                                    <Button onClick={() => window.dispatchEvent(new CustomEvent('link-google'))} className="bg-win95-blue text-white uppercase text-[10px] font-bold">
+                                        VINCULAR AGORA
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className="text-sm font-bold uppercase mb-2">Conecte-se para começar</h3>
+                                    <p className="text-[10px] max-w-xs leading-relaxed italic">
+                                        Acesse seus documentos diretamente do Google Drive de forma segura.
+                                        Os arquivos não são armazenados localmente.
+                                    </p>
+                                </>
+                            )}
                         </div>
                     ) : isLoading && driveFiles.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center">

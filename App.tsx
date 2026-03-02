@@ -143,7 +143,12 @@ const App: React.FC = () => {
         });
       }
     }) as any;
-    return () => subscription.unsubscribe();
+
+    window.addEventListener('link-google', handleLinkGoogle);
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('link-google', handleLinkGoogle);
+    };
   }, []);
 
   useEffect(() => {
@@ -226,6 +231,26 @@ const App: React.FC = () => {
     setIsDataLoaded(false);
   };
 
+  const handleLinkGoogle = async () => {
+    try {
+      const { error } = await supabase.auth.linkIdentity({
+        provider: 'google',
+        options: {
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly',
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Erro ao vincular conta Google:', err);
+      alert('Erro ao vincular conta Google. Verifique se o provedor está ativo no Supabase.');
+    }
+  };
+
   if (viewMessage) return <MessageLinker mode="view" encodedMessage={viewMessage} />;
   if (!user) return <Auth onLogin={setUser} />;
 
@@ -249,6 +274,17 @@ const App: React.FC = () => {
           <div className="flex items-center gap-4 text-xs font-medium bg-white/50 px-3 py-1.5 rounded-full shadow-sm border border-white/50">
             <span className="text-gray-600">Usuário: <b className="text-gray-900">{user.nick}</b></span>
             <div className="h-4 w-px bg-gray-300"></div>
+
+            {user.id !== 'demo_user_id' && !user.googleAccessToken && (
+              <button
+                onClick={handleLinkGoogle}
+                className="flex items-center gap-1.5 px-2 py-0.5 bg-white border border-gray-300 win95-raised hover:bg-gray-50 text-[10px] text-blue-700 font-bold uppercase"
+                title="Vincular sua conta ao Google para usar o Drive"
+              >
+                <Cloud size={12} /> Vincular Google
+              </button>
+            )}
+
             <button onClick={() => setIsInverted(!isInverted)} className="hover:text-blue-600 transition-colors" title="Modo Escuro"><Contrast size={16} /></button>
             <button onClick={handleLogout} className="hover:text-red-600 transition-colors font-bold">Sair</button>
           </div>
