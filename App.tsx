@@ -121,7 +121,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }: any) => {
+      console.log('Sessão Supabase:', session);
       if (session?.user) {
+        console.log('Provider Token:', session.provider_token);
         setUser({
           id: session.user.id,
           nick: session.user.user_metadata.username || session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'Usuário',
@@ -134,6 +136,7 @@ const App: React.FC = () => {
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      console.log('Auth Change:', _event, session);
       if (session?.user) {
         setUser({
           id: session.user.id,
