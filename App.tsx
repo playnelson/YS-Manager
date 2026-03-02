@@ -245,9 +245,10 @@ const App: React.FC = () => {
         }
       });
       if (error) throw error;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao vincular conta Google:', err);
-      alert('Erro ao vincular conta Google. Verifique se o provedor está ativo no Supabase.');
+      const msg = err.message || JSON.stringify(err);
+      alert('Erro ao vincular conta Google [v2]: ' + msg);
     }
   };
 
