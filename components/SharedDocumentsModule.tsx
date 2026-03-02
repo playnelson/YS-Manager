@@ -6,14 +6,10 @@ import { User } from '../types';
 declare global {
     interface Window {
         gapi: any;
-        google: any;
     }
 }
 
 // Configurações do Google Drive API
-// NOTA: Em um app de produção, estas chaves devem vir de variáveis de ambiente
-const CLIENT_ID = '110239908429-dubr8jctefembu0fr898cc3qmtobmhr5.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly';
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
 
 interface DriveFile {
@@ -33,9 +29,7 @@ interface SharedDocumentsModuleProps {
 
 export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ driveFiles, onDriveFilesChange, currentUser }) => {
     const [isGapiLoaded, setIsGapiLoaded] = useState(false);
-    const [isGsiLoaded, setIsGsiLoaded] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [tokenClient, setTokenClient] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -53,34 +47,15 @@ export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ dr
                 if (currentUser?.googleAccessToken) {
                     window.gapi.client.setToken({ access_token: currentUser.googleAccessToken });
                     setIsAuthenticated(true);
+                } else {
+                    setIsAuthenticated(false);
                 }
             } catch (err) {
                 console.error('Erro ao inicializar GAPI:', err);
             }
         };
 
-        const initGsi = () => {
-            try {
-                const client = window.google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: SCOPES,
-                    callback: (response: any) => {
-                        if (response.error !== undefined) {
-                            throw response;
-                        }
-                        setIsAuthenticated(true);
-                        listDriveFiles();
-                    },
-                });
-                setTokenClient(client);
-                setIsGsiLoaded(true);
-            } catch (err) {
-                console.error('Erro ao inicializar GSI:', err);
-            }
-        };
-
         if (window.gapi) initGapi();
-        if (window.google) initGsi();
     }, [currentUser]);
 
     // 2. Chamar listagem quando autenticado
@@ -92,7 +67,7 @@ export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ dr
 
     // 3. Listar Arquivos
     const listDriveFiles = useCallback(async () => {
-        if (!isAuthenticated) return;
+        if (!isAuthenticated || !isGapiLoaded) return;
         setIsLoading(true);
         try {
             const response = await window.gapi.client.drive.files.list({
@@ -103,16 +78,18 @@ export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ dr
             onDriveFilesChange(response.result.files || []);
         } catch (err) {
             console.error('Erro ao listar arquivos do Drive:', err);
+            // Se o token expirou, desloga localmente para forçar novo vínculo
+            if ((err as any).status === 401) {
+                setIsAuthenticated(false);
+            }
         } finally {
             setIsLoading(false);
         }
-    }, [isAuthenticated, onDriveFilesChange]);
+    }, [isAuthenticated, isGapiLoaded, onDriveFilesChange]);
 
-    // 3. Autenticar
+    // 3. Autenticar (Solicita vínculo no App.tsx)
     const handleAuth = () => {
-        if (tokenClient) {
-            tokenClient.requestAccessToken({ prompt: 'consent' });
-        }
+        window.dispatchEvent(new CustomEvent('link-google'));
     };
 
     const formatSize = (bytes?: string) => {
@@ -268,7 +245,7 @@ export const SharedDocumentsModule: React.FC<SharedDocumentsModuleProps> = ({ dr
 
             {/* Footer / Status */}
             <div className="bg-[#c0c0c0] border-t border-gray-400 px-2 py-0.5 text-[9px] text-[#222] flex justify-between uppercase font-bold">
-                <span>Google Drive API: {isGapiLoaded ? 'OK' : '...'} | GIS: {isGsiLoaded ? 'OK' : '...'}</span>
+                <span>Google Drive API: {isGapiLoaded ? 'OK' : '...'}</span>
                 <span>{isAuthenticated ? 'Sessão Ativa' : 'Desconectado'}</span>
             </div>
         </div>
