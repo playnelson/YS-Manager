@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Briefcase, Search, Truck, Settings } from 'lucide-react';
+import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Briefcase, Search, Truck, Settings, Cloud } from 'lucide-react';
 import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState } from './types';
 import { Auth } from './components/Auth';
 import { MessageLinker } from './components/MessageLinker';
@@ -15,6 +15,7 @@ const FlowBuilder = lazy(() => import('./components/FlowBuilder').then(m => ({ d
 const ConsultationModule = lazy(() => import('./components/ConsultationModule').then(m => ({ default: m.ConsultationModule })));
 const WhatsAppTool = lazy(() => import('./components/WhatsAppTool').then(m => ({ default: m.WhatsAppTool })));
 const LogisticsModule = lazy(() => import('./components/LogisticsModule').then(m => ({ default: m.LogisticsModule })));
+const SharedDocumentsModule = lazy(() => import('./components/SharedDocumentsModule').then(m => ({ default: m.SharedDocumentsModule })));
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 const initialLogistics: LogisticsState = { freightTables: [], checklists: [] };
@@ -26,6 +27,7 @@ const DEFAULT_TABS = [
   { id: 'logistics', label: 'Logística', icon: <Truck size={16} /> },
   { id: 'consultas', label: 'Consultas', icon: <Search size={16} /> },
   { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={16} /> },
+  { id: 'shared_docs', label: 'Docs', icon: <Cloud size={16} /> },
 ];
 
 const App: React.FC = () => {
@@ -58,6 +60,7 @@ const App: React.FC = () => {
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | undefined>(undefined);
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [personalFiles, setPersonalFiles] = useState<StoredFile[]>([]);
+  const [driveFiles, setDriveFiles] = useState<any[]>([]);
   const [logisticsData, setLogisticsData] = useState<LogisticsState>(initialLogistics);
 
   const [isSyncing, setIsSyncing] = useState(false);
@@ -329,6 +332,12 @@ const App: React.FC = () => {
           {activeTab === 'logistics' && <LogisticsModule data={logisticsData} onChange={setLogisticsData} />}
           {activeTab === 'consultas' && <ConsultationModule />}
           {activeTab === 'whatsapp' && <WhatsAppTool />}
+          {activeTab === 'shared_docs' && (
+            <SharedDocumentsModule
+              driveFiles={driveFiles}
+              onDriveFilesChange={setDriveFiles}
+            />
+          )}
         </Suspense>
       </main>
 
