@@ -44,7 +44,7 @@ const App: React.FC = () => {
   const [isTabsDropdownOpen, setIsTabsDropdownOpen] = useState(false);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-  
+
   // Estados de Dados
   const [flowData, setFlowData] = useState<FlowState>(initialFlow);
   const [calendarConfig, setCalendarConfig] = useState<CalendarConfig>({ uf: 'SP', city: 'São Paulo' });
@@ -59,7 +59,7 @@ const App: React.FC = () => {
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [personalFiles, setPersonalFiles] = useState<StoredFile[]>([]);
   const [logisticsData, setLogisticsData] = useState<LogisticsState>(initialLogistics);
-  
+
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isInverted, setIsInverted] = useState(() => localStorage.getItem('ysoffice_inverted') === 'true');
@@ -181,7 +181,7 @@ const App: React.FC = () => {
             setHiddenTabs(payload.hiddenTabs || []);
           }
         }
-      } catch (err) { console.error(err); } 
+      } catch (err) { console.error(err); }
       finally { setIsSyncing(false); setIsDataLoaded(true); }
     };
     fetchData();
@@ -217,27 +217,30 @@ const App: React.FC = () => {
   const visibleTabs = tabs.filter(t => !hiddenTabs.includes(t.id));
 
   return (
-    <div className="flex flex-col h-screen bg-win95-bg p-4 font-sans text-gray-800">
-      <div className="flex justify-between items-center px-2 mb-4 shrink-0">
-        <div className="flex items-center gap-4">
-           <button onClick={() => setActiveTab('calendar')} className="flex items-center gap-2 group">
-             <div className="win95-sunken px-3 py-1.5 bg-white flex items-center gap-2 group-hover:border-blue-300 transition-colors">
-               <CalendarIcon size={16} className="text-win95-blue" />
-               <span className="font-semibold text-sm text-gray-700">{getFullDate()}</span>
-             </div>
-           </button>
-           {isSyncing && <RefreshCw size={14} className="animate-spin text-win95-blue" />}
-        </div>
-        <div className="flex items-center gap-4 text-xs font-medium bg-white/50 px-3 py-1.5 rounded-full shadow-sm border border-white/50">
-           <span className="text-gray-600">Usuário: <b className="text-gray-900">{user.nick}</b></span>
-           <div className="h-4 w-px bg-gray-300"></div>
-           <button onClick={() => setIsInverted(!isInverted)} className="hover:text-blue-600 transition-colors" title="Modo Escuro"><Contrast size={16} /></button>
-           <button onClick={handleLogout} className="hover:text-red-600 transition-colors font-bold">Sair</button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-win95-bg font-sans text-gray-800">
 
-      <div className="flex-1 flex flex-col overflow-hidden win95-raised bg-gray-100 shadow-2xl">
-        <div className="flex px-2 pt-2 bg-[#d1d5db] border-b border-gray-300 gap-1 items-end relative shrink-0">
+      {/* ── Navbar fixa no topo ── */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#e0e5ec] border-b border-gray-300 shadow-sm">
+        <div className="flex justify-between items-center px-4 py-2">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setActiveTab('calendar')} className="flex items-center gap-2 group">
+              <div className="win95-sunken px-3 py-1.5 bg-white flex items-center gap-2 group-hover:border-blue-300 transition-colors">
+                <CalendarIcon size={16} className="text-win95-blue" />
+                <span className="font-semibold text-sm text-gray-700">{getFullDate()}</span>
+              </div>
+            </button>
+            {isSyncing && <RefreshCw size={14} className="animate-spin text-win95-blue" />}
+          </div>
+          <div className="flex items-center gap-4 text-xs font-medium bg-white/50 px-3 py-1.5 rounded-full shadow-sm border border-white/50">
+            <span className="text-gray-600">Usuário: <b className="text-gray-900">{user.nick}</b></span>
+            <div className="h-4 w-px bg-gray-300"></div>
+            <button onClick={() => setIsInverted(!isInverted)} className="hover:text-blue-600 transition-colors" title="Modo Escuro"><Contrast size={16} /></button>
+            <button onClick={handleLogout} className="hover:text-red-600 transition-colors font-bold">Sair</button>
+          </div>
+        </div>
+
+        {/* ── Barra de abas (sticky, logo abaixo da navbar) ── */}
+        <div className="flex px-2 bg-[#d1d5db] border-t border-gray-300 gap-1 items-end relative">
           <div className="flex-1 flex overflow-x-auto no-scrollbar gap-1 items-end">
             {visibleTabs.map((tab, index) => (
               <div
@@ -249,12 +252,12 @@ const App: React.FC = () => {
                 onDragOver={(e) => e.preventDefault()}
                 className="relative"
               >
-                <button 
-                  onClick={() => setActiveTab(tab.id)} 
+                <button
+                  onClick={() => setActiveTab(tab.id)}
                   className={`
                     relative flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-t-lg transition-all duration-200 whitespace-nowrap
-                    ${activeTab === tab.id 
-                      ? 'bg-white text-blue-700 shadow-[0_-2px_5px_rgba(0,0,0,0.05)] z-10 -mb-[1px] border-t-2 border-blue-500 pb-2.5' 
+                    ${activeTab === tab.id
+                      ? 'bg-white text-blue-700 shadow-[0_-2px_5px_rgba(0,0,0,0.05)] z-10 -mb-[1px] border-t-2 border-blue-500 pb-2.5'
                       : 'bg-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 border-t-2 border-transparent pb-2 opacity-80 hover:opacity-100'}
                   `}
                 >
@@ -264,7 +267,7 @@ const App: React.FC = () => {
             ))}
           </div>
           <div className="relative">
-            <button 
+            <button
               onClick={() => setIsTabsDropdownOpen(!isTabsDropdownOpen)}
               className="p-2 rounded-t-md hover:bg-gray-200 transition-colors"
               title="Gerenciar abas"
@@ -272,7 +275,7 @@ const App: React.FC = () => {
               <Settings size={16} className="text-gray-600" />
             </button>
             {isTabsDropdownOpen && (
-              <div 
+              <div
                 className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-300 rounded-md shadow-lg z-20 win95-raised p-1"
                 onMouseLeave={() => setIsTabsDropdownOpen(false)}
               >
@@ -281,8 +284,8 @@ const App: React.FC = () => {
                   {DEFAULT_TABS.map(tab => (
                     <li key={tab.id}>
                       <label className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-800 hover:bg-blue-100 rounded-sm cursor-pointer">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           checked={!hiddenTabs.includes(tab.id)}
                           onChange={() => toggleTabVisibility(tab.id)}
                           className="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -296,44 +299,45 @@ const App: React.FC = () => {
             )}
           </div>
         </div>
+      </header>
 
-        <div className="flex-1 overflow-hidden relative bg-white">
-            <div className="absolute inset-0 overflow-auto bg-white">
-              <Suspense fallback={<LoadingPlaceholder />}>
-                {activeTab === 'office' && (
-                  <OfficeModule 
-                    emails={emails} onEmailChange={setEmails}
-                    signatures={signatures} onSignatureChange={setSignatures}
-                    onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
-                    postIts={postIts} onPostItChange={setPostIts}
-                    importantNotes={importantNotes} onNoteChange={setImportantNotes}
-                    handoffs={shiftHandoffs} onHandoffChange={setShiftHandoffs}
-                    currentUser={user} links={links} onLinkChange={setLinks}
-                    extensions={extensions} onExtensionChange={setExtensions}
-                    personalFiles={personalFiles} onFilesChange={setPersonalFiles}
-                  />
-                )}
-                {activeTab === 'calendar' && (
-                  <CalendarModule 
-                    calendarConfig={calendarConfig} onCalendarConfigChange={setCalendarConfig}
-                    events={calendarEvents} onEventsChange={setCalendarEvents}
-                    shiftConfig={shiftConfig} onShiftConfigChange={setShiftConfig}
-                  />
-                )}
-                {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
-                {activeTab === 'logistics' && <LogisticsModule data={logisticsData} onChange={setLogisticsData} />}
-                {activeTab === 'consultas' && <ConsultationModule />}
-                {activeTab === 'whatsapp' && <WhatsAppTool />}
-              </Suspense>
-            </div>
-        </div>
-        
-        <div className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none shrink-0">
-           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.5 - Optimized Engine</span>
-           <DigitalClock />
-           <span>{isDataLoaded ? 'Conectado' : 'Sincronizando...'}</span>
-        </div>
-      </div>
+      {/* ── Conteúdo principal — scroll natural de site ── */}
+      {/* pt-[calc] compensa a navbar (aprox. 88px: header ~48px + tabs ~40px) */}
+      <main className="pt-[88px] win95-raised bg-gray-100 shadow-inner min-h-screen">
+        <Suspense fallback={<LoadingPlaceholder />}>
+          {activeTab === 'office' && (
+            <OfficeModule
+              emails={emails} onEmailChange={setEmails}
+              signatures={signatures} onSignatureChange={setSignatures}
+              onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
+              postIts={postIts} onPostItChange={setPostIts}
+              importantNotes={importantNotes} onNoteChange={setImportantNotes}
+              handoffs={shiftHandoffs} onHandoffChange={setShiftHandoffs}
+              currentUser={user} links={links} onLinkChange={setLinks}
+              extensions={extensions} onExtensionChange={setExtensions}
+              personalFiles={personalFiles} onFilesChange={setPersonalFiles}
+            />
+          )}
+          {activeTab === 'calendar' && (
+            <CalendarModule
+              calendarConfig={calendarConfig} onCalendarConfigChange={setCalendarConfig}
+              events={calendarEvents} onEventsChange={setCalendarEvents}
+              shiftConfig={shiftConfig} onShiftConfigChange={setShiftConfig}
+            />
+          )}
+          {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
+          {activeTab === 'logistics' && <LogisticsModule data={logisticsData} onChange={setLogisticsData} />}
+          {activeTab === 'consultas' && <ConsultationModule />}
+          {activeTab === 'whatsapp' && <WhatsAppTool />}
+        </Suspense>
+      </main>
+
+      {/* ── Rodapé ── */}
+      <footer className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none">
+        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.5 - Optimized Engine</span>
+        <DigitalClock />
+        <span>{isDataLoaded ? 'Conectado' : 'Sincronizando...'}</span>
+      </footer>
     </div>
   );
 };

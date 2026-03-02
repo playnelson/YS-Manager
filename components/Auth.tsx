@@ -1,15 +1,15 @@
 
 import React, { useState } from 'react';
-import { 
-  IconUser, 
-  IconLock, 
-  IconKey, 
-  IconHelp, 
-  IconUserPlus, 
-  IconLogin, 
-  IconLoader2, 
-  IconMail, 
-  IconBrandGoogle 
+import {
+  IconUser,
+  IconLock,
+  IconKey,
+  IconHelp,
+  IconUserPlus,
+  IconLogin,
+  IconLoader2,
+  IconMail,
+  IconBrandGoogle
 } from '@tabler/icons-react';
 import { User } from '../types';
 import { supabase } from '../supabase';
@@ -56,7 +56,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     setError('');
     setSuccessMsg('');
     setLoading(true);
-    
+
     // Pequeno delay para feedback visual
     await new Promise(r => setTimeout(r, 300));
 
@@ -131,25 +131,25 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         <div className="px-4 pb-4">
           <div className="flex gap-4 mb-4">
             <div className="pt-2">
-               {isRegistering ? (
-                 <IconMail size={48} className="text-[#808080]" strokeWidth={1.5} />
-               ) : (
-                 <IconKey size={48} className="text-[#808080]" strokeWidth={1.5} />
-               )}
+              {isRegistering ? (
+                <IconMail size={48} className="text-[#808080]" strokeWidth={1.5} />
+              ) : (
+                <IconKey size={48} className="text-[#808080]" strokeWidth={1.5} />
+              )}
             </div>
             <div className="flex-1">
               <p className="text-sm mb-4 text-black">
-                {isRegistering 
-                  ? 'Informe seu e-mail real para receber o link de confirmação.' 
+                {isRegistering
+                  ? 'Informe seu e-mail real para receber o link de confirmação.'
                   : 'Digite suas credenciais para entrar.'}
               </p>
-              
+
               {error && (
                 <div className="mb-3 px-2 py-1 bg-[#ff0000] text-white text-xs font-bold text-center border border-white shadow-md">
                   {error}
                 </div>
               )}
-              
+
               {successMsg && (
                 <div className="mb-3 px-2 py-1 bg-[#008000] text-white text-xs font-bold text-center border border-white shadow-md">
                   {successMsg}
@@ -160,7 +160,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 {isRegistering && (
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-black">Nome de Exibição:</label>
-                    <input 
+                    <input
                       type="text"
                       disabled={loading}
                       required={isRegistering}
@@ -174,7 +174,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-black">E-mail:</label>
-                  <input 
+                  <input
                     type="email"
                     disabled={loading}
                     required
@@ -188,7 +188,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-black">Senha:</label>
-                  <input 
+                  <input
                     type="password"
                     disabled={loading}
                     required
@@ -201,57 +201,57 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 </div>
 
                 <div className="flex flex-col gap-2 pt-4">
-                    <Button type="submit" disabled={loading} className="w-full">
-                       {loading ? <IconLoader2 className="animate-spin" size={14} /> : (isRegistering ? 'CADASTRAR COM E-MAIL' : 'ENTRAR COM E-MAIL')}
-                    </Button>
-                    
-                    {!isRegistering && (
-                      <button 
-                        type="button"
-                        onClick={handleGoogleLogin}
-                        disabled={loading}
-                        className="w-full win95-raised bg-white p-2 flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors border border-gray-400"
-                      >
-                        <IconBrandGoogle size={16} className="text-[#4285F4]" />
-                        <span className="text-xs font-bold text-black uppercase">Entrar com Google</span>
-                      </button>
-                    )}
+                  <Button type="submit" disabled={loading} className="w-full">
+                    {loading ? <IconLoader2 className="animate-spin" size={14} /> : (isRegistering ? 'CADASTRAR COM E-MAIL' : 'ENTRAR COM E-MAIL')}
+                  </Button>
+
+                  {!isRegistering && (
+                    <button
+                      type="button"
+                      onClick={handleGoogleLogin}
+                      disabled={loading}
+                      className="w-full win95-raised bg-white p-2 flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors border border-gray-400"
+                    >
+                      <IconBrandGoogle size={16} className="text-[#4285F4]" />
+                      <span className="text-xs font-bold text-black uppercase">Entrar com Google</span>
+                    </button>
+                  )}
                 </div>
               </form>
             </div>
           </div>
-          
+
           <div className="border-t border-[#808080] border-b border-white my-2 h-0" />
-          
+
           <div className="flex flex-col gap-2 pt-1">
-             <div className="flex justify-between items-center">
-               <button 
+            <div className="flex justify-between items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegistering(!isRegistering);
+                  setError('');
+                  setSuccessMsg('');
+                  setPassword('');
+                }}
+                className="text-xs font-bold text-[#000080] hover:underline focus:outline-dotted flex items-center gap-1"
+              >
+                {isRegistering ? (
+                  <><IconLogin size={12} /> Já tenho conta</>
+                ) : (
+                  <><IconUserPlus size={12} /> Criar conta com E-mail</>
+                )}
+              </button>
+
+              {!isRegistering && (
+                <button
                   type="button"
-                  onClick={() => {
-                    setIsRegistering(!isRegistering);
-                    setError('');
-                    setSuccessMsg('');
-                    setPassword('');
-                  }}
-                  className="text-xs font-bold text-[#000080] hover:underline focus:outline-dotted flex items-center gap-1"
-               >
-                  {isRegistering ? (
-                    <><IconLogin size={12}/> Já tenho conta</>
-                  ) : (
-                    <><IconUserPlus size={12}/> Criar conta com E-mail</>
-                  )}
-               </button>
-               
-               {!isRegistering && (
-                 <button 
-                    type="button"
-                    onClick={() => onLogin({ id: 'demo_user_id', nick: 'Visitante' })}
-                    className="text-xs text-[#555] hover:text-black hover:underline"
-                 >
-                    Acesso Demo
-                 </button>
-               )}
-             </div>
+                  onClick={() => onLogin({ id: 'demo_user_id', nick: 'Visitante' })}
+                  className="text-xs text-[#555] hover:text-black hover:underline"
+                >
+                  Acesso Demo
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

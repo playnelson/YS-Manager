@@ -1,16 +1,16 @@
 
 import React, { useState } from 'react';
-import { 
-  IconMail, 
-  IconFileSearch, 
-  IconNote, 
-  IconClipboardList, 
-  IconPhone, 
-  IconGlobe, 
-  IconFileText, 
-  IconWriting, 
-  IconFolder, 
-  IconCalculator 
+import {
+  IconMail,
+  IconFileSearch,
+  IconNote,
+  IconClipboardList,
+  IconPhone,
+  IconGlobe,
+  IconFileText,
+  IconWriting,
+  IconFolder,
+  IconCalculator
 } from '@tabler/icons-react';
 import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile } from '../types';
 import { EmailManager } from './EmailManager';
@@ -48,12 +48,12 @@ interface OfficeModuleProps {
 type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'emails';
 
 const NavTab = ({ id, label, icon, activeSubTab, onClick }: { id: SubTab, label: string, icon: React.ReactNode, activeSubTab: SubTab, onClick: (id: SubTab) => void }) => (
-  <button 
-    onClick={() => onClick(id)} 
+  <button
+    onClick={() => onClick(id)}
     className={`
       flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase transition-all border-t-2 border-l-2 border-r-2 rounded-t-md whitespace-nowrap
-      ${activeSubTab === id 
-        ? 'bg-win95-bg border-white border-b-win95-bg relative z-10 -mb-[2px] text-blue-800 shadow-sm' 
+      ${activeSubTab === id
+        ? 'bg-win95-bg border-white border-b-win95-bg relative z-10 -mb-[2px] text-blue-800 shadow-sm'
         : 'bg-[#c0c0c0] border-gray-400 text-gray-600 hover:bg-[#d0d0d0]'}
     `}
   >
@@ -77,7 +77,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('mural');
 
   return (
-    <div className="h-full flex flex-col gap-0 overflow-hidden bg-[#c0c0c0]">
+    <div className="flex flex-col gap-0 bg-[#c0c0c0] min-h-screen">
       <div className="flex gap-1 shrink-0 px-2 pt-2 border-b border-white overflow-x-auto no-scrollbar scroll-smooth">
         <NavTab id="mural" label="Mural" icon={<IconNote size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
         <NavTab id="notes" label="Anotações" icon={<IconFileText size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
@@ -93,50 +93,50 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
         <NavTab id="emails" label="E-mails" icon={<IconMail size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
       </div>
 
-      <div className="flex-1 win95-sunken bg-white overflow-hidden border-2 border-white">
-        <div className="h-full w-full bg-win95-bg">
-            {activeSubTab === 'mural' && (
-                <StickyNotesWall notes={postIts} onChange={onPostItChange} />
-            )}
-            {activeSubTab === 'notes' && (
-                <ImportantNotes notes={importantNotes} onChange={onNoteChange} />
-            )}
-            {activeSubTab === 'handoff' && (
-                <ShiftHandoffModule handoffs={handoffs} onChange={onHandoffChange} currentUser={currentUser} />
-            )}
-            {activeSubTab === 'directory' && (
-                <ProfessionalLinks links={links} onChange={onLinkChange} />
-            )}
-            {activeSubTab === 'extensions' && (
-                <ExtensionsDirectory extensions={extensions} onChange={onExtensionChange} />
-            )}
-            {activeSubTab === 'arquivos' && (
-                <PersonalFileManager files={personalFiles} onChange={onFilesChange} />
-            )}
-            {activeSubTab === 'gerador' && (
-                <DocumentGenerator />
-            )}
-            {activeSubTab === 'assinador' && (
-                <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />
-            )}
-            {activeSubTab === 'precificacao' && (
-                <PricingCalculator />
-            )}
-            {activeSubTab === 'emails' && (
-                <EmailManager emails={emails} onChange={onEmailChange} />
-            )}
+      <div className="win95-sunken bg-white border-2 border-white">
+        <div className="w-full bg-win95-bg">
+          {activeSubTab === 'mural' && (
+            <StickyNotesWall notes={postIts} onChange={onPostItChange} />
+          )}
+          {activeSubTab === 'notes' && (
+            <ImportantNotes notes={importantNotes} onChange={onNoteChange} />
+          )}
+          {activeSubTab === 'handoff' && (
+            <ShiftHandoffModule handoffs={handoffs} onChange={onHandoffChange} currentUser={currentUser} />
+          )}
+          {activeSubTab === 'directory' && (
+            <ProfessionalLinks links={links} onChange={onLinkChange} />
+          )}
+          {activeSubTab === 'extensions' && (
+            <ExtensionsDirectory extensions={extensions} onChange={onExtensionChange} />
+          )}
+          {activeSubTab === 'arquivos' && (
+            <PersonalFileManager files={personalFiles} onChange={onFilesChange} />
+          )}
+          {activeSubTab === 'gerador' && (
+            <DocumentGenerator />
+          )}
+          {activeSubTab === 'assinador' && (
+            <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />
+          )}
+          {activeSubTab === 'precificacao' && (
+            <PricingCalculator />
+          )}
+          {activeSubTab === 'emails' && (
+            <EmailManager emails={emails} onChange={onEmailChange} />
+          )}
         </div>
       </div>
 
       <div className="px-2 py-1 bg-win95-bg border-t border-white text-[9px] font-bold text-gray-500 uppercase flex justify-between items-center italic select-none shrink-0">
         <div className="flex gap-4">
-           <span>Sessão: {activeSubTab.toUpperCase()}</span>
-           <span>•</span>
-           <span>Brain Office v2.7</span>
+          <span>Sessão: {activeSubTab.toUpperCase()}</span>
+          <span>•</span>
+          <span>Brain Office v2.7</span>
         </div>
         <div className="flex gap-4">
-           <span>Documentos: {personalFiles.length}</span>
-           <span>Contatos: {extensions.length}</span>
+          <span>Documentos: {personalFiles.length}</span>
+          <span>Contatos: {extensions.length}</span>
         </div>
       </div>
     </div>
