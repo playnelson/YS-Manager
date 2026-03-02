@@ -1,7 +1,13 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Cloud, Download, RefreshCw, File, LogIn, ExternalLink, Trash2, Search, Filter } from 'lucide-react';
 import { Button } from './ui/Button';
+
+declare global {
+    interface Window {
+        gapi: any;
+        google: any;
+    }
+}
 
 // Configurações do Google Drive API
 // NOTA: Em um app de produção, estas chaves devem vir de variáveis de ambiente
