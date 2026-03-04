@@ -120,7 +120,16 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }: any) => {
+    // Força atualização da sessão no carregamento para capturar o provider_token do Google
+    // após o redirecionamento do linkIdentity.
+    const refreshAndGetSession = async () => {
+      try {
+        await supabase.auth.refreshSession();
+      } catch (e) {
+        console.error("Erro ao fazer refresh da sessão:", e);
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
       console.log('Sessão Supabase:', session);
       if (session?.user) {
         console.log('Provider Token:', session.provider_token);
@@ -134,7 +143,10 @@ const App: React.FC = () => {
         const demoSession = localStorage.getItem('ysoffice_demo_session');
         if (demoSession) setUser(JSON.parse(demoSession));
       }
-    });
+    };
+
+    refreshAndGetSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       console.log('Auth Change:', _event, session);
       if (session?.user) {
