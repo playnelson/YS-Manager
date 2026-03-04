@@ -236,7 +236,10 @@ const App: React.FC = () => {
 
   const handleLinkGoogle = async () => {
     try {
-      const { error } = await supabase.auth.linkIdentity({
+      console.log('🔴 Iniciando vinculação com o Google...');
+      // alert('Iniciando vinculação com conta Google...'); // Opcional, ajudaria a debugar
+
+      const { data, error } = await supabase.auth.linkIdentity({
         provider: 'google',
         options: {
           queryParams: {
@@ -247,7 +250,14 @@ const App: React.FC = () => {
           redirectTo: window.location.origin
         }
       });
+
+      console.log('🔴 Resultado da vinculação:', data, error);
+
       if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
     } catch (err: any) {
       console.error('Erro ao vincular conta Google:', err);
       const msg = err.message || JSON.stringify(err);
