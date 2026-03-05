@@ -71,11 +71,11 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
     : SUB_TABS;
 
   return (
-    <div className="flex flex-col h-full bg-gray-100 dark:bg-black/20">
+    <div className="flex flex-col h-full bg-palette-mediumLight dark:bg-[#111111]">
 
       {/* ── Sub-tabs pill bar ── */}
       <div
-        className="px-6 py-3 flex gap-2 overflow-x-auto border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 flex-shrink-0"
+        className="px-6 py-3 flex gap-2 overflow-x-auto border-b border-palette-mediumDark dark:border-gray-800 bg-palette-lightest dark:bg-gray-900 flex-shrink-0"
         style={{ scrollbarWidth: 'none' }}
       >
         {allSubTabs.map(tab => (
@@ -83,8 +83,8 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
             key={tab.id}
             onClick={() => setActiveSubTab(tab.id)}
             className={`px-4 py-1.5 text-[11px] font-semibold rounded-full whitespace-nowrap uppercase tracking-wide transition-all ${activeSubTab === tab.id
-                ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700'
+              ? 'bg-palette-darkest dark:bg-white text-white dark:text-gray-900 shadow-sm'
+              : 'text-palette-darkest/70 dark:text-gray-400 hover:bg-palette-mediumLight dark:hover:bg-gray-800 border border-transparent hover:border-palette-mediumDark dark:hover:border-gray-700'
               }`}
           >
             {tab.label}
@@ -108,7 +108,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
       </div>
 
       {/* ── Footer status bar ── */}
-      <div className="h-10 px-6 flex items-center justify-between bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
+      <div className="h-10 px-6 flex items-center justify-between bg-palette-mediumLight/50 dark:bg-gray-900 border-t border-palette-mediumDark dark:border-gray-800 flex-shrink-0">
         <div className="flex items-center gap-4 text-[10px] text-gray-500 font-medium">
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>

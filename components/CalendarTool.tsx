@@ -14,15 +14,15 @@ import {
   IconCake,
   IconTarget,
   IconSun,
-  IconMoon,
   IconCoffee,
   IconClock,
   IconBrandGoogle,
   IconArrowRight,
   IconSparkles
 } from '@tabler/icons-react';
-import { CalendarConfig, Holiday, UserEvent, ShiftConfig } from '../types';
+import { CalendarConfig, Holiday, UserEvent, ShiftConfig, MoonPhase } from '../types';
 import { Button } from './ui/Button';
+import { Moon as LucideMoon, MoonStar as LucideMoonStar } from 'lucide-react';
 
 interface CalendarToolProps {
   config: CalendarConfig;
@@ -48,6 +48,14 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
   const [selectedDayStr, setSelectedDayStr] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState<Partial<UserEvent>>({ title: '', type: 'reminder' });
+  const [moonPhases, setMoonPhases] = useState<MoonPhase[]>([]);
+  const [seasonalDates, setSeasonalDates] = useState<Holiday[]>([]);
+  const [filters, setFilters] = useState({
+    holidays: true,
+    commemorative: true,
+    moon: true,
+    shifts: true
+  });
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -67,25 +75,105 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
     return dates;
   };
 
+  // --- Astronomical Logic ---
+  const calculateMoonPhases = (y: number, m: number) => {
+    const phases: MoonPhase[] = [];
+    const firstDay = new Date(y, m, 1);
+    const lastDay = new Date(y, m + 1, 0);
+
+    // Known New Moon: 2024-01-11T11:57:00
+    const refNewMoon = new Date('2024-01-11T11:57:00Z').getTime();
+    const synodicMonth = 29.530588 * 24 * 60 * 60 * 1000;
+
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      const date = new Date(y, m, d);
+      const diff = date.getTime() - refNewMoon;
+      const age = (diff % synodicMonth) / synodicMonth;
+
+      const dateStr = date.toISOString().split('T')[0];
+
+      // We look for the 4 main phases by checking if the exact point falls within this day
+      // A more robust way is to check if it crossed 0, 0.25, 0.5, 0.75 relative to previous day
+      const prevDate = new Date(y, m, d - 1);
+      const prevAge = ((prevDate.getTime() - refNewMoon) % synodicMonth) / synodicMonth;
+
+      const checkPhase = (target: number, phaseName: MoonPhase['phase'], label: string) => {
+        if ((prevAge < target && age >= target) || (prevAge > age && (prevAge < target || age >= target))) {
+          phases.push({ date: dateStr, phase: phaseName, name: label });
+        }
+      };
+
+      checkPhase(0, 'new', 'Lua Nova');
+      checkPhase(0.25, 'first-quarter', 'Quarto Crescente');
+      checkPhase(0.5, 'full', 'Lua Cheia');
+      checkPhase(0.75, 'last-quarter', 'Quarto Minguante');
+    }
+    setMoonPhases(phases);
+  };
+
   const fetchHolidays = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`);
+      // 1. Brasil API (Nacionais)
+      const resBH = await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`);
       let apiHolidays: Holiday[] = [];
-      if (response.ok) {
-        const apiData = await response.json();
-        apiHolidays = Array.isArray(apiData) ? apiData.map((h: any) => ({ date: h.date, name: h.name, type: 'national' })) : [];
+      if (resBH.ok) {
+        const data = await resBH.json();
+        apiHolidays = data.map((h: any) => ({ date: h.date, name: h.name, type: 'national' }));
       }
+
+      // 2. Seasonal / Commemorative
+      const seasonal: Holiday[] = [
+        { date: `${year}-03-08`, name: 'Dia Internacional da Mulher', type: 'commemorative' },
+        { date: `${year}-03-20`, name: 'Início do Outono', type: 'commemorative' },
+        { date: `${year}-04-19`, name: 'Dia dos Povos Indígenas', type: 'commemorative' },
+        { date: `${year}-05-10`, name: 'Dia das Mães', type: 'commemorative' },
+        { date: `${year}-06-12`, name: 'Dia dos Namorados', type: 'commemorative' },
+        { date: `${year}-06-21`, name: 'Início do Inverno', type: 'commemorative' },
+        { date: `${year}-08-09`, name: 'Dia dos Pais', type: 'commemorative' },
+        { date: `${year}-08-11`, name: 'Dia do Estudante', type: 'commemorative' },
+        { date: `${year}-09-22`, name: 'Início da Primavera', type: 'commemorative' },
+        { date: `${year}-10-15`, name: 'Dia do Professor', type: 'commemorative' },
+        { date: `${year}-10-28`, name: 'Dia do Servidor Público', type: 'optional' },
+        { date: `${year}-11-20`, name: 'Dia da Consciência Negra', type: 'national' },
+        { date: `${year}-12-21`, name: 'Início do Verão', type: 'commemorative' },
+        { date: `${year}-12-24`, name: 'Véspera de Natal', type: 'optional' },
+        { date: `${year}-12-31`, name: 'Véspera de Ano Novo', type: 'optional' },
+      ];
+
+      // 3. Historical Events (Simulated)
+      const historical: Holiday[] = [
+        { date: `${year}-04-22`, name: 'Descobrimento do Brasil (1500)', type: 'commemorative' },
+        { date: `${year}-05-13`, name: 'Abolição da Escravidão (1888)', type: 'commemorative' },
+        { date: `${year}-07-09`, name: 'Rev. Constitucionalista (SP)', type: 'state' },
+      ];
+
+      // 3. State Holidays (Simulated/Local DB)
       const stateHolidaysRaw = STATE_HOLIDAYS_DB[config.uf] || [];
       const stateHolidays: Holiday[] = stateHolidaysRaw.map(sh => ({
         date: `${year}-${String(sh.month).padStart(2, '0')}-${String(sh.day).padStart(2, '0')}`,
         name: sh.name,
         type: 'state'
       }));
+
       const dynamicHolidays = calculateDynamicDates(year);
+
       const finalHolidays: Holiday[] = [...apiHolidays];
-      stateHolidays.forEach(sh => { if (!finalHolidays.some(fh => fh.date === sh.date)) finalHolidays.push(sh); });
-      dynamicHolidays.forEach(dh => { if (!finalHolidays.some(fh => fh.date === dh.date || fh.name.toLowerCase().includes(dh.name.toLowerCase()))) finalHolidays.push(dh); });
+
+      // Merge unique
+      const merge = (list: Holiday[]) => {
+        list.forEach(item => {
+          if (!finalHolidays.some(fh => fh.date === item.date && fh.name === item.name)) {
+            finalHolidays.push(item);
+          }
+        });
+      };
+
+      merge(stateHolidays);
+      merge(dynamicHolidays);
+      merge(seasonal);
+      merge(historical);
+
       setHolidays(finalHolidays);
     } catch (e) {
       setHolidays(calculateDynamicDates(year));
@@ -94,7 +182,10 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
     }
   };
 
-  useEffect(() => { fetchHolidays(); }, [year, config.uf]);
+  useEffect(() => {
+    fetchHolidays();
+    calculateMoonPhases(year, month);
+  }, [year, month, config.uf]);
 
   // --- Projected Shift Projection Logic ---
   const projectedShifts = useMemo(() => {
@@ -149,11 +240,12 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
         date: dateStr,
         holidays: holidays.filter(h => h.date === dateStr),
         userEvents: events.filter(e => e.date === dateStr),
-        shift: projectedShifts.get(dateStr)
+        shift: projectedShifts.get(dateStr),
+        moon: moonPhases.find(m => m.date === dateStr)
       });
     }
     return days;
-  }, [year, month, holidays, events, projectedShifts]);
+  }, [year, month, holidays, events, projectedShifts, moonPhases]);
 
   const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,6 +274,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
       hols: dayObj?.holidays || [],
       evs: dayObj?.userEvents || [],
       shift: dayObj?.shift,
+      moon: dayObj?.moon,
       day: dayObj?.day
     };
   }, [selectedDayStr, daysInMonth]);
@@ -198,12 +291,12 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
   const isToday = (dateStr: string) => new Date().toISOString().split('T')[0] === dateStr;
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
+    <div className="h-full flex flex-col bg-palette-lightest dark:bg-[#111111] overflow-hidden">
       {/* Premium Header Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4 shadow-sm z-20">
+      <div className="bg-palette-lightest dark:bg-gray-900 border-b border-palette-mediumDark dark:border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 shadow-sm z-20">
         <div className="flex items-center gap-6">
           <div className="flex flex-col">
-            <h1 className="text-2xl font-black italic tracking-tighter text-blue-900 uppercase">
+            <h1 className="text-2xl font-black italic tracking-tighter text-blue-900 dark:text-blue-400 uppercase">
               Calendário
             </h1>
             <div className="flex items-center gap-2 mt-0.5">
@@ -214,19 +307,19 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
             </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg win95-sunken">
+          <div className="flex items-center gap-1 bg-palette-mediumLight dark:bg-gray-800 p-1 rounded-lg win95-sunken">
             <button
               onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-              className="p-1.5 hover:bg-white rounded-md transition-all text-gray-600 hover:text-blue-600 active:scale-95"
+              className="p-1.5 hover:bg-palette-lightest rounded-md transition-all text-gray-600 hover:text-blue-600 active:scale-95"
             >
               <IconChevronLeft size={18} />
             </button>
-            <div className="px-4 font-black text-sm text-blue-900 min-w-[150px] text-center uppercase tracking-wide">
+            <div className="px-4 font-black text-sm text-blue-900 dark:text-blue-400 min-w-[150px] text-center uppercase tracking-wide">
               {monthNames[month]} {year}
             </div>
             <button
               onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-              className="p-1.5 hover:bg-white rounded-md transition-all text-gray-600 hover:text-blue-600 active:scale-95"
+              className="p-1.5 hover:bg-palette-lightest rounded-md transition-all text-gray-600 hover:text-blue-600 active:scale-95"
             >
               <IconChevronRight size={18} />
             </button>
@@ -234,6 +327,30 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
         </div>
 
         <div className="flex items-center gap-4">
+          <div className="flex gap-2 bg-palette-lightest/50 dark:bg-gray-800/50 backdrop-blur-sm p-1 rounded-xl win95-sunken mr-4">
+            <button
+              onClick={() => setFilters(f => ({ ...f, moon: !f.moon }))}
+              className={`p-1.5 rounded-lg transition-all ${filters.moon ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400'}`}
+              title="Fases da Lua"
+            >
+              <LucideMoon size={16} />
+            </button>
+            <button
+              onClick={() => setFilters(f => ({ ...f, holidays: !f.holidays }))}
+              className={`p-1.5 rounded-lg transition-all ${filters.holidays ? 'bg-red-500 text-white shadow-md' : 'text-gray-400'}`}
+              title="Feriados"
+            >
+              <IconTarget size={16} />
+            </button>
+            <button
+              onClick={() => setFilters(f => ({ ...f, shifts: !f.shifts }))}
+              className={`p-1.5 rounded-lg transition-all ${filters.shifts ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400'}`}
+              title="Escala de Trabalho"
+            >
+              <IconClock size={16} />
+            </button>
+          </div>
+
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase">
               <select
@@ -243,7 +360,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
               >
                 {UFS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
               </select>
-              <div className="w-1 h-1 rounded-full bg-gray-300"></div>
+              <div className="w-1 h-1 rounded-full bg-palette-mediumDark"></div>
               {isLoading ? (
                 <div className="flex items-center gap-1 text-blue-600">
                   <IconLoader2 size={12} className="animate-spin" /> Sincronizando
@@ -266,13 +383,13 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
 
       <div className="flex-1 flex overflow-hidden">
         {/* Main Grid Area */}
-        <div className="flex-1 overflow-y-auto p-4 bg-[#f4f7f9] custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 bg-palette-mediumLight dark:bg-black/30 custom-scrollbar">
           <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
             {/* Weekdays indicator */}
             <div className="grid grid-cols-7 gap-4 mb-2">
               {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map(d => (
-                <div key={d} className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-center">
+                <div key={d} className="text-[10px] font-black text-palette-darkest/40 uppercase tracking-[0.2em] text-center">
                   {d.substring(0, 3)}
                 </div>
               ))}
@@ -295,17 +412,17 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                     key={dayObj.date}
                     onClick={() => setSelectedDayStr(dayObj.date)}
                     className={`
-                      min-h-[120px] rounded-2xl p-3 flex flex-col transition-all cursor-pointer group shadow-sm
+                      min-h-[120px] rounded-2xl p-3 flex flex-col transition-all cursor-pointer group shadow-sm relative
                       ${isSel
-                        ? 'bg-white ring-2 ring-blue-500 -translate-y-1 shadow-xl z-10'
-                        : 'bg-white/80 hover:bg-white hover:-translate-y-0.5 hover:shadow-lg'}
-                      ${isTodayDate ? 'border-2 border-dashed border-blue-400' : 'border border-gray-100'}
+                        ? 'bg-palette-lightest dark:bg-gray-800 ring-2 ring-blue-500 -translate-y-1 shadow-xl z-10'
+                        : 'bg-palette-lightest/80 dark:bg-gray-900/60 hover:bg-palette-lightest dark:hover:bg-gray-800 hover:-translate-y-0.5 hover:shadow-lg'}
+                      ${isTodayDate ? 'border-2 border-dashed border-blue-400' : 'border border-palette-mediumLight dark:border-gray-800'}
                     `}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <span className={`
                           text-lg font-black italic tracking-tighter
-                          ${isSel || isTodayDate ? 'text-blue-600' : (isWeekend ? 'text-red-300' : 'text-gray-900')}
+                          ${isSel || isTodayDate ? 'text-blue-600 dark:text-blue-400' : (isWeekend ? 'text-red-300 dark:text-red-500/50' : 'text-palette-darkest dark:text-gray-100')}
                         `}>
                         {dayObj.day}
                       </span>
@@ -318,22 +435,35 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                     </div>
 
                     <div className="flex-1 space-y-1.5 overflow-hidden">
+                      {/* Lua */}
+                      {dayObj.moon && filters.moon && (
+                        <div className="absolute top-2 right-2 opacity-60">
+                          {dayObj.moon.phase === 'full' ? <LucideMoonStar size={14} className="text-yellow-500 fill-yellow-500" /> : <LucideMoon size={12} className="text-slate-300 fill-slate-300" />}
+                        </div>
+                      )}
+
                       {/* Indicador de Turno mais visual */}
-                      {shift && (
+                      {shift && filters.shifts && (
                         <div className={`
                              px-2 py-1 rounded-lg flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter
                              ${isWork
                             ? (isNight ? 'bg-indigo-50 text-indigo-700' : 'bg-blue-50 text-blue-700')
-                            : 'bg-gray-50 text-gray-400'}
+                            : 'bg-palette-mediumLight text-palette-darkest/40'}
                            `}>
-                          {isWork ? (isNight ? <IconMoon size={10} /> : <IconSun size={10} />) : <IconCoffee size={10} />}
+                          {isWork ? (isNight ? <LucideMoon size={10} /> : <IconSun size={10} />) : <IconCoffee size={10} />}
                           <span className="truncate">{isWork ? `${shift.startTime} - ${shift.endTime}` : 'Folga'}</span>
                         </div>
                       )}
 
-                      {/* Feriados */}
-                      {dayObj.holidays.map((h, idx) => (
-                        <div key={idx} className="px-2 py-0.5 bg-red-500 text-white text-[8px] font-black uppercase tracking-wider rounded group-hover:bg-red-600 flex items-center gap-1">
+                      {/* Feriados e Datas Comemorativas */}
+                      {dayObj.holidays.filter(h => filters.holidays || h.type === 'commemorative').map((h, idx) => (
+                        <div
+                          key={idx}
+                          className={`
+                            px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded flex items-center gap-1
+                            ${h.type === 'commemorative' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-red-500 text-white'}
+                          `}
+                        >
                           <IconTarget size={8} />
                           <span className="truncate">{h.name}</span>
                         </div>
@@ -353,7 +483,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
 
                     {dayObj.userEvents.length > 2 && (
                       <div className="mt-1 text-right">
-                        <span className="text-[8px] font-bold text-gray-400 uppercase">+{dayObj.userEvents.length - 2} Eventos</span>
+                        <span className="text-[8px] font-bold text-palette-darkest/40 uppercase">+{dayObj.userEvents.length - 2} Eventos</span>
                       </div>
                     )}
                   </div>
@@ -368,7 +498,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                 <span className="text-[10px] font-black uppercase tracking-widest">Trabalho</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                <div className="w-2 h-2 rounded-full bg-palette-mediumDark"></div>
                 <span className="text-[10px] font-black uppercase tracking-widest">Folga</span>
               </div>
               <div className="flex items-center gap-2">
@@ -380,22 +510,22 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
         </div>
 
         {/* Premium Detail Sidebar */}
-        <div className="w-96 bg-white border-l border-gray-200 flex flex-col shadow-2xl z-10 transition-all duration-300 transform">
-          <div className="p-6 border-b border-gray-100">
+        <div className="w-96 bg-palette-lightest dark:bg-gray-900 border-l border-palette-mediumDark dark:border-gray-800 flex flex-col shadow-2xl z-10 transition-all duration-300 transform">
+          <div className="p-6 border-b border-palette-mediumLight">
             <div className="flex flex-col">
               <span className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1">
                 Compromissos
               </span>
-              <h2 className="text-2xl font-black text-gray-900 leading-tight">
+              <h2 className="text-2xl font-black text-palette-darkest dark:text-white leading-tight">
                 {new Date(selectedDayStr + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
               </h2>
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+              <span className="text-xs font-bold text-palette-darkest/40 uppercase tracking-widest">
                 {new Date(selectedDayStr + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long' })}
               </span>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-gray-50/50">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-palette-mediumLight/50 dark:bg-black/20">
 
             {/* Visual Shift Card */}
             {selectedData.shift && (
@@ -405,12 +535,12 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                   ? (parseInt(selectedData.shift.startTime?.split(':')[0] || '0') >= 18
                     ? 'bg-gradient-to-br from-indigo-900 to-slate-900 text-white'
                     : 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white')
-                  : 'bg-white border border-gray-100 text-gray-400'}
+                  : 'bg-palette-lightest dark:bg-gray-900 border border-palette-mediumLight dark:border-gray-800 text-palette-darkest/40'}
                     `}>
                 <div className="flex justify-between items-start mb-6">
                   <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl">
                     {selectedData.shift.type === 'work'
-                      ? (parseInt(selectedData.shift.startTime?.split(':')[0] || '0') >= 18 ? <IconMoon size={24} /> : <IconSun size={24} />)
+                      ? (parseInt(selectedData.shift.startTime?.split(':')[0] || '0') >= 18 ? <LucideMoon size={24} /> : <IconSun size={24} />)
                       : <IconCoffee size={24} />}
                   </div>
                   <span className="text-[10px] font-black uppercase px-3 py-1 bg-white/10 rounded-full tracking-widest">
@@ -428,45 +558,68 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                     </div>
                   </div>
                 ) : (
-                  <div className="text-lg font-black text-gray-800 italic uppercase">Dia de Folga</div>
+                  <div className="text-lg font-black text-palette-darkest/80 italic uppercase">Dia de Folga</div>
                 )}
+              </div>
+            )}
+
+            {/* Lua no Sidebar */}
+            {selectedData.moon && filters.moon && (
+              <div className="bg-slate-900 rounded-3xl p-4 flex items-center gap-4 text-white border border-slate-800 shadow-xl overflow-hidden relative">
+                <div className="absolute -right-4 -top-4 opacity-10">
+                  <LucideMoon size={80} />
+                </div>
+                <div className={`p-3 rounded-2xl ${selectedData.moon.phase === 'full' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/10 text-slate-300'}`}>
+                  {selectedData.moon.phase === 'full' ? <LucideMoonStar size={24} /> : <LucideMoon size={24} />}
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase opacity-60 block">Fase Lunar</span>
+                  <span className="text-lg font-black italic tracking-tighter">{selectedData.moon.name}</span>
+                </div>
               </div>
             )}
 
             {/* Empty State */}
             {selectedData.hols.length === 0 && selectedData.evs.length === 0 && !selectedData.shift && (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <IconSparkles size={32} className="text-gray-300" />
-                </div>
-                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Dia inteiramente livre</span>
+                <span className="text-xs font-black text-palette-darkest/40 uppercase tracking-widest">Dia inteiramente livre</span>
               </div>
             )}
 
             {/* List of Other Events */}
             <div className="space-y-3">
               {selectedData.hols.map((h, i) => (
-                <div key={i} className="bg-red-50 border border-red-100 rounded-2xl p-4 flex gap-4 items-start shadow-sm border-l-4 border-l-red-500">
-                  <div className="p-2 bg-red-500 text-white rounded-xl">
+                <div
+                  key={i}
+                  className={`
+                    rounded-2xl p-4 flex gap-4 items-start shadow-sm border-l-4
+                    ${h.type === 'commemorative'
+                      ? 'bg-amber-50 border-amber-100 border-l-amber-500'
+                      : 'bg-red-50 border-red-100 border-l-red-500'}
+                  `}
+                >
+                  <div className={`p-2 rounded-xl ${h.type === 'commemorative' ? 'bg-amber-500' : 'bg-red-500'} text-white`}>
                     <IconTarget size={18} />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[9px] font-black text-red-600 uppercase tracking-widest">Feriado {h.type === 'national' ? 'Nacional' : 'Estadual'}</span>
-                    <span className="text-sm font-black text-gray-900 uppercase italic tracking-tighter">{h.name}</span>
+                    <span className={`text-[9px] font-black uppercase tracking-widest ${h.type === 'commemorative' ? 'text-amber-600' : 'text-red-600'}`}>
+                      {h.type === 'national' ? 'Feriado Nacional' : h.type === 'state' ? 'Feriado Estadual' : 'Data Comemorativa'}
+                    </span>
+                    <span className="text-sm font-black text-palette-darkest dark:text-white uppercase italic tracking-tighter">{h.name}</span>
                   </div>
                 </div>
               ))}
 
               {selectedData.evs.map((e) => (
-                <div key={e.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex gap-4 items-start shadow-sm border-l-4 border-l-blue-600 group relative">
+                <div key={e.id} className="bg-palette-lightest dark:bg-gray-900 border border-palette-mediumLight dark:border-gray-800 rounded-2xl p-4 flex gap-4 items-start shadow-sm border-l-4 border-l-blue-600 group relative">
                   <div className={`p-2 rounded-xl ${e.id.startsWith('google_') ? 'bg-blue-50 text-blue-600' : 'bg-blue-600 text-white'}`}>
                     {e.id.startsWith('google_') ? <IconBrandGoogle size={18} /> : (eventIcons[e.type] || <IconSparkles size={18} />)}
                   </div>
                   <div className="flex flex-col flex-1 min-w-0">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{e.id.startsWith('google_') ? 'Sincronizado' : e.type}</span>
-                    <span className="text-sm font-black text-gray-900 uppercase italic tracking-tighter truncate">{e.title}</span>
+                    <span className="text-[9px] font-black text-palette-darkest/40 uppercase tracking-widest">{e.id.startsWith('google_') ? 'Sincronizado' : e.type}</span>
+                    <span className="text-sm font-black text-palette-darkest dark:text-white uppercase italic tracking-tighter truncate">{e.title}</span>
                     {e.description && (
-                      <p className="text-[10px] text-gray-500 mt-2 leading-relaxed bg-gray-50 p-2 rounded-lg border border-dashed border-gray-200">
+                      <p className="text-[10px] text-palette-darkest/50 mt-2 leading-relaxed bg-palette-mediumLight dark:bg-black/20 p-2 rounded-lg border border-dashed border-palette-mediumDark dark:border-gray-800">
                         {e.description}
                       </p>
                     )}
@@ -484,8 +637,8 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
             </div>
           </div>
 
-          <div className="p-6 bg-white border-t border-gray-100">
-            <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+          <div className="p-6 bg-palette-lightest dark:bg-gray-900 border-t border-palette-mediumLight dark:border-gray-800">
+            <div className="flex items-center justify-between text-[10px] font-bold text-palette-darkest/40 uppercase tracking-widest">
               <span>Próximo Passo</span>
               <div className="flex items-center gap-2">
                 <span className="text-blue-600">{events.length}</span> Eventos Criados
@@ -505,7 +658,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
       {/* Modern Dialog Style Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-palette-lightest dark:bg-gray-900 w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-8">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-black uppercase tracking-[0.3em] opacity-60">Agendador</span>
@@ -518,10 +671,10 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
             <form onSubmit={handleAddEvent} className="p-8 space-y-6">
               <div className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-1">O que vai acontecer?</label>
+                  <label className="text-[10px] font-black uppercase text-palette-darkest/40 tracking-widest block mb-1">O que vai acontecer?</label>
                   <input
                     required
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black italic placeholder:text-gray-300 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all uppercase"
+                    className="w-full px-4 py-3 bg-palette-mediumLight dark:bg-gray-800 border border-palette-mediumDark dark:border-gray-700 rounded-2xl text-sm font-black italic placeholder:text-gray-300 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-palette-lightest dark:focus:bg-gray-900 transition-all uppercase text-palette-darkest dark:text-white"
                     value={newEvent.title}
                     onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
                     autoFocus
@@ -530,9 +683,9 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-1">Categoria:</label>
+                    <label className="text-[10px] font-black uppercase text-palette-darkest/40 tracking-widest block mb-1">Categoria:</label>
                     <select
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-xs font-bold outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-palette-mediumLight dark:bg-gray-800 border border-palette-mediumDark dark:border-gray-700 rounded-2xl text-xs font-bold outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 text-palette-darkest dark:text-white"
                       value={newEvent.type}
                       onChange={e => setNewEvent({ ...newEvent, type: e.target.value as any })}
                     >
@@ -543,16 +696,16 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-1">Status:</label>
-                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-[10px] font-black text-green-600 flex items-center gap-2">
+                    <label className="text-[10px] font-black uppercase text-palette-darkest/40 tracking-widest block mb-1">Status:</label>
+                    <div className="w-full px-4 py-3 bg-palette-mediumLight dark:bg-gray-800 border border-palette-mediumDark dark:border-gray-700 rounded-2xl text-[10px] font-black text-green-600 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Confirmado
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-1">Notas (Opcional):</label>
+                  <label className="text-[10px] font-black uppercase text-palette-darkest/40 tracking-widest block mb-1">Notas (Opcional):</label>
                   <textarea
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-500 resize-none h-24"
+                    className="w-full px-4 py-3 bg-palette-mediumLight dark:bg-gray-800 border border-palette-mediumDark dark:border-gray-700 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-500 resize-none h-24 text-palette-darkest dark:text-white"
                     value={newEvent.description}
                     onChange={e => setNewEvent({ ...newEvent, description: e.target.value })}
                     placeholder="Adicione detalhes aqui..."
@@ -560,7 +713,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                 </div>
               </div>
               <div className="flex gap-4 pt-2">
-                <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 px-4 py-3 bg-palette-mediumLight dark:bg-gray-800 text-palette-darkest/60 dark:text-gray-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-palette-mediumDark dark:hover:bg-gray-700 transition-colors">Cancelar</button>
                 <button type="submit" className="flex-2 px-8 py-3 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
                   <IconPlus size={16} /> Gravar Evento
                 </button>

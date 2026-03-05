@@ -1,27 +1,27 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  IconCalculator, 
-  IconSearch, 
-  IconBook, 
-  IconChecklist, 
-  IconAnchor, 
-  IconTruck, 
-  IconMapPin, 
-  IconScale, 
-  IconPlus, 
-  IconTrash, 
-  IconDeviceFloppy, 
-  IconInfoCircle, 
+import {
+  IconCalculator,
+  IconSearch,
+  IconBook,
+  IconChecklist,
+  IconAnchor,
+  IconTruck,
+  IconMapPin,
+  IconScale,
+  IconPlus,
+  IconTrash,
+  IconDeviceFloppy,
+  IconInfoCircle,
   IconChevronRight,
-  IconGlobe, 
-  IconBox, 
-  IconFileText, 
-  IconCircleCheck, 
-  IconAlertCircle, 
+  IconGlobe,
+  IconBox,
+  IconFileText,
+  IconCircleCheck,
+  IconAlertCircle,
   IconNavigation,
-  IconClock, 
-  IconMap, 
+  IconClock,
+  IconMap,
   IconStack
 } from '@tabler/icons-react';
 import { LogisticsState, FreightTable, LogisticsChecklist } from '../types';
@@ -144,7 +144,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
   const [vehicleType, setVehicleType] = useState('truck');
   const [axles, setAxles] = useState(3);
   const [showMap, setShowMap] = useState(false);
-  
+
   const originRef = useRef<HTMLInputElement>(null);
   const destinationRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
@@ -154,7 +154,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
     if (activeTab === 'routing' || activeTab === 'map') {
       const rawKey = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || (process as any).env?.VITE_GOOGLE_MAPS_API_KEY;
       const apiKey = rawKey?.trim();
-      
+
       if (apiKey) {
         console.log('--- Google Maps Debug ---');
         console.log('Key Length:', apiKey.length);
@@ -162,7 +162,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         console.log('Key End:', apiKey.substring(apiKey.length - 4));
         console.log('-------------------------');
       }
-      
+
       if (!apiKey) {
         console.warn('VITE_GOOGLE_MAPS_API_KEY not found in environment');
         return;
@@ -189,7 +189,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMapsCallback`;
         script.async = true;
         script.defer = true;
-        
+
         (window as any).initGoogleMapsCallback = () => {
           console.log('Google Maps Script Loaded Successfully');
           setAuthError(false);
@@ -235,7 +235,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
     setLoadingRoutes(true);
 
     const directionsService = new window.google.maps.DirectionsService();
-    
+
     directionsService.route(
       {
         origin: routingOrigin,
@@ -260,7 +260,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
   useEffect(() => {
     if ((showMap || activeTab === 'map') && mapRef.current && window.google) {
       const isSupportMap = activeTab === 'map';
-      
+
       const map = new window.google.maps.Map(mapRef.current, {
         center: isSupportMap ? { lat: -23.5505, lng: -46.6333 } : { lat: -15.7801, lng: -47.9292 },
         zoom: isSupportMap ? 10 : 4,
@@ -315,7 +315,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
       const key = rawKey.trim();
       setMaskedKey(`${key.substring(0, 6)}...${key.substring(key.length - 4)} (Tam: ${key.length})`);
     }
-    
+
     const handleError = () => setAuthError(true);
     window.addEventListener('google-maps-auth-error', handleError);
     return () => window.removeEventListener('google-maps-auth-error', handleError);
@@ -323,7 +323,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
 
   // --- Checklists State ---
   const [newChecklistTitle, setNewChecklistTitle] = useState('');
-  
+
   const handleAddChecklist = (type: 'maritime' | 'land' | 'custom') => {
     let items: string[] = [];
     let title = '';
@@ -383,39 +383,39 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
     <div className="flex flex-col h-full gap-4">
       {/* Navigation */}
       <div className="flex gap-2 overflow-x-auto pb-2 shrink-0">
-        <button onClick={() => setActiveTab('costs')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'costs' ? 'bg-win95-blue text-white' : ''}`}>
+        <button onClick={() => setActiveTab('costs')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'costs' ? 'bg-[#000080] dark:bg-blue-900 text-white' : ''}`}>
           <IconCalculator size={16} /> Custos e Tabelas
         </button>
-        <button onClick={() => setActiveTab('search')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'search' ? 'bg-win95-blue text-white' : ''}`}>
+        <button onClick={() => setActiveTab('search')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'search' ? 'bg-[#000080] dark:bg-blue-900 text-white' : ''}`}>
           <IconGlobe size={16} /> CEP e Portos
         </button>
-        <button onClick={() => setActiveTab('tools')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'tools' ? 'bg-win95-blue text-white' : ''}`}>
+        <button onClick={() => setActiveTab('tools')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'tools' ? 'bg-[#000080] dark:bg-blue-900 text-white' : ''}`}>
           <IconBook size={16} /> Glossário e Conversor
         </button>
-        <button onClick={() => setActiveTab('checklists')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'checklists' ? 'bg-win95-blue text-white' : ''}`}>
+        <button onClick={() => setActiveTab('checklists')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'checklists' ? 'bg-[#000080] dark:bg-blue-900 text-white' : ''}`}>
           <IconChecklist size={16} /> Checklists
         </button>
-        <button onClick={() => setActiveTab('routing')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'routing' ? 'bg-win95-blue text-white' : ''}`}>
+        <button onClick={() => setActiveTab('routing')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'routing' ? 'bg-[#000080] dark:bg-blue-900 text-white' : ''}`}>
           <IconNavigation size={16} /> Roteirizador
         </button>
-        <button onClick={() => setActiveTab('map')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'map' ? 'bg-win95-blue text-white' : ''}`}>
+        <button onClick={() => setActiveTab('map')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'map' ? 'bg-[#000080] dark:bg-blue-900 text-white' : ''}`}>
           <IconMapPin size={16} /> Mapa de Apoio
         </button>
-        <button onClick={() => setActiveTab('scales')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'scales' ? 'bg-win95-blue text-white' : ''}`}>
+        <button onClick={() => setActiveTab('scales')} className={`win95-btn px-4 py-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'scales' ? 'bg-[#000080] dark:bg-blue-900 text-white' : ''}`}>
           <IconScale size={16} /> Balança e Cubagem
         </button>
       </div>
 
-      <div className="win95-sunken flex-1 p-4 overflow-y-auto bg-white/40">
+      <div className="win95-sunken flex-1 p-4 overflow-y-auto bg-palette-lightest/40 dark:bg-black/40">
         {/* --- ROUTING TAB --- */}
         {activeTab === 'routing' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <div className="win95-raised p-6 bg-white">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconNavigation size={20} /> Roteirizador Inteligente</h3>
-                
+              <div className="win95-raised p-6 bg-palette-lightest dark:bg-gray-900 border border-palette-mediumLight dark:border-gray-800">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-[#000080] dark:text-blue-400"><IconNavigation size={20} /> Roteirizador Inteligente</h3>
+
                 {authError && (
-                  <div className="mb-4 p-4 win95-raised bg-red-50 border-red-500 text-red-700 text-xs flex gap-3 items-center">
+                  <div className="mb-4 p-4 win95-raised bg-red-50 dark:bg-red-900/20 border-red-500 text-red-700 dark:text-red-400 text-xs flex gap-3 items-center">
                     <IconAlertCircle className="shrink-0" size={20} />
                     <div>
                       <div className="font-bold">Erro de Autenticação do Google Maps</div>
@@ -426,40 +426,40 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold uppercase text-gray-400">Origem (Cidade/CEP)</label>
+                    <label className="text-[10px] font-bold uppercase text-gray-400 dark:text-gray-500">Origem (Cidade/CEP)</label>
                     <div className="relative">
-                      <input 
+                      <input
                         ref={originRef}
-                        type="text" 
-                        className="win95-sunken p-3 w-full outline-none pl-10" 
-                        placeholder="Digite a origem..." 
+                        type="text"
+                        className="win95-sunken p-3 w-full outline-none pl-10 bg-palette-lightest dark:bg-gray-800 text-black dark:text-white"
+                        placeholder="Digite a origem..."
                         value={routingOrigin}
                         onChange={e => setRoutingOrigin(e.target.value)}
                       />
-                      <IconMapPin className="absolute left-3 top-3.5 text-win95-blue" size={18} />
+                      <IconMapPin className="absolute left-3 top-3.5 text-[#000080] dark:text-blue-400" size={18} />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold uppercase text-gray-400">Destino (Cidade/CEP)</label>
+                    <label className="text-[10px] font-bold uppercase text-gray-400 dark:text-gray-500">Destino (Cidade/CEP)</label>
                     <div className="relative">
-                      <input 
+                      <input
                         ref={destinationRef}
-                        type="text" 
-                        className="win95-sunken p-3 w-full outline-none pl-10" 
-                        placeholder="Digite o destino..." 
+                        type="text"
+                        className="win95-sunken p-3 w-full outline-none pl-10 bg-palette-lightest dark:bg-gray-800 text-black dark:text-white"
+                        placeholder="Digite o destino..."
                         value={routingDestination}
                         onChange={e => setRoutingDestination(e.target.value)}
                       />
-                      <IconNavigation className="absolute left-3 top-3.5 text-win95-blue" size={18} />
+                      <IconNavigation className="absolute left-3 top-3.5 text-[#000080] dark:text-blue-400" size={18} />
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold uppercase text-gray-400">Tipo de Veículo</label>
-                    <select 
-                      className="win95-sunken p-2 outline-none"
+                    <label className="text-[10px] font-bold uppercase text-gray-400 dark:text-gray-500">Tipo de Veículo</label>
+                    <select
+                      className="win95-sunken p-2 outline-none bg-palette-lightest dark:bg-gray-800 text-black dark:text-white"
                       value={vehicleType}
                       onChange={e => setVehicleType(e.target.value)}
                     >
@@ -470,46 +470,46 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                     </select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold uppercase text-gray-400">Número de Eixos</label>
+                    <label className="text-[10px] font-bold uppercase text-gray-400 dark:text-gray-500">Número de Eixos</label>
                     <div className="flex items-center gap-2">
-                      <input 
-                        type="range" min="2" max="9" 
-                        className="flex-1 accent-win95-blue"
+                      <input
+                        type="range" min="2" max="9"
+                        className="flex-1 accent-[#000080] dark:accent-blue-500"
                         value={axles}
                         onChange={e => setAxles(Number(e.target.value))}
                       />
-                      <span className="win95-sunken px-3 py-1 font-bold text-win95-blue w-12 text-center">{axles}</span>
+                      <span className="win95-sunken px-3 py-1 font-bold text-[#000080] dark:text-blue-400 w-12 text-center bg-palette-lightest dark:bg-gray-800">{axles}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-4 mb-6">
                   <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <input type="checkbox" className="accent-win95-blue" defaultChecked /> Evitar estradas não pavimentadas
+                    <input type="checkbox" className="accent-[#000080] dark:accent-blue-500" defaultChecked /> Evitar estradas não pavimentadas
                   </label>
-                  <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <input type="checkbox" className="accent-win95-blue" defaultChecked /> Restrição para Carretas
+                  <label className="flex items-center gap-2 text-xs cursor-pointer text-black dark:text-white">
+                    <input type="checkbox" className="accent-[#000080] dark:accent-blue-500" defaultChecked /> Restrição para Carretas
                   </label>
                 </div>
 
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={calculateRoutes}
                     disabled={loadingRoutes}
-                    className="win95-btn flex-1 py-3 bg-win95-blue text-white font-bold flex items-center justify-center gap-2"
+                    className="win95-btn flex-1 py-3 bg-[#000080] dark:bg-blue-900 text-white font-bold flex items-center justify-center gap-2"
                   >
                     {loadingRoutes ? 'Calculando...' : <><IconNavigation size={18} /> Calcular 3 Rotas</>}
                   </button>
-                  <button 
+                  <button
                     onClick={() => setShowMap(!showMap)}
-                    className={`win95-btn px-4 py-3 flex items-center gap-2 ${showMap ? 'bg-win95-blue text-white' : 'bg-white text-win95-blue'}`}
+                    className={`win95-btn px-4 py-3 flex items-center gap-2 ${showMap ? 'bg-[#000080] dark:bg-blue-900 text-white' : 'bg-palette-lightest dark:bg-gray-800 text-[#000080] dark:text-blue-400'}`}
                   >
                     <IconMap size={18} /> {showMap ? 'Ocultar Mapa' : 'Ver Mapa'}
                   </button>
                 </div>
 
                 {showMap && (
-                  <div className="mt-6 win95-sunken h-[400px] bg-gray-200 relative overflow-hidden">
+                  <div className="mt-6 win95-sunken h-[400px] bg-gray-200 dark:bg-gray-800 relative overflow-hidden">
                     <div ref={mapRef} className="w-full h-full" />
                     {(authError || !(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY) && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white p-6 text-center">
@@ -536,7 +536,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                             </div>
                           </div>
                           {authError && (
-                            <button 
+                            <button
                               onClick={() => window.location.reload()}
                               className="win95-btn px-4 py-1 bg-white text-black text-[10px] font-bold uppercase"
                             >
@@ -548,14 +548,14 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                     )}
                   </div>
                 )}
-                
+
                 <div className="mt-8 space-y-4">
                   {routes.map((route, idx) => {
                     const distanceKm = Math.round(route.legs[0].distance.value / 1000);
                     const durationSec = route.legs[0].duration.value;
                     const hours = Math.floor(durationSec / 3600);
                     const minutes = Math.floor((durationSec % 3600) / 60);
-                    
+
                     // Lei do Motorista: 30min a cada 5h30
                     const drivingHours = durationSec / 3600;
                     const stops = Math.floor(drivingHours / 5.5);
@@ -564,12 +564,12 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                     const totalMinutes = Math.floor((totalDurationWithStops % 3600) / 60);
 
                     return (
-                      <div key={idx} className={`win95-raised p-4 border-l-4 bg-white transition-all hover:shadow-md ${idx === 0 ? 'border-green-500' : 'border-blue-400 opacity-80'}`}>
+                      <div key={idx} className={`win95-raised p-4 border-l-4 bg-palette-lightest dark:bg-gray-900 border-palette-mediumDark dark:border-gray-800 transition-all hover:shadow-md ${idx === 0 ? 'border-l-green-500' : 'border-l-blue-400 opacity-80'}`}>
                         <div className="flex justify-between items-start mb-2">
                           <span className={`text-white text-[10px] px-2 py-0.5 font-bold rounded ${idx === 0 ? 'bg-green-500' : 'bg-blue-400'}`}>
                             ROTA {idx + 1} {idx === 0 ? '- RECOMENDADA' : ''}
                           </span>
-                          <span className="font-mono font-bold text-gray-700">{distanceKm} km</span>
+                          <span className="font-mono font-bold text-gray-700 dark:text-gray-300">{distanceKm} km</span>
                         </div>
                         <div className="grid grid-cols-3 gap-4 text-center">
                           <div>
@@ -582,7 +582,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                           </div>
                           <div>
                             <div className="text-[9px] text-gray-400 uppercase">Tempo Total</div>
-                            <div className="font-bold text-win95-blue text-xs">{totalHours}h {totalMinutes}min</div>
+                            <div className="font-bold text-[#000080] dark:text-blue-400 text-xs">{totalHours}h {totalMinutes}min</div>
                           </div>
                         </div>
                         <div className="mt-3 text-[10px] text-gray-500 flex items-center gap-1 italic">
@@ -591,7 +591,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                       </div>
                     );
                   })}
-                  
+
                   {routes.length === 0 && !loadingRoutes && (
                     <div className="text-center py-10 text-gray-400 italic text-sm">
                       Insira origem e destino para calcular as rotas.
@@ -600,23 +600,23 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-4">
-              <div className="win95-raised p-4 bg-white">
-                <h4 className="font-bold text-xs mb-3 flex items-center gap-2"><IconClock size={14} className="text-win95-blue" /> Lei do Motorista (13.103/15)</h4>
+              <div className="win95-raised p-4 bg-palette-lightest dark:bg-gray-900 border border-palette-mediumLight dark:border-gray-800">
+                <h4 className="font-bold text-xs mb-3 flex items-center gap-2 text-black dark:text-white"><IconClock size={14} className="text-[#000080] dark:text-blue-400" /> Lei do Motorista (13.103/15)</h4>
                 <div className="space-y-3">
-                  <div className="win95-sunken p-2 bg-blue-50/50">
-                    <div className="text-[10px] font-bold text-blue-700 mb-1">Jornada de Trabalho</div>
-                    <p className="text-[9px] text-gray-600">O tempo de direção é calculado automaticamente com base na legislação vigente, adicionando 30min de descanso a cada 5h30 de volante.</p>
+                  <div className="win95-sunken p-2 bg-blue-50/50 dark:bg-blue-900/10">
+                    <div className="text-[10px] font-bold text-blue-700 dark:text-blue-400 mb-1">Jornada de Trabalho</div>
+                    <p className="text-[9px] text-gray-600 dark:text-gray-400">O tempo de direção é calculado automaticamente com base na legislação vigente, adicionando 30min de descanso a cada 5h30 de volante.</p>
                   </div>
-                  <ul className="text-[10px] space-y-2 text-gray-600">
+                  <ul className="text-[10px] space-y-2 text-gray-600 dark:text-gray-400">
                     <li className="flex gap-2"><IconChevronRight size={10} className="shrink-0 mt-0.5" /> Máximo 5h30 ininterruptas de direção.</li>
                     <li className="flex gap-2"><IconChevronRight size={10} className="shrink-0 mt-0.5" /> Descanso obrigatório de 30min a cada 6h.</li>
                     <li className="flex gap-2"><IconChevronRight size={10} className="shrink-0 mt-0.5" /> Repouso diário de 11h (pode ser fracionado).</li>
                   </ul>
                 </div>
               </div>
-              
+
               <div className="win95-raised p-4 bg-win95-blue text-white">
                 <h4 className="font-bold text-xs mb-2 flex items-center gap-2"><IconStack size={14} /> Configuração do Veículo</h4>
                 <div className="text-[10px] space-y-2 opacity-90">
@@ -631,40 +631,40 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         {/* --- MAP TAB --- */}
         {activeTab === 'map' && (
           <div className="flex flex-col h-full gap-4">
-            <div className="win95-raised p-4 bg-white flex gap-4 items-center shrink-0">
-              <span className="text-xs font-bold">Filtros no Mapa:</span>
-              <label className="flex items-center gap-2 text-xs cursor-pointer bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-                <input type="checkbox" className="accent-win95-blue" defaultChecked /> Postos de Combustível
+            <div className="win95-raised p-4 bg-palette-lightest dark:bg-gray-900 border border-palette-mediumLight dark:border-gray-800 flex gap-4 items-center shrink-0">
+              <span className="text-xs font-bold text-black dark:text-white">Filtros no Mapa:</span>
+              <label className="flex items-center gap-2 text-xs cursor-pointer bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full border border-blue-200 dark:border-blue-800 text-black dark:text-white">
+                <input type="checkbox" className="accent-[#000080] dark:accent-blue-500" defaultChecked /> Postos de Combustível
               </label>
-              <label className="flex items-center gap-2 text-xs cursor-pointer bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
-                <input type="checkbox" className="accent-win95-blue" defaultChecked /> Borracharias 24h
+              <label className="flex items-center gap-2 text-xs cursor-pointer bg-orange-50 dark:bg-orange-900/20 px-3 py-1 rounded-full border border-orange-200 dark:border-orange-800 text-black dark:text-white">
+                <input type="checkbox" className="accent-[#000080] dark:accent-blue-500" defaultChecked /> Borracharias 24h
               </label>
-              <label className="flex items-center gap-2 text-xs cursor-pointer bg-green-50 px-3 py-1 rounded-full border border-green-200">
-                <input type="checkbox" className="accent-win95-blue" defaultChecked /> Balanças Rodoviárias
+              <label className="flex items-center gap-2 text-xs cursor-pointer bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full border border-green-200 dark:border-green-800 text-black dark:text-white">
+                <input type="checkbox" className="accent-[#000080] dark:accent-blue-500" defaultChecked /> Balanças Rodoviárias
               </label>
               <div className="flex-1"></div>
               <div className="text-[10px] text-gray-400 italic">Dados baseados em redes colaborativas</div>
             </div>
-            <div className="win95-sunken flex-1 bg-gray-200 relative overflow-hidden flex items-center justify-center">
+            <div className="win95-sunken flex-1 bg-gray-200 dark:bg-gray-800 relative overflow-hidden flex items-center justify-center">
               <div ref={mapRef} className="absolute inset-0 w-full h-full" />
               {(authError || !(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY) && (
-                <div className="text-center space-y-4 z-10 bg-white/80 p-8 win95-raised">
-                  <IconMapPin size={48} className="mx-auto text-win95-blue animate-bounce" />
+                <div className="text-center space-y-4 z-10 bg-white/80 dark:bg-black/80 p-8 win95-raised border border-white dark:border-gray-800">
+                  <IconMapPin size={48} className="mx-auto text-[#000080] dark:text-blue-400 animate-bounce" />
                   <div>
-                    <div className="font-bold text-lg">
+                    <div className="font-bold text-lg text-black dark:text-white">
                       {authError ? 'Erro de Autenticação' : 'Mapa de Apoio Logístico'}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {authError 
-                        ? 'Chave de API inválida (InvalidKeyMapError). Verifique as configurações no Google Cloud.' 
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {authError
+                        ? 'Chave de API inválida (InvalidKeyMapError). Verifique as configurações no Google Cloud.'
                         : 'Integração com Google Maps API aguardando chave...'}
                     </div>
                   </div>
-                  <div className="win95-raised p-4 bg-white max-w-sm mx-auto text-left text-xs space-y-2">
-                    <div className="font-bold border-b pb-1 mb-2">Próximos Pontos (Simulação):</div>
-                    <div className="flex justify-between"><span>Posto Graal (KM 240)</span> <span className="text-green-600 font-bold">ABERTO</span></div>
-                    <div className="flex justify-between"><span>Borracharia do Zé (KM 255)</span> <span className="text-blue-600 font-bold">24H</span></div>
-                    <div className="flex justify-between"><span>Balança ANTT (KM 280)</span> <span className="text-orange-600 font-bold">ATIVA</span></div>
+                  <div className="win95-raised p-4 bg-white dark:bg-gray-800 border border-white dark:border-gray-700 max-w-sm mx-auto text-left text-xs space-y-2">
+                    <div className="font-bold border-b pb-1 mb-2 text-black dark:text-white">Próximos Pontos (Simulação):</div>
+                    <div className="flex justify-between text-black dark:text-white"><span>Posto Graal (KM 240)</span> <span className="text-green-600 dark:text-green-400 font-bold">ABERTO</span></div>
+                    <div className="flex justify-between text-black dark:text-white"><span>Borracharia do Zé (KM 255)</span> <span className="text-[#000080] dark:text-blue-400 font-bold">24H</span></div>
+                    <div className="flex justify-between text-black dark:text-white"><span>Balança ANTT (KM 280)</span> <span className="text-orange-600 dark:text-orange-400 font-bold">ATIVA</span></div>
                   </div>
                 </div>
               )}
@@ -680,8 +680,8 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         {/* --- SCALES TAB --- */}
         {activeTab === 'scales' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="win95-raised p-6 bg-white">
-              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-win95-blue"><IconScale size={20} /> Lei da Balança (Pesos Permitidos)</h3>
+            <div className="win95-raised p-6 bg-palette-lightest dark:bg-gray-900 border border-palette-mediumLight dark:border-gray-800">
+              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-[#000080] dark:text-blue-400"><IconScale size={20} /> Lei da Balança (Pesos Permitidos)</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-2">
                   {[
@@ -692,12 +692,12 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                     { type: 'Bitrem (7 eixos)', pbt: '57t', tara: '20t', liq: '37t' },
                     { type: 'Rodotrem (9 eixos)', pbt: '74t', tara: '25t', liq: '49t' },
                   ].map((t, i) => (
-                    <div key={i} className="win95-sunken p-3 flex justify-between items-center hover:bg-blue-50 transition-colors">
-                      <div className="font-bold text-xs">{t.type}</div>
+                    <div key={i} className="win95-sunken p-3 flex justify-between items-center hover:bg-palette-mediumLight dark:hover:bg-blue-900/20 transition-colors bg-palette-lightest dark:bg-gray-800">
+                      <div className="font-bold text-xs text-black dark:text-white">{t.type}</div>
                       <div className="flex gap-4 text-center">
-                        <div><div className="text-[8px] text-gray-400 uppercase">PBT</div><div className="text-xs font-black text-win95-blue">{t.pbt}</div></div>
-                        <div><div className="text-[8px] text-gray-400 uppercase">Tara</div><div className="text-xs font-bold text-gray-500">{t.tara}</div></div>
-                        <div><div className="text-[8px] text-gray-400 uppercase">Líquido</div><div className="text-xs font-bold text-green-600">{t.liq}</div></div>
+                        <div><div className="text-[8px] text-gray-400 dark:text-gray-500 uppercase">PBT</div><div className="text-xs font-black text-[#000080] dark:text-blue-400">{t.pbt}</div></div>
+                        <div><div className="text-[8px] text-gray-400 dark:text-gray-500 uppercase">Tara</div><div className="text-xs font-bold text-gray-500 dark:text-gray-400">{t.tara}</div></div>
+                        <div><div className="text-[8px] text-gray-400 dark:text-gray-500 uppercase">Líquido</div><div className="text-xs font-bold text-green-600 dark:text-green-400">{t.liq}</div></div>
                       </div>
                     </div>
                   ))}
@@ -709,19 +709,19 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
               </div>
             </div>
 
-            <div className="win95-raised p-6 bg-white">
-              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-win95-blue"><IconBox size={20} /> Cubicagem de Carreta Sider</h3>
+            <div className="win95-raised p-6 bg-palette-lightest dark:bg-gray-900 border border-palette-mediumLight dark:border-gray-800">
+              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-[#000080] dark:text-blue-400"><IconBox size={20} /> Cubicagem de Carreta Sider</h3>
               <div className="space-y-4">
-                <div className="win95-sunken p-4 bg-gray-50 mb-4">
-                  <div className="text-xs font-bold mb-2 uppercase text-gray-400">Dimensões Padrão Sider (13.5m)</div>
-                  <div className="flex justify-between text-sm">
+                <div className="win95-sunken p-4 bg-palette-mediumLight dark:bg-gray-800 mb-4">
+                  <div className="text-xs font-bold mb-2 uppercase text-gray-400 dark:text-gray-500">Dimensões Padrão Sider (13.5m)</div>
+                  <div className="flex justify-between text-sm text-black dark:text-white">
                     <span>Comp: 13.50m</span>
                     <span>Larg: 2.50m</span>
                     <span>Alt: 2.80m</span>
-                    <span className="font-bold text-win95-blue">~94.5 m³</span>
+                    <span className="font-bold text-[#000080] dark:text-blue-400">~94.5 m³</span>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-3 gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-bold">Comp. Caixa (cm)</label>
@@ -732,17 +732,17 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                     <input type="number" className="win95-sunken p-2 outline-none font-mono" placeholder="50" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold">Alt. Caixa (cm)</label>
-                    <input type="number" className="win95-sunken p-2 outline-none font-mono" placeholder="50" />
+                    <label className="text-[10px] font-bold text-black dark:text-white">Alt. Caixa (cm)</label>
+                    <input type="number" className="win95-sunken p-2 outline-none font-mono bg-white dark:bg-gray-800 text-black dark:text-white" placeholder="50" />
                   </div>
                 </div>
-                
-                <button className="win95-btn w-full py-3 bg-win95-blue text-white font-bold">Calcular Capacidade Máxima</button>
-                
-                <div className="mt-6 p-6 win95-sunken bg-emerald-50 border-emerald-200 text-center">
-                  <div className="text-xs font-bold text-emerald-600 uppercase mb-1">Capacidade Estimada</div>
-                  <div className="text-4xl font-black text-emerald-600">756 Caixas</div>
-                  <div className="text-[10px] text-gray-400 mt-2">Considerando empilhamento máximo e aproveitamento de 100% do volume.</div>
+
+                <button className="win95-btn w-full py-3 bg-[#000080] dark:bg-blue-900 text-white font-bold">Calcular Capacidade Máxima</button>
+
+                <div className="mt-6 p-6 win95-sunken bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800 text-center">
+                  <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase mb-1">Capacidade Estimada</div>
+                  <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400">756 Caixas</div>
+                  <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Considerando empilhamento máximo e aproveitamento de 100% do volume.</div>
                 </div>
               </div>
             </div>
@@ -753,37 +753,37 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         {activeTab === 'costs' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <div className="win95-raised p-6 bg-white">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconCalculator size={20} /> Calculadora de Operação</h3>
+              <div className="win95-raised p-6 bg-palette-lightest dark:bg-gray-900 border border-palette-mediumLight dark:border-gray-800">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-[#000080] dark:text-blue-400"><IconCalculator size={20} /> Calculadora de Operação</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <h4 className="text-xs font-bold text-gray-400 uppercase border-b pb-1">Terrestre</h4>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold">KM Rodados (Total)</label>
-                      <input type="number" className="win95-sunken p-2 outline-none font-mono" value={calc.km} onChange={e => setCalc({...calc, km: Number(e.target.value)})} />
+                      <label className="text-[10px] font-bold text-black dark:text-white">KM Rodados (Total)</label>
+                      <input type="number" className="win95-sunken p-2 outline-none font-mono bg-palette-lightest dark:bg-gray-800 text-black dark:text-white" value={calc.km} onChange={e => setCalc({ ...calc, km: Number(e.target.value) })} />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold">Pedágios (R$)</label>
-                      <input type="number" className="win95-sunken p-2 outline-none font-mono" value={calc.tolls} onChange={e => setCalc({...calc, tolls: Number(e.target.value)})} />
+                      <label className="text-[10px] font-bold text-black dark:text-white">Pedágios (R$)</label>
+                      <input type="number" className="win95-sunken p-2 outline-none font-mono bg-white dark:bg-gray-800 text-black dark:text-white" value={calc.tolls} onChange={e => setCalc({ ...calc, tolls: Number(e.target.value) })} />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold">Consumo (km/l)</label>
-                        <input type="number" step="0.1" className="win95-sunken p-2 outline-none font-mono" value={calc.avgConsumption} onChange={e => setCalc({...calc, avgConsumption: Number(e.target.value)})} />
+                        <label className="text-[10px] font-bold text-black dark:text-white">Consumo (km/l)</label>
+                        <input type="number" step="0.1" className="win95-sunken p-2 outline-none font-mono bg-white dark:bg-gray-800 text-black dark:text-white" value={calc.avgConsumption} onChange={e => setCalc({ ...calc, avgConsumption: Number(e.target.value) })} />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold">Diesel (R$/l)</label>
-                        <input type="number" step="0.01" className="win95-sunken p-2 outline-none font-mono" value={calc.fuelPrice} onChange={e => setCalc({...calc, fuelPrice: Number(e.target.value)})} />
+                        <label className="text-[10px] font-bold text-black dark:text-white">Diesel (R$/l)</label>
+                        <input type="number" step="0.01" className="win95-sunken p-2 outline-none font-mono bg-white dark:bg-gray-800 text-black dark:text-white" value={calc.fuelPrice} onChange={e => setCalc({ ...calc, fuelPrice: Number(e.target.value) })} />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold">Diárias Motorista</label>
-                        <input type="number" className="win95-sunken p-2 outline-none font-mono" value={calc.driverDays} onChange={e => setCalc({...calc, driverDays: Number(e.target.value)})} />
+                        <label className="text-[10px] font-bold text-black dark:text-white">Diárias Motorista</label>
+                        <input type="number" className="win95-sunken p-2 outline-none font-mono bg-white dark:bg-gray-800 text-black dark:text-white" value={calc.driverDays} onChange={e => setCalc({ ...calc, driverDays: Number(e.target.value) })} />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold">Valor Diária (R$)</label>
-                        <input type="number" className="win95-sunken p-2 outline-none font-mono" value={calc.driverPerDieum} onChange={e => setCalc({...calc, driverPerDieum: Number(e.target.value)})} />
+                        <label className="text-[10px] font-bold text-black dark:text-white">Valor Diária (R$)</label>
+                        <input type="number" className="win95-sunken p-2 outline-none font-mono bg-white dark:bg-gray-800 text-black dark:text-white" value={calc.driverPerDieum} onChange={e => setCalc({ ...calc, driverPerDieum: Number(e.target.value) })} />
                       </div>
                     </div>
                   </div>
@@ -792,19 +792,19 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                     <h4 className="text-xs font-bold text-gray-400 uppercase border-b pb-1">Marítimo / Aduaneiro</h4>
                     <div className="flex flex-col gap-1">
                       <label className="text-[10px] font-bold">Custo Contêiner (TEU/FEU)</label>
-                      <input type="number" className="win95-sunken p-2 outline-none font-mono" value={calc.containerCost} onChange={e => setCalc({...calc, containerCost: Number(e.target.value)})} />
+                      <input type="number" className="win95-sunken p-2 outline-none font-mono" value={calc.containerCost} onChange={e => setCalc({ ...calc, containerCost: Number(e.target.value) })} />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-[10px] font-bold">Taxas Portuárias (THC, etc)</label>
-                      <input type="number" className="win95-sunken p-2 outline-none font-mono" value={calc.portFees} onChange={e => setCalc({...calc, portFees: Number(e.target.value)})} />
+                      <input type="number" className="win95-sunken p-2 outline-none font-mono" value={calc.portFees} onChange={e => setCalc({ ...calc, portFees: Number(e.target.value) })} />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-[10px] font-bold">Valor da Carga (R$)</label>
-                      <input type="number" className="win95-sunken p-2 outline-none font-mono" value={calc.cargoValue} onChange={e => setCalc({...calc, cargoValue: Number(e.target.value)})} />
+                      <input type="number" className="win95-sunken p-2 outline-none font-mono" value={calc.cargoValue} onChange={e => setCalc({ ...calc, cargoValue: Number(e.target.value) })} />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-[10px] font-bold">Taxa Seguro (%)</label>
-                      <input type="number" step="0.01" className="win95-sunken p-2 outline-none font-mono" value={calc.insuranceRate} onChange={e => setCalc({...calc, insuranceRate: Number(e.target.value)})} />
+                      <input type="number" step="0.01" className="win95-sunken p-2 outline-none font-mono" value={calc.insuranceRate} onChange={e => setCalc({ ...calc, insuranceRate: Number(e.target.value) })} />
                     </div>
                   </div>
                 </div>
@@ -815,8 +815,8 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                     <div className="text-3xl font-black text-win95-blue">R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                   </div>
                   <div className="flex gap-2">
-                    <input 
-                      type="text" placeholder="Nome da Tabela" 
+                    <input
+                      type="text" placeholder="Nome da Tabela"
                       className="win95-sunken p-2 text-xs outline-none w-32"
                       value={tableName} onChange={e => setTableName(e.target.value)}
                     />
@@ -829,17 +829,17 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
             </div>
 
             <div className="space-y-4">
-              <div className="win95-raised p-4 bg-white h-full">
+              <div className="win95-raised p-4 bg-palette-lightest h-full">
                 <h3 className="font-bold text-sm mb-4 flex items-center gap-2"><IconFileText size={16} /> Tabelas Salvas</h3>
                 <div className="space-y-2">
                   {data.freightTables?.map(t => (
-                    <div key={t.id} className="win95-raised p-2 text-xs flex justify-between items-center hover:bg-gray-50 cursor-pointer" onClick={() => loadTable(t)}>
+                    <div key={t.id} className="win95-raised p-2 text-xs flex justify-between items-center hover:bg-palette-mediumLight cursor-pointer" onClick={() => loadTable(t)}>
                       <div>
                         <div className="font-bold">{t.name}</div>
                         <div className="text-[10px] text-gray-400">{new Date(t.updatedAt).toLocaleDateString()}</div>
                       </div>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); onChange({...data, freightTables: data.freightTables.filter(x => x.id !== t.id)}) }}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onChange({ ...data, freightTables: data.freightTables.filter(x => x.id !== t.id) }) }}
                         className="text-gray-300 hover:text-red-500"
                       >
                         <IconTrash size={14} />
@@ -858,11 +858,11 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         {/* --- SEARCH TAB --- */}
         {activeTab === 'search' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="win95-raised p-6 bg-white">
+            <div className="win95-raised p-6 bg-palette-lightest">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconMapPin size={20} /> Busca de CEP (Terra)</h3>
               <div className="flex gap-2 mb-4">
-                <input 
-                  type="text" placeholder="00000-000" 
+                <input
+                  type="text" placeholder="00000-000"
                   className="win95-sunken p-3 flex-1 outline-none font-mono text-lg"
                   value={cep} onChange={e => setCep(e.target.value.replace(/\D/g, ''))}
                   onKeyDown={e => e.key === 'Enter' && searchCep()}
@@ -872,7 +872,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                 </button>
               </div>
               {cepResult && (
-                <div className="win95-sunken p-4 bg-gray-50 space-y-2 text-sm">
+                <div className="win95-sunken p-4 bg-palette-mediumLight space-y-2 text-sm">
                   <div className="flex justify-between border-b pb-1"><span className="text-gray-500">Logradouro:</span> <span className="font-bold">{cepResult.street || 'N/A'}</span></div>
                   <div className="flex justify-between border-b pb-1"><span className="text-gray-500">Bairro:</span> <span className="font-bold">{cepResult.neighborhood || 'N/A'}</span></div>
                   <div className="flex justify-between border-b pb-1"><span className="text-gray-500">Cidade:</span> <span className="font-bold">{cepResult.city} - {cepResult.state}</span></div>
@@ -884,8 +884,8 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
             <div className="win95-raised p-6 bg-white">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconAnchor size={20} /> Códigos Portuários (Mar)</h3>
               <div className="relative mb-4">
-                <input 
-                  type="text" placeholder="Buscar cidade ou porto... (ex: Santos)" 
+                <input
+                  type="text" placeholder="Buscar cidade ou porto... (ex: Santos)"
                   className="win95-sunken p-3 w-full outline-none pl-10"
                   value={portSearch} onChange={e => setPortSearch(e.target.value)}
                 />
@@ -912,7 +912,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         {/* --- TOOLS TAB --- */}
         {activeTab === 'tools' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="win95-raised p-6 bg-white">
+            <div className="win95-raised p-6 bg-palette-lightest">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-win95-blue"><IconBook size={20} /> Glossário Técnico</h3>
               <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                 {GLOSSARY.map(g => (
@@ -929,12 +929,12 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold">Valor</label>
-                  <input type="number" className="win95-sunken p-3 outline-none font-mono text-xl" value={conv.value} onChange={e => setConv({...conv, value: Number(e.target.value)})} />
+                  <input type="number" className="win95-sunken p-3 outline-none font-mono text-xl" value={conv.value} onChange={e => setConv({ ...conv, value: Number(e.target.value) })} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-bold">De</label>
-                    <select className="win95-sunken p-2 outline-none" value={conv.from} onChange={e => setConv({...conv, from: e.target.value})}>
+                    <select className="win95-sunken p-2 outline-none" value={conv.from} onChange={e => setConv({ ...conv, from: e.target.value })}>
                       <option value="ft3">Pés Cúbicos (ft³)</option>
                       <option value="m3">Metros Cúbicos (m³)</option>
                       <option value="ft">Pés (ft)</option>
@@ -945,7 +945,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-bold">Para</label>
-                    <select className="win95-sunken p-2 outline-none" value={conv.to} onChange={e => setConv({...conv, to: e.target.value})}>
+                    <select className="win95-sunken p-2 outline-none" value={conv.to} onChange={e => setConv({ ...conv, to: e.target.value })}>
                       <option value="m3">Metros Cúbicos (m³)</option>
                       <option value="ft3">Pés Cúbicos (ft³)</option>
                       <option value="m">Metros (m)</option>
@@ -970,7 +970,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
         {/* --- CHECKLISTS TAB --- */}
         {activeTab === 'checklists' && (
           <div className="space-y-6">
-            <div className="win95-raised p-4 bg-white flex flex-wrap gap-4 items-center">
+            <div className="win95-raised p-4 bg-palette-lightest flex flex-wrap gap-4 items-center">
               <h3 className="font-bold text-sm mr-4">Gerar Checklist:</h3>
               <button onClick={() => handleAddChecklist('maritime')} className="win95-btn px-4 py-2 flex items-center gap-2 bg-blue-50 text-blue-700">
                 <IconAnchor size={14} /> Marítimo
@@ -979,8 +979,8 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
                 <IconTruck size={14} /> Terrestre
               </button>
               <div className="flex-1 min-w-[200px] flex gap-2">
-                <input 
-                  type="text" placeholder="Título Personalizado..." 
+                <input
+                  type="text" placeholder="Título Personalizado..."
                   className="win95-sunken p-2 flex-1 text-xs outline-none"
                   value={newChecklistTitle} onChange={e => setNewChecklistTitle(e.target.value)}
                 />
@@ -992,21 +992,21 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {data.checklists?.map(list => (
-                <div key={list.id} className="win95-raised p-4 bg-white flex flex-col">
+                <div key={list.id} className="win95-raised p-4 bg-palette-lightest flex flex-col">
                   <div className="flex justify-between items-start mb-4">
                     <h4 className="font-black text-win95-blue uppercase text-xs flex items-center gap-2">
                       <IconCircleCheck size={14} /> {list.title}
                     </h4>
-                    <button onClick={() => onChange({...data, checklists: data.checklists.filter(x => x.id !== list.id)})} className="text-gray-300 hover:text-red-500">
+                    <button onClick={() => onChange({ ...data, checklists: data.checklists.filter(x => x.id !== list.id) })} className="text-gray-300 hover:text-red-500">
                       <IconTrash size={14} />
                     </button>
                   </div>
                   <div className="space-y-2 flex-1">
                     {list.items.map(item => (
-                      <label key={item.id} className="flex items-center gap-3 p-2 win95-sunken bg-gray-50/50 cursor-pointer hover:bg-white transition-colors">
-                        <input 
-                          type="checkbox" 
-                          checked={item.completed} 
+                      <label key={item.id} className="flex items-center gap-3 p-2 win95-sunken bg-palette-mediumLight/30 cursor-pointer hover:bg-palette-lightest transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={item.completed}
                           onChange={() => toggleChecklistItem(list.id, item.id)}
                           className="w-4 h-4 accent-win95-blue"
                         />

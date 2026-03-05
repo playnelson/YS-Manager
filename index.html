@@ -43,13 +43,19 @@
           },
           colors: {
             primary: '#111827',
-            'background-light': '#F9FAFB',
+            'background-light': '#F2EFE5',
             'background-dark': '#111111',
+            palette: {
+              darkest: '#B4B4B8',
+              mediumDark: '#C7C8CC',
+              mediumLight: '#E3E1D9',
+              lightest: '#F2EFE5',
+            },
             win95: {
-              bg: '#e0e5ec',
-              light: '#ffffff',
-              shadow: '#a3b1c6',
-              dark: '#4a5568',
+              bg: '#E3E1D9',
+              light: '#F2EFE5',
+              shadow: '#C7C8CC',
+              dark: '#B4B4B8',
               blue: '#2563eb',
               blueLight: '#60a5fa'
             }
@@ -59,6 +65,48 @@
     }
   </script>
   <style>
+    :root {
+      --apple-bg: #F2EFE5;
+      --apple-card: #E3E1D9;
+      --apple-text: #1D1D1F;
+      --apple-secondary: #B4B4B8;
+      --apple-border: #C7C8CC;
+      --apple-button: #1D1D1F;
+      --win95-bg: #E3E1D9;
+      --win95-light: #F2EFE5;
+      --win95-shadow: #C7C8CC;
+    }
+
+    .dark {
+      --win95-bg: #2d2d2d;
+      --win95-light: #404040;
+      --win95-shadow: #1a1a1a;
+    }
+
+    /* Retro UI Utilities */
+    .win95-raised {
+      background-color: var(--win95-bg);
+      border: 2px solid;
+      border-color: var(--win95-light) var(--win95-shadow) var(--win95-shadow) var(--win95-light);
+    }
+
+    .win95-sunken {
+      background-color: var(--win95-bg);
+      border: 2px solid;
+      border-color: var(--win95-shadow) var(--win95-light) var(--win95-light) var(--win95-shadow);
+    }
+
+    .win95-btn {
+      background-color: var(--win95-bg);
+      border: 2px solid;
+      border-color: var(--win95-light) var(--win95-shadow) var(--win95-shadow) var(--win95-light);
+      padding: 4px 8px;
+    }
+
+    .win95-btn:active {
+      border-color: var(--win95-shadow) var(--win95-light) var(--win95-light) var(--win95-shadow);
+    }
+
     /* Material Symbols default style */
     .material-symbols-outlined {
       font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
@@ -70,6 +118,70 @@
     body {
       font-family: 'Inter', sans-serif;
       -webkit-font-smoothing: antialiased;
+    }
+
+    .squircle {
+      border-radius: 40px;
+    }
+
+    .input-apple {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background-color: white;
+      border: 1px solid var(--apple-border);
+      border-radius: 0.75rem;
+      transition: all 0.2s;
+      outline: none;
+      font-size: 0.875rem;
+    }
+
+    .input-apple:focus {
+      border-color: #888;
+      box-shadow: 0 0 0 1px #888;
+    }
+
+    .btn-apple-primary {
+      width: 100%;
+      padding: 0.875rem;
+      background-color: var(--apple-button);
+      color: white;
+      font-weight: 600;
+      border-radius: 0.75rem;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .btn-apple-primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn-apple-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-apple-social {
+      width: 100%;
+      padding: 0.75rem;
+      background-color: white;
+      border: 1px solid var(--apple-border);
+      color: var(--apple-text);
+      font-weight: 500;
+      border-radius: 0.75rem;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .btn-apple-social:hover {
+      background-color: #f9f9f9;
     }
 
     /* Scrollbar Moderna */
@@ -114,7 +226,7 @@
   </style>
 </head>
 
-<body class="min-h-screen select-none bg-gray-50 dark:bg-[#111111]">
+<body class="min-h-screen select-none bg-palette-lightest dark:bg-[#111111]">
   <div id="root" class="min-h-screen"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

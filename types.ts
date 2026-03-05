@@ -70,7 +70,13 @@ export interface FlowState {
 export interface Holiday {
   date: string; // YYYY-MM-DD
   name: string;
-  type: 'national' | 'state' | 'municipal' | 'optional';
+  type: 'national' | 'state' | 'municipal' | 'optional' | 'commemorative';
+}
+
+export interface MoonPhase {
+  date: string; // YYYY-MM-DD
+  phase: 'new' | 'first-quarter' | 'full' | 'last-quarter';
+  name: string;
 }
 
 export interface UserEvent {

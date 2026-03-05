@@ -136,7 +136,7 @@ export const BrasilApiModule: React.FC = () => {
                     </div>
                     <div>
                         <h4 className="text-lg font-black uppercase text-red-600 italic leading-none">Erro de Protocolo</h4>
-                        <p className="text-xs font-bold text-gray-400 uppercase mt-2">{state.error}</p>
+                        <p className="text-xs font-bold text-palette-darkest/40 uppercase mt-2">{state.error}</p>
                     </div>
                     <button onClick={() => setState(s => ({ ...s, error: null }))} className="px-6 py-3 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-red-500/20 active:scale-95 transition-all">Reportar / Resetar</button>
                 </div>
@@ -161,7 +161,7 @@ export const BrasilApiModule: React.FC = () => {
                                 <IconMapPin size={40} />
                             </div>
                             <div>
-                                <h3 className="text-4xl font-black italic tracking-tighter text-blue-900 leading-none">{data.cep}</h3>
+                                <h3 className="text-4xl font-black italic tracking-tighter text-palette-darkest leading-none">{data.cep}</h3>
                                 <p className="text-xs font-black text-blue-400 uppercase tracking-widest mt-2">{data.city} • {data.state} Brasil</p>
                             </div>
                         </div>
@@ -173,9 +173,9 @@ export const BrasilApiModule: React.FC = () => {
                                 { label: 'Coordenadas Geográficas', value: `${data.location?.coordinates?.latitude}, ${data.location?.coordinates?.longitude}` },
                                 { label: 'Provedor de Dados', value: data.service, special: true }
                             ].map((item, i) => (
-                                <div key={i} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm group hover:border-blue-500 transition-all">
-                                    <label className="text-[9px] font-black text-gray-400 uppercase block mb-1 tracking-widest">{item.label}</label>
-                                    <p className={`text-sm font-black ${item.special ? 'text-green-600 italic' : 'text-blue-900'}`}>{item.value || 'NÃO INFORMADO'}</p>
+                                <div key={i} className="bg-palette-lightest p-5 rounded-3xl border border-palette-mediumLight shadow-sm group hover:border-blue-500 transition-all">
+                                    <label className="text-[9px] font-black text-palette-darkest/40 uppercase block mb-1 tracking-widest">{item.label}</label>
+                                    <p className={`text-sm font-black ${item.special ? 'text-green-600 italic' : 'text-palette-darkest'}`}>{item.value || 'NÃO INFORMADO'}</p>
                                 </div>
                             ))}
                         </div>
@@ -194,7 +194,7 @@ export const BrasilApiModule: React.FC = () => {
                                 <IconBuildingBank size={40} />
                             </div>
                             <div className="flex-1 overflow-hidden">
-                                <h3 className="text-2xl font-black italic tracking-tighter text-blue-900 uppercase leading-none truncate">{data.razao_social}</h3>
+                                <h3 className="text-2xl font-black italic tracking-tighter text-palette-darkest uppercase leading-none truncate">{data.razao_social}</h3>
                                 <div className="flex items-center gap-3 mt-3">
                                     <span className="text-xs font-black text-indigo-400 uppercase tracking-[0.2em]">{data.cnpj}</span>
                                     <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${data.descricao_situacao_cadastral === 'ATIVA' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -205,17 +205,17 @@ export const BrasilApiModule: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm col-span-2">
-                                <label className="text-[9px] font-black text-gray-400 uppercase block mb-1">CNAE Primário (Atividade)</label>
-                                <p className="text-xs font-black text-blue-900 leading-tight uppercase italic">{data.cnae_fiscal_descricao}</p>
+                            <div className="bg-palette-lightest p-5 rounded-3xl border border-palette-mediumLight shadow-sm col-span-2">
+                                <label className="text-[9px] font-black text-palette-darkest/40 uppercase block mb-1">CNAE Primário (Atividade)</label>
+                                <p className="text-xs font-black text-palette-darkest leading-tight uppercase italic">{data.cnae_fiscal_descricao}</p>
                             </div>
-                            <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-                                <label className="text-[9px] font-black text-gray-400 uppercase block mb-1">Capital Social Integralizado</label>
+                            <div className="bg-palette-lightest p-5 rounded-3xl border border-palette-mediumLight shadow-sm">
+                                <label className="text-[9px] font-black text-palette-darkest/40 uppercase block mb-1">Capital Social Integralizado</label>
                                 <p className="text-lg font-black text-green-600">R$ {data.capital_social?.toLocaleString('pt-BR')}</p>
                             </div>
-                            <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-                                <label className="text-[9px] font-black text-gray-400 uppercase block mb-1">Início das Operações</label>
-                                <p className="text-lg font-black text-blue-900">{data.data_inicio_atividade}</p>
+                            <div className="bg-palette-lightest p-5 rounded-3xl border border-palette-mediumLight shadow-sm">
+                                <label className="text-[9px] font-black text-palette-darkest/40 uppercase block mb-1">Início das Operações</label>
+                                <p className="text-lg font-black text-palette-darkest">{data.data_inicio_atividade}</p>
                             </div>
                         </div>
 
@@ -251,22 +251,22 @@ export const BrasilApiModule: React.FC = () => {
                                 <IconBuildingBank size={40} />
                             </div>
                             <div>
-                                <h3 className="text-4xl font-black italic tracking-tighter text-blue-900 uppercase leading-none">{data.fullName}</h3>
+                                <h3 className="text-4xl font-black italic tracking-tighter text-palette-darkest uppercase leading-none">{data.fullName}</h3>
                                 <p className="text-xs font-black text-emerald-400 uppercase tracking-widest mt-2">Rede Bancária Interconectada • {data.code ? `COMPE ${String(data.code).padStart(3, '0')}` : 'DIGITAL ONLY'}</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
-                                <label className="text-[9px] font-black text-gray-400 uppercase block mb-3">ISPB Protocol</label>
+                            <div className="bg-palette-lightest p-8 rounded-[2.5rem] border border-palette-mediumLight shadow-sm flex flex-col items-center justify-center text-center">
+                                <label className="text-[9px] font-black text-palette-darkest/40 uppercase block mb-3">ISPB Protocol</label>
                                 <div className="text-2xl font-black italic text-emerald-600 truncate w-full">{data.ispb}</div>
                             </div>
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
-                                <label className="text-[9px] font-black text-gray-400 uppercase block mb-3">COMPE</label>
-                                <div className="text-4xl font-black italic text-gray-900">{data.code || '---'}</div>
+                            <div className="bg-palette-lightest p-8 rounded-[2.5rem] border border-palette-mediumLight shadow-sm flex flex-col items-center justify-center text-center">
+                                <label className="text-[9px] font-black text-palette-darkest/40 uppercase block mb-3">COMPE</label>
+                                <div className="text-4xl font-black italic text-palette-darkest">{data.code || '---'}</div>
                             </div>
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
-                                <label className="text-[9px] font-black text-gray-400 uppercase block mb-3">System Status</label>
+                            <div className="bg-palette-lightest p-8 rounded-[2.5rem] border border-palette-mediumLight shadow-sm flex flex-col items-center justify-center text-center">
+                                <label className="text-[9px] font-black text-palette-darkest/40 uppercase block mb-3">System Status</label>
                                 <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full border border-green-100">
                                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                                     <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
@@ -284,12 +284,12 @@ export const BrasilApiModule: React.FC = () => {
                                 <IconPhoneIncoming size={40} />
                             </div>
                             <div>
-                                <h3 className="text-4xl font-black italic tracking-tighter text-blue-900 leading-none">Região DDD {state.ddd}</h3>
+                                <h3 className="text-4xl font-black italic tracking-tighter text-palette-darkest leading-none">Região DDD {state.ddd}</h3>
                                 <p className="text-xs font-black text-purple-400 uppercase tracking-widest mt-2">Cobertura em {data.state} • {data.cities.length} Cidades</p>
                             </div>
                         </div>
-                        <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                            <label className="text-[9px] font-black text-gray-400 uppercase block mb-4 tracking-widest">Cidades Atendidas:</label>
+                        <div className="bg-palette-lightest p-6 rounded-[2.5rem] border border-palette-mediumLight shadow-sm">
+                            <label className="text-[9px] font-black text-palette-darkest/40 uppercase block mb-4 tracking-widest">Cidades Atendidas:</label>
                             <div className="max-h-64 overflow-y-auto custom-scrollbar flex flex-wrap gap-3">
                                 {data.cities.map((city: string, i: number) => (
                                     <span key={i} className="px-4 py-2 bg-purple-50 text-purple-700 text-[10px] font-black rounded-xl border border-purple-100 uppercase tracking-tight">{city}</span>
@@ -307,8 +307,8 @@ export const BrasilApiModule: React.FC = () => {
                                 <IconBrowser size={40} />
                             </div>
                             <div>
-                                <h3 className="text-4xl font-black italic tracking-tighter text-blue-900 uppercase leading-none">{data.fqdn}</h3>
-                                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mt-2">{data.status === 'AVAILABLE' ? 'DURMÍNIO DISPONÍVEL PARA AQUISIÇÃO' : 'DOMÍNIO REGISTRADO • REGISTRO.BR'}</p>
+                                <h3 className="text-4xl font-black italic tracking-tighter text-palette-darkest uppercase leading-none">{data.fqdn}</h3>
+                                <p className="text-xs font-black text-palette-darkest/40 uppercase tracking-widest mt-2">{data.status === 'AVAILABLE' ? 'DURMÍNIO DISPONÍVEL PARA AQUISIÇÃO' : 'DOMÍNIO REGISTRADO • REGISTRO.BR'}</p>
                             </div>
                         </div>
 
@@ -317,8 +317,8 @@ export const BrasilApiModule: React.FC = () => {
                                 <h4 className="text-[10px] font-black uppercase text-gray-400 mb-2">Metadata de Registro</h4>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                                     <div>
-                                        <label className="text-[8px] font-black text-gray-400 uppercase block">Status</label>
-                                        <p className="text-xs font-black uppercase text-blue-900 italic mt-1">{data.status}</p>
+                                        <label className="text-[8px] font-black text-palette-darkest/40 uppercase block">Status</label>
+                                        <p className="text-xs font-black uppercase text-palette-darkest italic mt-1">{data.status}</p>
                                     </div>
                                     {data.publication_status && (
                                         <div>
@@ -361,7 +361,7 @@ export const BrasilApiModule: React.FC = () => {
                                         <div className="mb-4">
                                             <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full uppercase tracking-tighter">{item.marca}</span>
                                         </div>
-                                        <h4 className="text-sm font-black text-blue-900 uppercase italic line-clamp-2 mb-2">{item.modelo}</h4>
+                                        <h4 className="text-sm font-black text-palette-darkest uppercase italic line-clamp-2 mb-2">{item.modelo}</h4>
                                         <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
                                             <div>
                                                 <p className="text-[8px] font-black uppercase text-gray-400">Referência / Ano</p>
@@ -383,7 +383,7 @@ export const BrasilApiModule: React.FC = () => {
                 return (
                     <div className="p-8 animate-in fade-in">
                         <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-2xl font-black italic tracking-tighter text-blue-900 uppercase">Calendário Nacional Pro</h3>
+                            <h3 className="text-2xl font-black italic tracking-tighter text-palette-darkest uppercase">Calendário Nacional Pro</h3>
                             <div className="flex gap-2">
                                 <span className="px-3 py-1 bg-blue-100 text-blue-700 text-[10px] font-black rounded-full uppercase tracking-widest">{data.items.length} DATAS</span>
                             </div>
@@ -393,10 +393,10 @@ export const BrasilApiModule: React.FC = () => {
                                 <div key={i} className="flex items-center gap-4 p-5 bg-white rounded-3xl border border-gray-50 shadow-sm transition-all hover:translate-x-1 border-l-4 border-l-blue-600">
                                     <div className="flex flex-col items-center bg-blue-50 px-4 py-3 rounded-2xl min-w-[60px]">
                                         <span className="text-[10px] font-black text-blue-400 uppercase leading-none mb-1">{new Date(f.date + 'T00:00:00').toLocaleDateString('pt-BR', { month: 'short' })}</span>
-                                        <span className="text-2xl font-black italic text-blue-900 leading-none">{new Date(f.date + 'T00:00:00').getDate()}</span>
+                                        <span className="text-2xl font-black italic text-palette-darkest leading-none">{new Date(f.date + 'T00:00:00').getDate()}</span>
                                     </div>
                                     <div className="flex-1 overflow-hidden">
-                                        <p className="text-sm font-black text-gray-900 uppercase tracking-tight truncate">{f.name}</p>
+                                        <p className="text-sm font-black text-palette-darkest uppercase tracking-tight truncate">{f.name}</p>
                                         <p className="text-[9px] font-bold text-blue-300 uppercase tracking-widest mt-0.5">{f.type === 'national' ? 'Feriado Federal' : f.type}</p>
                                     </div>
                                 </div>
@@ -411,9 +411,9 @@ export const BrasilApiModule: React.FC = () => {
     };
 
     return (
-        <div className="flex h-[calc(100vh-140px)] bg-[#f8fbff] overflow-hidden font-sans">
+        <div className="flex h-[calc(100vh-140px)] bg-palette-lightest overflow-hidden font-sans">
             {/* Sidebar de Controle de Inteligência */}
-            <div className="w-80 bg-white border-r border-gray-200 flex flex-col shadow-2xl z-30">
+            <div className="w-80 bg-palette-lightest border-r border-palette-mediumDark flex flex-col shadow-2xl z-30">
                 <div className="p-8 bg-slate-900 text-white shrink-0 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none rotate-[20deg]">
                         <IconGlobe size={180} />
@@ -426,17 +426,17 @@ export const BrasilApiModule: React.FC = () => {
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2 relative z-10 italic">Acesso Restrito: Protocolo SSL/TLS 1.3</p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-gray-50/40">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-palette-mediumLight/40">
                     {/* Buscas Interativas */}
                     <div className="space-y-6">
                         {/* CEP Search */}
                         <div className="group">
-                            <label className="text-[9px] font-black uppercase text-gray-400 flex items-center justify-between tracking-widest mb-2 px-1 group-focus-within:text-blue-500 transition-colors">
+                            <label className="text-[9px] font-black uppercase text-palette-darkest/40 flex items-center justify-between tracking-widest mb-2 px-1 group-focus-within:text-blue-500 transition-colors">
                                 <span>Localização / Logística</span>
                                 <IconMapPin size={12} />
                             </label>
                             <div className="flex gap-2">
-                                <input className="flex-1 bg-white border border-gray-200 outline-none px-4 py-3 rounded-2xl text-xs font-black focus:ring-2 ring-blue-500/20 shadow-sm transition-all tracking-widest" placeholder="00000-000" value={state.cep} onChange={e => setState(s => ({ ...s, cep: e.target.value }))} onKeyDown={e => e.key === 'Enter' && fetchData('cep')} />
+                                <input className="flex-1 bg-palette-lightest border border-palette-mediumDark outline-none px-4 py-3 rounded-2xl text-xs font-black focus:ring-2 ring-blue-500/20 shadow-sm transition-all tracking-widest" placeholder="00000-000" value={state.cep} onChange={e => setState(s => ({ ...s, cep: e.target.value }))} onKeyDown={e => e.key === 'Enter' && fetchData('cep')} />
                                 <button onClick={() => fetchData('cep')} className="p-3.5 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all active:scale-90 shadow-lg shadow-blue-500/20"><IconSearch size={18} /></button>
                             </div>
                         </div>
@@ -498,7 +498,7 @@ export const BrasilApiModule: React.FC = () => {
 
                     {/* Dashboard de Taxas (Carga Global) */}
                     {rates.length > 0 && (
-                        <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-xl space-y-4">
+                        <div className="bg-palette-lightest p-6 rounded-[2.5rem] border border-palette-mediumLight shadow-xl space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">Live Global Indices</span>
                                 <IconActivity size={12} className="text-blue-500 animate-pulse" />
@@ -524,21 +524,21 @@ export const BrasilApiModule: React.FC = () => {
                 </div>
 
                 {/* Navbar de Navegação Interna */}
-                <div className="h-20 bg-white border-b border-gray-200 px-8 flex items-center justify-between z-20 shrink-0">
+                <div className="h-20 bg-palette-lightest border-b border-palette-mediumDark px-8 flex items-center justify-between z-20 shrink-0">
                     <div className="flex items-center gap-8">
                         <div className="flex flex-col">
-                            <h3 className="text-xl font-black italic tracking-tighter text-slate-900 uppercase leading-none">Intelligence Terminal</h3>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-1.5 flex items-center gap-2">
+                            <h3 className="text-xl font-black italic tracking-tighter text-palette-darkest uppercase leading-none">Intelligence Terminal</h3>
+                            <span className="text-[9px] font-bold text-palette-darkest/40 uppercase tracking-[0.3em] mt-1.5 flex items-center gap-2">
                                 <IconRefresh size={10} className={state.loading ? 'animate-spin' : ''} /> Sync Status: Real-Time Stream Active
                             </span>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex items-center gap-3 px-4 py-2 bg-palette-mediumLight rounded-2xl border border-palette-mediumDark">
                             <div className="text-right">
-                                <p className="text-xs font-black text-slate-900 uppercase leading-none italic">Admin Session</p>
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Encryption: AES-256</p>
+                                <p className="text-xs font-black text-palette-darkest uppercase leading-none italic">Admin Session</p>
+                                <p className="text-[8px] font-bold text-palette-darkest/40 uppercase tracking-widest mt-1">Encryption: AES-256</p>
                             </div>
                             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center text-white shadow-lg">
                                 <IconUser size={22} />
@@ -551,7 +551,7 @@ export const BrasilApiModule: React.FC = () => {
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-10">
                     <div className="max-w-5xl mx-auto space-y-10">
                         {/* Container Principal com Estilo Industrial de Software */}
-                        <div className="bg-white rounded-[3.5rem] shadow-[0_40px_100px_rgba(0,0,0,0.08)] overflow-hidden border border-white relative flex flex-col min-h-[600px]">
+                        <div className="bg-palette-lightest rounded-[3.5rem] shadow-[0_40px_100px_rgba(0,0,0,0.08)] overflow-hidden border border-palette-mediumLight relative flex flex-col min-h-[600px]">
                             {/* Fake Terminal Header */}
                             <div className="bg-slate-900 p-3 px-8 flex items-center justify-between">
                                 <div className="flex gap-2">
@@ -573,14 +573,14 @@ export const BrasilApiModule: React.FC = () => {
                         {/* Footer de Widgets Expandível */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {[
-                                { icon: <IconActivity size={24} />, label: 'SELIC TARGET', value: '10.75%', color: 'text-blue-600', bg: 'bg-blue-50' },
-                                { icon: <IconCurrencyDollar size={24} />, label: 'USD/BRL SPOT', value: 'R$ 5.92', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                                { icon: <IconTruck size={24} />, label: 'CORREIOS I/O', value: 'SINC.', color: 'text-orange-600', bg: 'bg-orange-50' }
+                                w.label === 'SELIC TARGET' ? { icon: <IconActivity size={24} />, label: 'SELIC TARGET', value: '10.75%', color: 'text-blue-600', bg: 'bg-blue-50' } :
+                                    w.label === 'USD/BRL SPOT' ? { icon: <IconCurrencyDollar size={24} />, label: 'USD/BRL SPOT', value: 'R$ 5.92', color: 'text-emerald-600', bg: 'bg-emerald-50' } :
+                                        { icon: <IconTruck size={24} />, label: 'CORREIOS I/O', value: 'SINC.', color: 'text-orange-600', bg: 'bg-orange-50' }
                             ].map((w, i) => (
-                                <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-2xl transition-all cursor-pointer group">
+                                <div key={i} className="bg-palette-lightest p-6 rounded-[2.5rem] border border-palette-mediumLight shadow-sm hover:shadow-2xl transition-all cursor-pointer group">
                                     <div className={`p-4 ${w.bg} ${w.color} rounded-2xl w-fit mb-5 group-hover:scale-110 transition-transform`}>{w.icon}</div>
-                                    <h4 className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">{w.label}</h4>
-                                    <p className="text-2xl font-black italic text-slate-900 tracking-tighter leading-none uppercase">{w.value}</p>
+                                    <h4 className="text-[9px] font-black uppercase text-palette-darkest/40 tracking-[0.2em] mb-1">{w.label}</h4>
+                                    <p className="text-2xl font-black italic text-palette-darkest tracking-tighter leading-none uppercase">{w.value}</p>
                                 </div>
                             ))}
                         </div>

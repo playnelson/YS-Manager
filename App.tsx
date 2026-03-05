@@ -285,10 +285,10 @@ const App: React.FC = () => {
   const visibleTabs = tabs.filter(t => !hiddenTabs.includes(t.id));
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-[#111111] text-gray-900 dark:text-gray-100 transition-colors duration-300 font-sans">
+    <div className="flex h-screen overflow-hidden bg-palette-lightest dark:bg-[#111111] text-gray-900 dark:text-gray-100 transition-colors duration-300 font-sans">
 
       {/* ── Sidebar ── */}
-      <aside className="w-16 lg:w-64 flex-shrink-0 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
+      <aside className="w-16 lg:w-64 flex-shrink-0 bg-palette-lightest dark:bg-gray-900 border-r border-palette-mediumDark dark:border-gray-800 flex flex-col">
         {/* Logo */}
         <div className="p-5 flex items-center gap-3">
           <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-gray-900 flex-shrink-0">
@@ -305,7 +305,7 @@ const App: React.FC = () => {
               onClick={() => setActiveTab(tab.id)}
               title={tab.label}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 ${activeTab === tab.id
-                ? 'bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-semibold'
+                ? 'bg-white dark:bg-gray-800 shadow-sm border border-palette-mediumDark dark:border-gray-700 text-gray-900 dark:text-white font-semibold'
                 : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-800/60 font-medium'
                 }`}
             >
@@ -316,7 +316,7 @@ const App: React.FC = () => {
         </nav>
 
         {/* User info */}
-        <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+        <div className="p-3 border-t border-palette-mediumDark dark:border-gray-800">
           <div className="flex items-center gap-3 px-2 py-1.5">
             <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
               {user.photoUrl
@@ -343,9 +343,9 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* ── Top Header ── */}
-        <header className="h-14 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-6 bg-white/80 dark:bg-gray-900/50 backdrop-blur-md flex-shrink-0">
+        <header className="h-14 border-b border-palette-mediumLight dark:border-gray-800 flex items-center justify-between px-6 bg-white/80 dark:bg-gray-900/50 backdrop-blur-md flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 bg-palette-mediumLight dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-palette-mediumDark dark:border-gray-700">
               <span className="material-symbols-outlined text-gray-500" style={{ fontSize: '16px' }}>calendar_month</span>
               <span className="text-xs font-medium">{getFullDate()}</span>
             </div>
@@ -383,7 +383,7 @@ const App: React.FC = () => {
             >
               <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>settings</span>
             </button>
-            <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+            <div className="h-4 w-px bg-palette-mediumDark dark:bg-gray-700 mx-1"></div>
             <button
               onClick={handleLogout}
               className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-red-500 transition-colors px-2 py-1.5"
@@ -395,7 +395,7 @@ const App: React.FC = () => {
         </header>
 
         {/* ── Content Area (fills remaining height) ── */}
-        <div className="flex-1 overflow-hidden bg-gray-100 dark:bg-black/30">
+        <div className="flex-1 overflow-hidden bg-palette-mediumLight dark:bg-black/30">
           <Suspense fallback={<LoadingPlaceholder />}>
             {activeTab === 'office' && (
               <OfficeModule

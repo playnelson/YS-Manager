@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  MessageCircle, Smartphone, Globe, Monitor, Zap, User, History, 
-  Clock, Trash2, RotateCcw, QrCode, Copy, Check, Send, 
+import {
+  MessageCircle, Smartphone, Globe, Monitor, Zap, User, History,
+  Clock, Trash2, RotateCcw, QrCode, Copy, Check, Send,
   Plus, FileText, Share2, ExternalLink
 } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -41,7 +41,7 @@ export const WhatsAppTool: React.FC = () => {
     const saved = localStorage.getItem('ysoffice_whatsapp_templates');
     return saved ? JSON.parse(saved) : DEFAULT_TEMPLATES;
   });
-  
+
   const [history, setHistory] = useState<HistoryItem[]>(() => {
     const saved = localStorage.getItem('ysoffice_whatsapp_history');
     return saved ? JSON.parse(saved) : [];
@@ -71,7 +71,7 @@ export const WhatsAppTool: React.FC = () => {
   // Formatação Automática de Telefone
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, ''); // Remove não números
-    
+
     if (value.length > 11) value = value.slice(0, 11);
 
     if (value.length > 2) {
@@ -99,7 +99,7 @@ export const WhatsAppTool: React.FC = () => {
       finalPhone = '55' + finalPhone;
     }
     const textParam = encodeURIComponent(message);
-    
+
     switch (openMethod) {
       case 'web':
         return `https://web.whatsapp.com/send?phone=${finalPhone}&text=${textParam}`;
@@ -113,7 +113,7 @@ export const WhatsAppTool: React.FC = () => {
 
   const handleLaunch = () => {
     if (!phone) return;
-    
+
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
       alert("Número inválido. Digite DDD + Número.");
@@ -151,7 +151,7 @@ export const WhatsAppTool: React.FC = () => {
   };
 
   const clearHistory = () => {
-    if(confirm('Limpar todo o histórico?')) {
+    if (confirm('Limpar todo o histórico?')) {
       setHistory([]);
     }
   };
@@ -161,29 +161,29 @@ export const WhatsAppTool: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex gap-2 bg-[#c0c0c0] p-1 overflow-hidden">
+    <div className="h-full flex gap-2 bg-palette-mediumLight dark:bg-[#1a1a1a] p-1 overflow-hidden">
       {/* Esquerda: Formulário e Ferramentas */}
       <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar p-1">
-        
-        <div className="win95-raised bg-win95-bg border border-white p-1 w-full shadow-md">
-          <div className="bg-[#000080] text-white p-1.5 flex items-center justify-between text-xs font-bold uppercase mb-1">
+
+        <div className="win95-raised border border-palette-lightest dark:border-gray-800 p-1 w-full shadow-md">
+          <div className="bg-[#000080] dark:bg-blue-900 text-white p-1.5 flex items-center justify-between text-xs font-bold uppercase mb-1">
             <div className="flex items-center gap-2">
               <Smartphone size={14} />
               <span>Gerador de Link e Mensagem</span>
             </div>
           </div>
-          
+
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase text-[#444]">Nome do Contato</label>
+                <label className="text-[10px] font-bold uppercase text-[#444] dark:text-gray-400">Nome do Contato</label>
                 <div className="flex items-center gap-2">
-                  <div className="win95-sunken bg-gray-100 p-1.5 border border-gray-400">
-                    <User size={14} className="text-gray-500" />
+                  <div className="win95-sunken bg-palette-mediumLight dark:bg-gray-800 p-1.5 border border-palette-mediumDark dark:border-gray-700">
+                    <User size={14} className="text-gray-500 dark:text-gray-400" />
                   </div>
-                  <input 
+                  <input
                     type="text"
-                    className="flex-1 px-3 py-1.5 border border-gray-400 win95-sunken bg-white text-sm outline-none focus:bg-yellow-50"
+                    className="flex-1 px-3 py-1.5 border border-gray-400 dark:border-gray-700 win95-sunken bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white outline-none focus:bg-yellow-50 dark:focus:bg-gray-800"
                     placeholder="Ex: João Silva"
                     value={name}
                     onChange={e => setName(e.target.value)}
@@ -192,14 +192,14 @@ export const WhatsAppTool: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase text-[#444]">Número do WhatsApp</label>
+                <label className="text-[10px] font-bold uppercase text-[#444] dark:text-gray-400">Número do WhatsApp</label>
                 <div className="flex gap-2">
-                  <div className="win95-sunken bg-gray-100 px-3 py-2 text-sm text-gray-500 font-bold flex items-center border border-gray-400 select-none">
+                  <div className="win95-sunken bg-gray-100 dark:bg-gray-800 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 font-bold flex items-center border border-gray-400 dark:border-gray-700 select-none">
                     +55
                   </div>
-                  <input 
+                  <input
                     type="tel"
-                    className="flex-1 px-3 py-2 border border-gray-400 win95-sunken bg-white text-lg font-mono font-bold outline-none focus:bg-yellow-50"
+                    className="flex-1 px-3 py-2 border border-gray-400 dark:border-gray-700 win95-sunken bg-white dark:bg-gray-900 text-lg font-mono font-bold text-gray-900 dark:text-white outline-none focus:bg-yellow-50 dark:focus:bg-gray-800"
                     placeholder="(00) 00000-0000"
                     value={phone}
                     onChange={handlePhoneChange}
@@ -209,9 +209,9 @@ export const WhatsAppTool: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase text-[#444]">Mensagem</label>
-                <textarea 
-                  className="w-full px-3 py-2 border border-gray-400 win95-sunken bg-white text-sm outline-none resize-none focus:bg-yellow-50"
+                <label className="text-[10px] font-bold uppercase text-[#444] dark:text-gray-400">Mensagem</label>
+                <textarea
+                  className="w-full px-3 py-2 border border-gray-400 dark:border-gray-700 win95-sunken bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white outline-none resize-none focus:bg-yellow-50 dark:focus:bg-gray-800"
                   rows={4}
                   placeholder="Digite sua mensagem aqui..."
                   value={message}
@@ -220,14 +220,14 @@ export const WhatsAppTool: React.FC = () => {
               </div>
 
               <div className="flex gap-2">
-                <Button 
+                <Button
                   onClick={handleLaunch}
                   className="flex-1 h-10"
                   icon={<Send size={16} />}
                 >
                   ENVIAR AGORA
                 </Button>
-                <button 
+                <button
                   onClick={copyLink}
                   className={`win95-btn px-3 flex items-center gap-2 ${copied ? 'text-green-700' : ''}`}
                   title="Copiar Link wa.me"
@@ -235,9 +235,9 @@ export const WhatsAppTool: React.FC = () => {
                   {copied ? <Check size={16} /> : <Copy size={16} />}
                   <span className="text-[10px] font-bold uppercase">Link</span>
                 </button>
-                <button 
+                <button
                   onClick={() => setShowQR(!showQR)}
-                  className={`win95-btn px-3 flex items-center gap-2 ${showQR ? 'win95-sunken bg-white' : ''}`}
+                  className={`win95-btn px-3 flex items-center gap-2 ${showQR ? 'win95-sunken bg-white dark:bg-gray-800' : ''}`}
                   title="Gerar QR Code"
                 >
                   <QrCode size={16} />
@@ -248,11 +248,11 @@ export const WhatsAppTool: React.FC = () => {
 
             <div className="flex flex-col gap-4">
               {showQR ? (
-                <div className="win95-sunken bg-white p-4 flex flex-col items-center justify-center h-full min-h-[250px]">
-                  <div className="text-[10px] font-bold uppercase text-gray-500 mb-4">Aponte a câmera para escanear</div>
+                <div className="win95-sunken bg-white dark:bg-gray-900 p-4 flex flex-col items-center justify-center h-full min-h-[250px]">
+                  <div className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-4">Aponte a câmera para escanear</div>
                   {phone ? (
                     <div className="p-2 border-4 border-black bg-white">
-                      <QRCodeCanvas 
+                      <QRCodeCanvas
                         value={`https://wa.me/${phone.replace(/\D/g, '').length <= 11 ? '55' + phone.replace(/\D/g, '') : phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`}
                         size={180}
                         level="H"
@@ -270,22 +270,22 @@ export const WhatsAppTool: React.FC = () => {
               ) : (
                 <div className="flex flex-col h-full">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-[10px] font-bold uppercase text-[#444]">Modelos de Mensagem</label>
+                    <label className="text-[10px] font-bold uppercase text-[#444] dark:text-gray-400">Modelos de Mensagem</label>
                     <button className="text-blue-700 hover:underline text-[9px] font-bold uppercase flex items-center gap-1">
                       <Plus size={10} /> Novo
                     </button>
                   </div>
-                  <div className="win95-sunken bg-white flex-1 overflow-y-auto p-2 space-y-2 max-h-[250px]">
+                  <div className="win95-sunken bg-white dark:bg-gray-900 flex-1 overflow-y-auto p-2 space-y-2 max-h-[250px]">
                     {templates.map(t => (
-                      <div 
-                        key={t.id} 
+                      <div
+                        key={t.id}
                         onClick={() => applyTemplate(t.content)}
-                        className="p-2 border border-gray-200 hover:bg-blue-50 cursor-pointer group relative"
+                        className="p-2 border border-gray-200 dark:border-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer group relative"
                       >
-                        <div className="font-bold text-[10px] text-blue-800 mb-1 flex items-center gap-1">
+                        <div className="font-bold text-[10px] text-blue-800 dark:text-blue-400 mb-1 flex items-center gap-1">
                           <FileText size={10} /> {t.title}
                         </div>
-                        <div className="text-[9px] text-gray-600 line-clamp-2 italic">
+                        <div className="text-[9px] text-gray-600 dark:text-gray-400 line-clamp-2 italic">
                           "{t.content}"
                         </div>
                       </div>
@@ -296,52 +296,52 @@ export const WhatsAppTool: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-gray-100 p-2 border-t border-gray-400 flex gap-4">
-             <div className="flex items-center gap-2">
-               <span className="text-[9px] font-bold uppercase text-gray-500">Método:</span>
-               <div className="flex gap-1">
-                 {['api', 'web', 'app'].map(m => (
-                   <button 
-                     key={m}
-                     onClick={() => setOpenMethod(m as any)}
-                     className={`px-2 py-0.5 text-[9px] font-bold uppercase border ${openMethod === m ? 'win95-sunken bg-white text-blue-700' : 'win95-raised bg-win95-bg'}`}
-                   >
-                     {m}
-                   </button>
-                 ))}
-               </div>
-             </div>
-             <div className="flex-1"></div>
-             <div className="flex items-center gap-1 text-[9px] text-gray-400 italic">
-               <Zap size={10} /> Envio rápido habilitado
-             </div>
+          <div className="bg-palette-lightest p-2 border-t border-palette-mediumDark flex gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold uppercase text-gray-500">Método:</span>
+              <div className="flex gap-1">
+                {['api', 'web', 'app'].map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setOpenMethod(m as any)}
+                    className={`px-2 py-0.5 text-[9px] font-bold uppercase border ${openMethod === m ? 'win95-sunken bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-400' : 'win95-raised'}`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex-1"></div>
+            <div className="flex items-center gap-1 text-[9px] text-gray-400 italic">
+              <Zap size={10} /> Envio rápido habilitado
+            </div>
           </div>
         </div>
 
         {/* Dicas e Atalhos */}
-        <div className="win95-raised bg-win95-bg border border-white p-3 shadow-sm">
-          <h4 className="text-[10px] font-bold uppercase text-win95-blue mb-2 flex items-center gap-1">
+        <div className="win95-raised border border-white dark:border-gray-800 p-3 shadow-sm">
+          <h4 className="text-[10px] font-bold uppercase text-win95-blue dark:text-blue-400 mb-2 flex items-center gap-1">
             <Zap size={12} /> Dicas de Produtividade
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-[9px] text-gray-600 flex gap-2">
-              <div className="win95-sunken bg-white p-1 h-fit"><Globe size={12} /></div>
+            <div className="text-[9px] text-gray-600 dark:text-gray-400 flex gap-2">
+              <div className="win95-sunken bg-white dark:bg-gray-800 p-1 h-fit"><Globe size={12} /></div>
               <div>
-                <span className="font-bold block text-black">WhatsApp Web</span>
+                <span className="font-bold block text-black dark:text-white">WhatsApp Web</span>
                 Ideal para quando você já está logado no navegador.
               </div>
             </div>
-            <div className="text-[9px] text-gray-600 flex gap-2">
-              <div className="win95-sunken bg-white p-1 h-fit"><Monitor size={12} /></div>
+            <div className="text-[9px] text-gray-600 dark:text-gray-400 flex gap-2">
+              <div className="win95-sunken bg-white dark:bg-gray-800 p-1 h-fit"><Monitor size={12} /></div>
               <div>
-                <span className="font-bold block text-black">WhatsApp Desktop</span>
+                <span className="font-bold block text-black dark:text-white">WhatsApp Desktop</span>
                 Abre diretamente o aplicativo instalado no seu Windows.
               </div>
             </div>
-            <div className="text-[9px] text-gray-600 flex gap-2">
-              <div className="win95-sunken bg-white p-1 h-fit"><ExternalLink size={12} /></div>
+            <div className="text-[9px] text-gray-600 dark:text-gray-400 flex gap-2">
+              <div className="win95-sunken bg-white dark:bg-gray-800 p-1 h-fit"><ExternalLink size={12} /></div>
               <div>
-                <span className="font-bold block text-black">Link Direto</span>
+                <span className="font-bold block text-black dark:text-white">Link Direto</span>
                 Gere links curtos para colocar em bios de redes sociais ou sites.
               </div>
             </div>
@@ -350,43 +350,43 @@ export const WhatsAppTool: React.FC = () => {
       </div>
 
       {/* Direita: Histórico */}
-      <div className="w-72 flex flex-col bg-win95-bg win95-raised p-1 h-full shrink-0">
-        <div className="flex items-center justify-between bg-[#000080] text-white p-1 mb-1 px-2">
-           <div className="flex items-center gap-1 text-[10px] font-bold uppercase">
-             <History size={12} /> Histórico Recente
-           </div>
-           <button onClick={clearHistory} className="text-white hover:bg-red-600 p-0.5 rounded" title="Limpar Histórico">
-             <Trash2 size={12} />
-           </button>
+      <div className="w-72 flex flex-col win95-raised p-1 h-full shrink-0">
+        <div className="flex items-center justify-between bg-[#000080] dark:bg-blue-900 text-white p-1 mb-1 px-2">
+          <div className="flex items-center gap-1 text-[10px] font-bold uppercase">
+            <History size={12} /> Histórico Recente
+          </div>
+          <button onClick={clearHistory} className="text-white hover:bg-red-600 p-0.5 rounded" title="Limpar Histórico">
+            <Trash2 size={12} />
+          </button>
         </div>
-        
-        <div className="flex-1 win95-sunken bg-white overflow-y-auto custom-scrollbar p-1 space-y-2">
+
+        <div className="flex-1 win95-sunken bg-white dark:bg-gray-900 overflow-y-auto custom-scrollbar p-1 space-y-2">
           {history.length === 0 ? (
             <div className="text-center p-4 text-[#808080] text-[10px] italic">
               Nenhuma mensagem enviada.
             </div>
           ) : (
             history.map(item => (
-              <div key={item.id} className="border border-dotted border-gray-300 p-2 hover:bg-blue-50 group relative bg-gray-50">
+              <div key={item.id} className="border border-dotted border-gray-300 dark:border-gray-700 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 group relative bg-gray-50 dark:bg-gray-800">
                 <div className="flex justify-between items-start mb-1">
-                  <div className="font-bold text-xs text-blue-800 truncate max-w-[140px]">{item.name}</div>
+                  <div className="font-bold text-xs text-blue-800 dark:text-blue-400 truncate max-w-[140px]">{item.name}</div>
                   <div className="text-[9px] text-gray-500 flex items-center gap-0.5">
-                    <Clock size={8} /> {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    <Clock size={8} /> {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
-                <div className="text-[10px] font-mono font-bold text-black mb-1">{item.phone}</div>
+                <div className="text-[10px] font-mono font-bold text-black dark:text-white mb-1">{item.phone}</div>
                 {item.message && (
-                  <div className="text-[9px] text-gray-600 italic truncate border-t border-gray-200 pt-1">
+                  <div className="text-[9px] text-gray-600 dark:text-gray-400 italic truncate border-t border-gray-200 dark:border-gray-700 pt-1">
                     "{item.message}"
                   </div>
                 )}
-                
-                <button 
+
+                <button
                   onClick={() => loadFromHistory(item)}
-                  className="absolute bottom-1 right-1 p-1 bg-white border border-gray-300 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100"
+                  className="absolute bottom-1 right-1 p-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100 dark:hover:bg-blue-900/50"
                   title="Reutilizar dados"
                 >
-                  <RotateCcw size={12} className="text-blue-600"/>
+                  <RotateCcw size={12} className="text-blue-600 dark:text-blue-400" />
                 </button>
               </div>
             ))

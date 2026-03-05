@@ -1,9 +1,9 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { 
-  Folder, FileText, Plus, Search, Trash2, Save, AlertTriangle, 
-  Lock, Archive, Clock, Hash, Bold, Italic, Underline, 
-  AlignLeft, AlignCenter, AlignRight, List, ListOrdered 
+import {
+  Folder, FileText, Plus, Search, Trash2, Save, AlertTriangle,
+  Lock, Archive, Clock, Hash, Bold, Italic, Underline,
+  AlignLeft, AlignCenter, AlignRight, List, ListOrdered
 } from 'lucide-react';
 import { ImportantNote, NotePriority } from '../types';
 import { Button } from './ui/Button';
@@ -27,8 +27,8 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
 
   const filteredNotes = useMemo(() => {
     return notes.filter(n => {
-      const matchSearch = n.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          n.content.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchSearch = n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        n.content.toLowerCase().includes(searchTerm.toLowerCase());
       const matchCat = activeCategory === 'Todas' || n.category === activeCategory;
       return matchSearch && matchCat;
     });
@@ -83,22 +83,22 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
   };
 
   return (
-    <div className="flex h-full gap-2 bg-win95-bg overflow-hidden p-1">
+    <div className="flex h-full gap-2 bg-palette-lightest overflow-hidden p-1">
       {/* Sidebar - Explorador de Notas */}
-      <div className="w-72 flex flex-col bg-win95-bg win95-raised p-1 h-full">
-        <div className="bg-win95-blue text-white px-2 py-1 text-[11px] font-black uppercase flex items-center justify-between shadow-md mb-2">
+      <div className="w-72 flex flex-col bg-palette-lightest win95-raised p-1 h-full font-sans">
+        <div className="bg-palette-darkest text-white px-2 py-1 text-[11px] font-black uppercase flex items-center justify-between shadow-md mb-2">
           <div className="flex items-center gap-2">
             <Folder size={12} />
             <span>Documentos</span>
           </div>
-          <button onClick={addNote} className="win95-raised bg-win95-bg text-black p-0.5"><Plus size={10} /></button>
+          <button onClick={addNote} className="win95-raised bg-palette-lightest text-black p-0.5"><Plus size={10} /></button>
         </div>
 
         <div className="px-2 mb-2">
           <div className="relative">
             <Search className="absolute left-2 top-2 text-win95-shadow" size={12} />
-            <input 
-              className="w-full pl-7 pr-2 py-1 win95-sunken text-[11px] bg-white outline-none placeholder:italic"
+            <input
+              className="w-full pl-7 pr-2 py-1 win95-sunken text-[11px] bg-palette-lightest outline-none placeholder:italic"
               placeholder="Pesquisar no arquivo..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -107,27 +107,27 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
         </div>
 
         {/* Categorias / Pastas */}
-        <div className="flex-1 overflow-y-auto win95-sunken bg-white p-1 flex flex-col gap-0.5">
+        <div className="flex-1 overflow-y-auto win95-sunken bg-palette-lightest p-1 flex flex-col gap-0.5">
           {categories.map(cat => (
             <div key={cat} className="flex flex-col">
-              <div 
+              <div
                 onClick={() => setActiveCategory(cat)}
-                className={`flex items-center gap-2 px-1 py-1 cursor-pointer text-[11px] font-bold ${activeCategory === cat ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
+                className={`flex items-center gap-2 px-1 py-1 cursor-pointer text-[11px] font-bold ${activeCategory === cat ? 'bg-palette-mediumLight' : 'hover:bg-palette-mediumLight/50'}`}
               >
                 <Folder size={12} className={activeCategory === cat ? 'text-win95-blue' : 'text-win95-shadow'} />
                 <span className="truncate uppercase">{cat}</span>
               </div>
-              
+
               {activeCategory === cat && (
                 <div className="ml-4 border-l-2 border-dotted border-win95-shadow pl-1 flex flex-col gap-0.5 mt-0.5">
                   {filteredNotes.length === 0 ? (
                     <div className="text-[9px] text-win95-shadow italic p-1">(Vazio)</div>
                   ) : (
                     filteredNotes.map(note => (
-                      <div 
+                      <div
                         key={note.id}
                         onClick={(e) => { e.stopPropagation(); setSelectedId(note.id); }}
-                        className={`flex items-center justify-between px-2 py-1 cursor-pointer text-[11px] group ${selectedId === note.id ? 'bg-win95-blue text-white' : 'hover:bg-gray-50 text-black'}`}
+                        className={`flex items-center justify-between px-2 py-1 cursor-pointer text-[11px] group ${selectedId === note.id ? 'bg-palette-darkest text-white' : 'hover:bg-palette-mediumLight/40 text-black'}`}
                       >
                         <div className="flex items-center gap-2 truncate">
                           {priorityMeta[note.priority].icon}
@@ -147,15 +147,15 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
       </div>
 
       {/* Área de Edição - Bloco de Notas */}
-      <div className="flex-1 flex flex-col win95-raised p-1 h-full bg-win95-bg">
+      <div className="flex-1 flex flex-col win95-raised p-1 h-full bg-palette-lightest">
         {selectedNote ? (
           <>
-            <div className="bg-[#808080] text-white px-2 py-1 text-[11px] font-bold flex justify-between items-center mb-1">
+            <div className="bg-palette-darkest text-white px-2 py-1 text-[11px] font-bold flex justify-between items-center mb-1">
               <div className="flex items-center gap-3">
                 <span className="uppercase tracking-widest">Editando: {selectedNote.title}.doc</span>
                 <div className="flex gap-1">
-                  <select 
-                    className="bg-win95-bg text-black text-[9px] px-1 outline-none border border-black/20 font-black uppercase"
+                  <select
+                    className="bg-palette-lightest text-black text-[9px] px-1 outline-none border border-black/20 font-black uppercase"
                     value={selectedNote.priority}
                     onChange={e => updateNote(selectedNote.id, { priority: e.target.value as NotePriority })}
                   >
@@ -167,81 +167,81 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                 <button className="win95-raised bg-win95-bg text-black px-2 py-0.5 text-[10px] flex items-center gap-1 active:shadow-none"><Save size={10}/> Salvar</button>
+                <button className="win95-raised bg-palette-lightest text-black px-2 py-0.5 text-[10px] flex items-center gap-1 active:shadow-none"><Save size={10} /> Salvar</button>
               </div>
             </div>
 
-            <div className="p-3 bg-win95-bg flex flex-col gap-3 flex-1 overflow-hidden">
-               <div className="grid grid-cols-2 gap-4 shrink-0">
-                  <div>
-                    <label className="text-[10px] font-black uppercase block mb-1">Título do Documento:</label>
-                    <input 
-                      className="w-full px-2 py-1 win95-sunken bg-white text-xs outline-none font-bold text-black uppercase"
-                      value={selectedNote.title}
-                      onChange={e => updateNote(selectedNote.id, { title: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase block mb-1">Categoria / Pasta:</label>
-                    <div className="relative">
-                       <Hash className="absolute left-2 top-1.5 text-win95-shadow" size={12} />
-                       <input 
-                        list="note-cats"
-                        className="w-full pl-7 pr-2 py-1 win95-sunken bg-white text-xs outline-none font-bold text-black uppercase"
-                        value={selectedNote.category}
-                        onChange={e => updateNote(selectedNote.id, { category: e.target.value })}
-                      />
-                      <datalist id="note-cats">
-                        {categories.filter(c => c !== 'Todas').map(c => <option key={c} value={c} />)}
-                      </datalist>
-                    </div>
-                  </div>
-               </div>
-
-               {/* Toolbar de Formatação */}
-               <div className="flex items-center gap-1 p-1 bg-win95-bg win95-raised shrink-0 select-none">
-                  <button onClick={() => execCommand('bold')} className="win95-raised p-1 hover:bg-white" title="Negrito"><Bold size={14} /></button>
-                  <button onClick={() => execCommand('italic')} className="win95-raised p-1 hover:bg-white" title="Itálico"><Italic size={14} /></button>
-                  <button onClick={() => execCommand('underline')} className="win95-raised p-1 hover:bg-white" title="Sublinhado"><Underline size={14} /></button>
-                  
-                  <div className="w-px h-4 bg-win95-shadow mx-1" />
-                  
-                  <button onClick={() => execCommand('justifyLeft')} className="win95-raised p-1 hover:bg-white" title="Alinhar à Esquerda"><AlignLeft size={14} /></button>
-                  <button onClick={() => execCommand('justifyCenter')} className="win95-raised p-1 hover:bg-white" title="Centralizar"><AlignCenter size={14} /></button>
-                  <button onClick={() => execCommand('justifyRight')} className="win95-raised p-1 hover:bg-white" title="Alinhar à Direita"><AlignRight size={14} /></button>
-                  
-                  <div className="w-px h-4 bg-win95-shadow mx-1" />
-
-                  <button onClick={() => execCommand('insertUnorderedList')} className="win95-raised p-1 hover:bg-white" title="Lista com Marcadores"><List size={14} /></button>
-                  <button onClick={() => execCommand('insertOrderedList')} className="win95-raised p-1 hover:bg-white" title="Lista Numerada"><ListOrdered size={14} /></button>
-               </div>
-
-               <div className="flex-1 flex flex-col min-h-0">
-                  <label className="text-[10px] font-black uppercase block mb-1">Conteúdo da Anotação:</label>
-                  <div 
-                    ref={editorRef}
-                    contentEditable
-                    className="flex-1 w-full p-4 win95-sunken bg-white outline-none overflow-y-auto font-sans text-sm leading-relaxed text-black custom-scrollbar"
-                    onInput={(e) => updateNote(selectedNote.id, { content: e.currentTarget.innerHTML })}
-                    onBlur={(e) => updateNote(selectedNote.id, { content: e.currentTarget.innerHTML })}
-                    style={{ minHeight: '100px' }}
+            <div className="p-3 bg-palette-lightest flex flex-col gap-3 flex-1 overflow-hidden">
+              <div className="grid grid-cols-2 gap-4 shrink-0">
+                <div>
+                  <label className="text-[10px] font-black uppercase block mb-1">Título do Documento:</label>
+                  <input
+                    className="w-full px-2 py-1 win95-sunken bg-palette-lightest text-xs outline-none font-bold text-black uppercase"
+                    value={selectedNote.title}
+                    onChange={e => updateNote(selectedNote.id, { title: e.target.value })}
                   />
-               </div>
-
-               <div className="win95-sunken bg-win95-bg border-none p-1 px-3 flex justify-between items-center text-[9px] font-bold text-[#555] uppercase italic">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1"><Clock size={10} /> Atualizado: {new Date(selectedNote.updatedAt).toLocaleString('pt-BR')}</span>
-                    <span>Formato: Rich Text (HTML)</span>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase block mb-1">Categoria / Pasta:</label>
+                  <div className="relative">
+                    <Hash className="absolute left-2 top-1.5 text-win95-shadow" size={12} />
+                    <input
+                      list="note-cats"
+                      className="w-full pl-7 pr-2 py-1 win95-sunken bg-palette-lightest text-xs outline-none font-bold text-black uppercase"
+                      value={selectedNote.category}
+                      onChange={e => updateNote(selectedNote.id, { category: e.target.value })}
+                    />
+                    <datalist id="note-cats">
+                      {categories.filter(c => c !== 'Todas').map(c => <option key={c} value={c} />)}
+                    </datalist>
                   </div>
-                  <div>Conteúdo: {selectedNote.content.length} bytes</div>
-               </div>
+                </div>
+              </div>
+
+              {/* Toolbar de Formatação */}
+              <div className="flex items-center gap-1 p-1 bg-palette-lightest win95-raised shrink-0 select-none">
+                <button onClick={() => execCommand('bold')} className="win95-raised p-1 hover:bg-palette-mediumLight" title="Negrito"><Bold size={14} /></button>
+                <button onClick={() => execCommand('italic')} className="win95-raised p-1 hover:bg-palette-mediumLight" title="Itálico"><Italic size={14} /></button>
+                <button onClick={() => execCommand('underline')} className="win95-raised p-1 hover:bg-palette-mediumLight" title="Sublinhado"><Underline size={14} /></button>
+
+                <div className="w-px h-4 bg-win95-shadow mx-1" />
+
+                <button onClick={() => execCommand('justifyLeft')} className="win95-raised p-1 hover:bg-palette-mediumLight" title="Alinhar à Esquerda"><AlignLeft size={14} /></button>
+                <button onClick={() => execCommand('justifyCenter')} className="win95-raised p-1 hover:bg-palette-mediumLight" title="Centralizar"><AlignCenter size={14} /></button>
+                <button onClick={() => execCommand('justifyRight')} className="win95-raised p-1 hover:bg-palette-mediumLight" title="Alinhar à Direita"><AlignRight size={14} /></button>
+
+                <div className="w-px h-4 bg-win95-shadow mx-1" />
+
+                <button onClick={() => execCommand('insertUnorderedList')} className="win95-raised p-1 hover:bg-palette-mediumLight" title="Lista com Marcadores"><List size={14} /></button>
+                <button onClick={() => execCommand('insertOrderedList')} className="win95-raised p-1 hover:bg-palette-mediumLight" title="Lista Numerada"><ListOrdered size={14} /></button>
+              </div>
+
+              <div className="flex-1 flex flex-col min-h-0">
+                <label className="text-[10px] font-black uppercase block mb-1">Conteúdo da Anotação:</label>
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  className="flex-1 w-full p-4 win95-sunken bg-palette-lightest outline-none overflow-y-auto font-sans text-sm leading-relaxed text-black custom-scrollbar"
+                  onInput={(e) => updateNote(selectedNote.id, { content: e.currentTarget.innerHTML })}
+                  onBlur={(e) => updateNote(selectedNote.id, { content: e.currentTarget.innerHTML })}
+                  style={{ minHeight: '100px' }}
+                />
+              </div>
+
+              <div className="win95-sunken bg-palette-lightest border-none p-1 px-3 flex justify-between items-center text-[9px] font-bold text-[#555] uppercase italic">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1"><Clock size={10} /> Atualizado: {new Date(selectedNote.updatedAt).toLocaleString('pt-BR')}</span>
+                  <span>Formato: Rich Text (HTML)</span>
+                </div>
+                <div>Conteúdo: {selectedNote.content.length} bytes</div>
+              </div>
             </div>
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center opacity-30 grayscale p-10 text-center">
-             <FileText size={64} className="mb-4" />
-             <h3 className="text-sm font-black uppercase tracking-widest mb-2">Editor de Documentos Pro v2.0</h3>
-             <p className="text-[10px] max-w-xs font-bold leading-tight">SELECIONE UM DOCUMENTO NA ÁRVORE AO LADO OU CLIQUE NO BOTÃO "+" PARA CRIAR UM NOVO REGISTRO.</p>
+            <FileText size={64} className="mb-4" />
+            <h3 className="text-sm font-black uppercase tracking-widest mb-2">Editor de Documentos Pro v2.0</h3>
+            <p className="text-[10px] max-w-xs font-bold leading-tight">SELECIONE UM DOCUMENTO NA ÁRVORE AO LADO OU CLIQUE NO BOTÃO "+" PARA CRIAR UM NOVO REGISTRO.</p>
           </div>
         )}
       </div>
