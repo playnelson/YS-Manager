@@ -573,9 +573,9 @@ export const BrasilApiModule: React.FC = () => {
                         {/* Footer de Widgets Expandível */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {[
-                                w.label === 'SELIC TARGET' ? { icon: <IconActivity size={24} />, label: 'SELIC TARGET', value: '10.75%', color: 'text-blue-600', bg: 'bg-blue-50' } :
-                                    w.label === 'USD/BRL SPOT' ? { icon: <IconCurrencyDollar size={24} />, label: 'USD/BRL SPOT', value: 'R$ 5.92', color: 'text-emerald-600', bg: 'bg-emerald-50' } :
-                                        { icon: <IconTruck size={24} />, label: 'CORREIOS I/O', value: 'SINC.', color: 'text-orange-600', bg: 'bg-orange-50' }
+                                { icon: <IconActivity size={24} />, label: 'SELIC TARGET', value: '10.75%', color: 'text-blue-600', bg: 'bg-blue-50' },
+                                { icon: <IconCurrencyDollar size={24} />, label: 'USD/BRL SPOT', value: 'R$ 5.92', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                                { icon: <IconTruck size={24} />, label: 'CORREIOS I/O', value: 'SINC.', color: 'text-orange-600', bg: 'bg-orange-50' }
                             ].map((w, i) => (
                                 <div key={i} className="bg-palette-lightest p-6 rounded-[2.5rem] border border-palette-mediumLight shadow-sm hover:shadow-2xl transition-all cursor-pointer group">
                                     <div className={`p-4 ${w.bg} ${w.color} rounded-2xl w-fit mb-5 group-hover:scale-110 transition-transform`}>{w.icon}</div>
