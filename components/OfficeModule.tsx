@@ -1,17 +1,5 @@
 
 import React, { useState } from 'react';
-import {
-  IconMail,
-  IconFileSearch,
-  IconNote,
-  IconClipboardList,
-  IconPhone,
-  IconGlobe,
-  IconFileText,
-  IconWriting,
-  IconFolder,
-  IconCalculator
-} from '@tabler/icons-react';
 import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile } from '../types';
 import { EmailManager } from './EmailManager';
 import { StickyNotesWall } from './StickyNotesWall';
@@ -23,6 +11,7 @@ import { DocumentGenerator } from './DocumentGenerator';
 import { SignatureManager } from './SignatureManager';
 import { PersonalFileManager } from './DocumentsModule';
 import { PricingCalculator } from './PricingCalculator';
+import { BrasilApiModule } from './BrasilApiModule';
 
 interface OfficeModuleProps {
   emails: EmailTemplate[];
@@ -43,24 +32,23 @@ interface OfficeModuleProps {
   onExtensionChange: (extensions: Extension[]) => void;
   personalFiles: StoredFile[];
   onFilesChange: (files: StoredFile[]) => void;
+  hiddenTabs?: string[];
 }
 
-type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'emails';
+type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'emails' | 'brasil';
 
-const NavTab = ({ id, label, icon, activeSubTab, onClick }: { id: SubTab, label: string, icon: React.ReactNode, activeSubTab: SubTab, onClick: (id: SubTab) => void }) => (
-  <button
-    onClick={() => onClick(id)}
-    className={`
-      flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase transition-all border-t-2 border-l-2 border-r-2 rounded-t-md whitespace-nowrap
-      ${activeSubTab === id
-        ? 'bg-win95-bg border-white border-b-win95-bg relative z-10 -mb-[2px] text-blue-800 shadow-sm'
-        : 'bg-[#c0c0c0] border-gray-400 text-gray-600 hover:bg-[#d0d0d0]'}
-    `}
-  >
-    {icon}
-    <span>{label}</span>
-  </button>
-);
+const SUB_TABS: { id: SubTab; label: string }[] = [
+  { id: 'mural', label: 'Mural' },
+  { id: 'notes', label: 'Anotações' },
+  { id: 'handoff', label: 'Passagem' },
+  { id: 'directory', label: 'Diretório' },
+  { id: 'extensions', label: 'Ramais' },
+  { id: 'arquivos', label: 'Arquivos' },
+  { id: 'gerador', label: 'Gerador' },
+  { id: 'assinador', label: 'Assinador' },
+  { id: 'precificacao', label: 'Precificação' },
+  { id: 'emails', label: 'E-mails' },
+];
 
 export const OfficeModule: React.FC<OfficeModuleProps> = ({
   emails, onEmailChange,
@@ -72,71 +60,67 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   currentUser,
   links, onLinkChange,
   extensions, onExtensionChange,
-  personalFiles, onFilesChange
+  personalFiles, onFilesChange,
+  hiddenTabs = []
 }) => {
+  const showBrasilHub = !hiddenTabs.includes('brasil-hub');
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('mural');
 
+  const allSubTabs = showBrasilHub
+    ? [...SUB_TABS, { id: 'brasil' as SubTab, label: 'Brasil Hub' }]
+    : SUB_TABS;
+
   return (
-    <div className="flex flex-col gap-0 bg-[#c0c0c0] min-h-screen">
-      <div className="flex gap-1 shrink-0 px-2 pt-2 border-b border-white overflow-x-auto no-scrollbar scroll-smooth">
-        <NavTab id="mural" label="Mural" icon={<IconNote size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
-        <NavTab id="notes" label="Anotações" icon={<IconFileText size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
-        <NavTab id="handoff" label="Passagem" icon={<IconClipboardList size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
-        <NavTab id="directory" label="Diretório" icon={<IconGlobe size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
-        <NavTab id="extensions" label="Ramais" icon={<IconPhone size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
-        <div className="w-px h-6 bg-gray-400 mx-1 self-center opacity-50"></div>
-        <NavTab id="arquivos" label="Arquivos" icon={<IconFolder size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
-        <NavTab id="gerador" label="Gerador" icon={<IconFileSearch size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
-        <NavTab id="assinador" label="Assinador" icon={<IconWriting size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
-        <div className="w-px h-6 bg-gray-400 mx-1 self-center opacity-50"></div>
-        <NavTab id="precificacao" label="Precificação" icon={<IconCalculator size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
-        <NavTab id="emails" label="E-mails" icon={<IconMail size={14} />} activeSubTab={activeSubTab} onClick={setActiveSubTab} />
+    <div className="flex flex-col h-full bg-gray-100 dark:bg-black/20">
+
+      {/* ── Sub-tabs pill bar ── */}
+      <div
+        className="px-6 py-3 flex gap-2 overflow-x-auto border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 flex-shrink-0"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {allSubTabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveSubTab(tab.id)}
+            className={`px-4 py-1.5 text-[11px] font-semibold rounded-full whitespace-nowrap uppercase tracking-wide transition-all ${activeSubTab === tab.id
+                ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700'
+              }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      <div className="win95-sunken bg-white border-2 border-white">
-        <div className="w-full bg-win95-bg">
-          {activeSubTab === 'mural' && (
-            <StickyNotesWall notes={postIts} onChange={onPostItChange} />
-          )}
-          {activeSubTab === 'notes' && (
-            <ImportantNotes notes={importantNotes} onChange={onNoteChange} />
-          )}
-          {activeSubTab === 'handoff' && (
-            <ShiftHandoffModule handoffs={handoffs} onChange={onHandoffChange} currentUser={currentUser} />
-          )}
-          {activeSubTab === 'directory' && (
-            <ProfessionalLinks links={links} onChange={onLinkChange} />
-          )}
-          {activeSubTab === 'extensions' && (
-            <ExtensionsDirectory extensions={extensions} onChange={onExtensionChange} />
-          )}
-          {activeSubTab === 'arquivos' && (
-            <PersonalFileManager files={personalFiles} onChange={onFilesChange} />
-          )}
-          {activeSubTab === 'gerador' && (
-            <DocumentGenerator />
-          )}
-          {activeSubTab === 'assinador' && (
-            <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />
-          )}
-          {activeSubTab === 'precificacao' && (
-            <PricingCalculator />
-          )}
-          {activeSubTab === 'emails' && (
-            <EmailManager emails={emails} onChange={onEmailChange} />
-          )}
-        </div>
+      {/* ── Content ── */}
+      <div className="flex-1 overflow-y-auto">
+        {activeSubTab === 'mural' && <StickyNotesWall notes={postIts} onChange={onPostItChange} />}
+        {activeSubTab === 'notes' && <ImportantNotes notes={importantNotes} onChange={onNoteChange} />}
+        {activeSubTab === 'handoff' && <ShiftHandoffModule handoffs={handoffs} onChange={onHandoffChange} currentUser={currentUser} />}
+        {activeSubTab === 'directory' && <ProfessionalLinks links={links} onChange={onLinkChange} />}
+        {activeSubTab === 'extensions' && <ExtensionsDirectory extensions={extensions} onChange={onExtensionChange} />}
+        {activeSubTab === 'arquivos' && <PersonalFileManager files={personalFiles} onChange={onFilesChange} />}
+        {activeSubTab === 'gerador' && <DocumentGenerator />}
+        {activeSubTab === 'assinador' && <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />}
+        {activeSubTab === 'precificacao' && <PricingCalculator />}
+        {activeSubTab === 'emails' && <EmailManager emails={emails} onChange={onEmailChange} />}
+        {activeSubTab === 'brasil' && <BrasilApiModule />}
       </div>
 
-      <div className="px-2 py-1 bg-win95-bg border-t border-white text-[9px] font-bold text-gray-500 uppercase flex justify-between items-center italic select-none shrink-0">
-        <div className="flex gap-4">
-          <span>Sessão: {activeSubTab.toUpperCase()}</span>
-          <span>•</span>
-          <span>Brain Office v2.7</span>
+      {/* ── Footer status bar ── */}
+      <div className="h-10 px-6 flex items-center justify-between bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
+        <div className="flex items-center gap-4 text-[10px] text-gray-500 font-medium">
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+            <span className="uppercase">Sessão: {activeSubTab}</span>
+          </div>
+          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span className="uppercase">Brain Office v2.7</span>
         </div>
-        <div className="flex gap-4">
-          <span>Documentos: {personalFiles.length}</span>
-          <span>Contatos: {extensions.length}</span>
+        <div className="flex items-center gap-4 text-[10px] text-gray-500 font-medium">
+          <span className="uppercase tracking-widest">Documentos: {personalFiles.length}</span>
+          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span className="uppercase tracking-widest">Contatos: {extensions.length}</span>
         </div>
       </div>
     </div>

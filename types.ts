@@ -297,6 +297,14 @@ export interface StoredFile {
   category?: string;
 }
 
+export interface ModuleDefinition {
+  id: string;
+  name: string;
+  description: string;
+  icon: string; // Lucide icon name
+  category: 'Productivity' | 'Logistics' | 'Communication' | 'Tools';
+}
+
 // Global App Data
 export interface AppData {
   kanban: KanbanState;
@@ -308,12 +316,13 @@ export interface AppData {
   extensions?: Extension[];
   postIts: PostIt[];
   importantNotes?: ImportantNote[];
-  shiftHandoffs?: ShiftHandoff[]; 
+  shiftHandoffs?: ShiftHandoff[];
   shiftConfig?: ShiftConfig;
   signatures?: Signature[];
   personalFiles?: StoredFile[];
-  // Added financialTransactions to support FinancialModule storage
   financialTransactions?: FinancialTransaction[];
+  warehouseInventory?: any[];
+  warehouseLogs?: any[];
   logistics?: LogisticsState;
   hiddenTabs?: string[];
 }

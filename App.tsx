@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { GitMerge, MessageSquare, RefreshCw, Contrast, Calendar as CalendarIcon, Briefcase, Search, Truck, Settings, Cloud } from 'lucide-react';
+import { GitMerge, MessageSquare, RefreshCw, Calendar as CalendarIcon, Search, Truck, Cloud, Home, DollarSign, Package, Store } from 'lucide-react';
 import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState } from './types';
 import { Auth } from './components/Auth';
 import { MessageLinker } from './components/MessageLinker';
@@ -16,18 +15,24 @@ const ConsultationModule = lazy(() => import('./components/ConsultationModule').
 const WhatsAppTool = lazy(() => import('./components/WhatsAppTool').then(m => ({ default: m.WhatsAppTool })));
 const LogisticsModule = lazy(() => import('./components/LogisticsModule').then(m => ({ default: m.LogisticsModule })));
 const SharedDocumentsModule = lazy(() => import('./components/SharedDocumentsModule').then(m => ({ default: m.SharedDocumentsModule })));
+const ModuleStore = lazy(() => import('./components/ModuleStore').then(m => ({ default: m.ModuleStore })));
+const FinancialModule = lazy(() => import('./components/FinancialModule').then(m => ({ default: m.FinancialModule })));
+const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m => ({ default: m.WarehouseModule })));
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 const initialLogistics: LogisticsState = { freightTables: [], checklists: [] };
 
 const DEFAULT_TABS = [
-  { id: 'office', label: 'Escritório', icon: <Briefcase size={16} /> },
-  { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={16} /> },
-  { id: 'flow', label: 'Fluxo', icon: <GitMerge size={16} /> },
-  { id: 'logistics', label: 'Logística', icon: <Truck size={16} /> },
-  { id: 'consultas', label: 'Consultas', icon: <Search size={16} /> },
-  { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={16} /> },
-  { id: 'shared_docs', label: 'Docs', icon: <Cloud size={16} /> },
+  { id: 'office', label: 'Escritório', icon: <Home size={18} /> },
+  { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={18} /> },
+  { id: 'flow', label: 'Fluxo', icon: <GitMerge size={18} /> },
+  { id: 'logistics', label: 'Logística', icon: <Truck size={18} /> },
+  { id: 'consultas', label: 'Consultas', icon: <Search size={18} /> },
+  { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={18} /> },
+  { id: 'shared_docs', label: 'Docs', icon: <Cloud size={18} /> },
+  { id: 'financial', label: 'Financeiro', icon: <DollarSign size={18} /> },
+  { id: 'warehouse', label: 'Estoque', icon: <Package size={18} /> },
+  { id: 'modules', label: 'Loja', icon: <Store size={18} /> },
 ];
 
 const App: React.FC = () => {
@@ -42,10 +47,10 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('office');
   const [tabs, setTabs] = useState(DEFAULT_TABS);
-  const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
-  const [isTabsDropdownOpen, setIsTabsDropdownOpen] = useState(false);
-  const dragItem = useRef<number | null>(null);
-  const dragOverItem = useRef<number | null>(null);
+  const [hiddenTabs, setHiddenTabs] = useState<string[]>(['financial', 'warehouse']);
+
+  // Dark mode via Tailwind dark class
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('ysoffice_dark') === 'true');
 
   // Estados de Dados
   const [flowData, setFlowData] = useState<FlowState>(initialFlow);
@@ -62,10 +67,18 @@ const App: React.FC = () => {
   const [personalFiles, setPersonalFiles] = useState<StoredFile[]>([]);
   const [driveFiles, setDriveFiles] = useState<any[]>([]);
   const [logisticsData, setLogisticsData] = useState<LogisticsState>(initialLogistics);
+  const [financialTransactions, setFinancialTransactions] = useState<any[]>([]);
+  const [warehouseInventory, setWarehouseInventory] = useState<any[]>([]);
+  const [warehouseLogs, setWarehouseLogs] = useState<any[]>([]);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [isInverted, setIsInverted] = useState(() => localStorage.getItem('ysoffice_inverted') === 'true');
+
+  useEffect(() => {
+    if (isDark) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+    localStorage.setItem('ysoffice_dark', String(isDark));
+  }, [isDark]);
 
   useEffect(() => {
     const savedOrder = localStorage.getItem('ysoffice_tab_order');
@@ -81,17 +94,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleSort = () => {
-    if (dragItem.current === null || dragOverItem.current === null) return;
-    const _tabs = [...tabs];
-    const draggedItemContent = _tabs[dragItem.current];
-    _tabs.splice(dragItem.current, 1);
-    _tabs.splice(dragOverItem.current, 0, draggedItemContent);
-    dragItem.current = null;
-    dragOverItem.current = null;
-    setTabs(_tabs);
-    localStorage.setItem('ysoffice_tab_order', JSON.stringify(_tabs.map(t => t.id)));
-  };
+  // Removed handleSort as drag-and-drop tabs are no longer in the main navigation
 
   const toggleTabVisibility = (tabId: string) => {
     setHiddenTabs(prev => {
@@ -166,11 +169,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (isInverted) document.body.classList.add('invert-colors');
-    else document.body.classList.remove('invert-colors');
-    localStorage.setItem('ysoffice_inverted', String(isInverted));
-  }, [isInverted]);
+
 
   useEffect(() => {
     if (!user) { setIsDataLoaded(false); return; }
@@ -213,6 +212,9 @@ const App: React.FC = () => {
             setSignatures(payload.signatures || []);
             setPersonalFiles(payload.personalFiles || []);
             setLogisticsData(payload.logistics || initialLogistics);
+            setFinancialTransactions(payload.financialTransactions || []);
+            setWarehouseInventory(payload.warehouseInventory || []);
+            setWarehouseLogs(payload.warehouseLogs || []);
             setHiddenTabs(payload.hiddenTabs || []);
           }
         }
@@ -225,7 +227,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs };
+      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs, financialTransactions, warehouseInventory, warehouseLogs };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -237,7 +239,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2500); // Maior intervalo para menos carga
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseLogs]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -283,145 +285,166 @@ const App: React.FC = () => {
   const visibleTabs = tabs.filter(t => !hiddenTabs.includes(t.id));
 
   return (
-    <div className="min-h-screen bg-win95-bg font-sans text-gray-800">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-[#111111] text-gray-900 dark:text-gray-100 transition-colors duration-300 font-sans">
 
-      {/* ── Navbar fixa no topo ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#e0e5ec] border-b border-gray-300 shadow-sm">
-        <div className="flex justify-between items-center px-4 py-2">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setActiveTab('calendar')} className="flex items-center gap-2 group">
-              <div className="win95-sunken px-3 py-1.5 bg-white flex items-center gap-2 group-hover:border-blue-300 transition-colors">
-                <CalendarIcon size={16} className="text-win95-blue" />
-                <span className="font-semibold text-sm text-gray-700">{getFullDate()}</span>
-              </div>
-            </button>
-            {isSyncing && <RefreshCw size={14} className="animate-spin text-win95-blue" />}
+      {/* ── Sidebar ── */}
+      <aside className="w-16 lg:w-64 flex-shrink-0 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
+        {/* Logo */}
+        <div className="p-5 flex items-center gap-3">
+          <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-gray-900 flex-shrink-0">
+            <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24" }}>deployed_code</span>
           </div>
-          <div className="flex items-center gap-4 text-xs font-medium bg-white/50 px-3 py-1.5 rounded-full shadow-sm border border-white/50">
-            <span className="text-gray-600">Usuário: <b className="text-gray-900">{user.nick}</b></span>
-            <div className="h-4 w-px bg-gray-300"></div>
+          <span className="font-bold text-lg tracking-tight hidden lg:block whitespace-nowrap">BRAIN OFFICE</span>
+        </div>
 
+        {/* Nav links */}
+        <nav className="flex-1 px-2 space-y-0.5">
+          {visibleTabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              title={tab.label}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 ${activeTab === tab.id
+                ? 'bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-semibold'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-800/60 font-medium'
+                }`}
+            >
+              {tab.icon}
+              <span className="hidden lg:block truncate">{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* User info */}
+        <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-3 px-2 py-1.5">
+            <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+              {user.photoUrl
+                ? <img src={user.photoUrl} alt={user.nick} className="w-full h-full object-cover" />
+                : <span className="material-symbols-outlined text-gray-500" style={{ fontSize: '18px' }}>person</span>
+              }
+            </div>
+            <div className="hidden lg:block overflow-hidden flex-1">
+              <p className="text-xs font-semibold truncate">{user.nick}</p>
+              <p className="text-[10px] text-gray-500 truncate">{isSyncing ? 'Sincronizando...' : 'Online'}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="ml-auto hidden lg:flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
+              title="Sair"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>logout</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main Panel ── */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        {/* ── Top Header ── */}
+        <header className="h-14 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-6 bg-white/80 dark:bg-gray-900/50 backdrop-blur-md flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700">
+              <span className="material-symbols-outlined text-gray-500" style={{ fontSize: '16px' }}>calendar_month</span>
+              <span className="text-xs font-medium">{getFullDate()}</span>
+            </div>
+            {isSyncing && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <RefreshCw size={12} className="animate-spin" />
+                <span className="hidden sm:inline">Salvando...</span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
             {user.id !== 'demo_user_id' && !user.googleAccessToken && (
               <button
                 onClick={handleLinkGoogle}
-                className="flex items-center gap-1.5 px-2 py-0.5 bg-white border border-gray-300 win95-raised hover:bg-gray-50 text-[10px] text-blue-700 font-bold uppercase"
-                title="Vincular sua conta ao Google para usar o Drive"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 transition-all"
               >
-                <Cloud size={12} /> Vincular Google
+                <Cloud size={13} />
+                <span className="hidden sm:inline">Vincular Google</span>
               </button>
             )}
-
-            <button onClick={() => setIsInverted(!isInverted)} className="hover:text-blue-600 transition-colors" title="Modo Escuro"><Contrast size={16} /></button>
-            <button onClick={handleLogout} className="hover:text-red-600 transition-colors font-bold">Sair</button>
-          </div>
-        </div>
-
-        {/* ── Barra de abas (sticky, logo abaixo da navbar) ── */}
-        <div className="flex px-2 bg-[#d1d5db] border-t border-gray-300 gap-1 items-end relative">
-          <div className="flex-1 flex overflow-x-auto no-scrollbar gap-1 items-end">
-            {visibleTabs.map((tab, index) => (
-              <div
-                key={tab.id}
-                draggable
-                onDragStart={() => (dragItem.current = index)}
-                onDragEnter={() => (dragOverItem.current = index)}
-                onDragEnd={handleSort}
-                onDragOver={(e) => e.preventDefault()}
-                className="relative"
-              >
-                <button
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    relative flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-t-lg transition-all duration-200 whitespace-nowrap
-                    ${activeTab === tab.id
-                      ? 'bg-white text-blue-700 shadow-[0_-2px_5px_rgba(0,0,0,0.05)] z-10 -mb-[1px] border-t-2 border-blue-500 pb-2.5'
-                      : 'bg-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 border-t-2 border-transparent pb-2 opacity-80 hover:opacity-100'}
-                  `}
-                >
-                  {tab.icon} {tab.label}
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="relative">
             <button
-              onClick={() => setIsTabsDropdownOpen(!isTabsDropdownOpen)}
-              className="p-2 rounded-t-md hover:bg-gray-200 transition-colors"
-              title="Gerenciar abas"
+              onClick={() => setIsDark(!isDark)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-500 transition-all"
+              title="Alternar tema"
             >
-              <Settings size={16} className="text-gray-600" />
+              {isDark
+                ? <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>light_mode</span>
+                : <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>dark_mode</span>
+              }
             </button>
-            {isTabsDropdownOpen && (
-              <div
-                className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-300 rounded-md shadow-lg z-20 win95-raised p-1"
-                onMouseLeave={() => setIsTabsDropdownOpen(false)}
-              >
-                <div className="px-2 py-1 text-xs font-bold text-gray-700 border-b border-gray-200 mb-1">Exibir Abas</div>
-                <ul>
-                  {DEFAULT_TABS.map(tab => (
-                    <li key={tab.id}>
-                      <label className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-800 hover:bg-blue-100 rounded-sm cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={!hiddenTabs.includes(tab.id)}
-                          onChange={() => toggleTabVisibility(tab.id)}
-                          className="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="flex-1 select-none">{tab.label}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <button
+              onClick={() => setActiveTab('modules')}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-500 transition-all"
+              title="Loja de Módulos"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>settings</span>
+            </button>
+            <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-red-500 transition-colors px-2 py-1.5"
+            >
+              SAIR
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>chevron_right</span>
+            </button>
           </div>
+        </header>
+
+        {/* ── Content Area (fills remaining height) ── */}
+        <div className="flex-1 overflow-hidden bg-gray-100 dark:bg-black/30">
+          <Suspense fallback={<LoadingPlaceholder />}>
+            {activeTab === 'office' && (
+              <OfficeModule
+                emails={emails} onEmailChange={setEmails}
+                signatures={signatures} onSignatureChange={setSignatures}
+                onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
+                postIts={postIts} onPostItChange={setPostIts}
+                importantNotes={importantNotes} onNoteChange={setImportantNotes}
+                handoffs={shiftHandoffs} onHandoffChange={setShiftHandoffs}
+                currentUser={user} links={links} onLinkChange={setLinks}
+                extensions={extensions} onExtensionChange={setExtensions}
+                personalFiles={personalFiles} onFilesChange={setPersonalFiles}
+                hiddenTabs={hiddenTabs}
+              />
+            )}
+            {activeTab === 'calendar' && (
+              <CalendarModule
+                calendarConfig={calendarConfig} onCalendarConfigChange={setCalendarConfig}
+                events={calendarEvents} onEventsChange={setCalendarEvents}
+                shiftConfig={shiftConfig} onShiftConfigChange={setShiftConfig}
+              />
+            )}
+            {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
+            {activeTab === 'logistics' && <LogisticsModule data={logisticsData} onChange={setLogisticsData} />}
+            {activeTab === 'consultas' && <ConsultationModule />}
+            {activeTab === 'whatsapp' && <WhatsAppTool />}
+            {activeTab === 'shared_docs' && (
+              <SharedDocumentsModule
+                driveFiles={driveFiles}
+                onDriveFilesChange={setDriveFiles}
+                currentUser={user}
+              />
+            )}
+            {activeTab === 'financial' && (
+              <FinancialModule
+                transactions={financialTransactions}
+                onChange={setFinancialTransactions}
+              />
+            )}
+            {activeTab === 'warehouse' && <WarehouseModule />}
+            {activeTab === 'modules' && (
+              <ModuleStore
+                hiddenTabs={hiddenTabs}
+                onToggleTab={toggleTabVisibility}
+              />
+            )}
+          </Suspense>
         </div>
-      </header>
-
-      {/* ── Conteúdo principal — scroll natural de site ── */}
-      {/* pt-[calc] compensa a navbar (aprox. 88px: header ~48px + tabs ~40px) */}
-      <main className="pt-[88px] win95-raised bg-gray-100 shadow-inner min-h-screen">
-        <Suspense fallback={<LoadingPlaceholder />}>
-          {activeTab === 'office' && (
-            <OfficeModule
-              emails={emails} onEmailChange={setEmails}
-              signatures={signatures} onSignatureChange={setSignatures}
-              onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
-              postIts={postIts} onPostItChange={setPostIts}
-              importantNotes={importantNotes} onNoteChange={setImportantNotes}
-              handoffs={shiftHandoffs} onHandoffChange={setShiftHandoffs}
-              currentUser={user} links={links} onLinkChange={setLinks}
-              extensions={extensions} onExtensionChange={setExtensions}
-              personalFiles={personalFiles} onFilesChange={setPersonalFiles}
-            />
-          )}
-          {activeTab === 'calendar' && (
-            <CalendarModule
-              calendarConfig={calendarConfig} onCalendarConfigChange={setCalendarConfig}
-              events={calendarEvents} onEventsChange={setCalendarEvents}
-              shiftConfig={shiftConfig} onShiftConfigChange={setShiftConfig}
-            />
-          )}
-          {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
-          {activeTab === 'logistics' && <LogisticsModule data={logisticsData} onChange={setLogisticsData} />}
-          {activeTab === 'consultas' && <ConsultationModule />}
-          {activeTab === 'whatsapp' && <WhatsAppTool />}
-          {activeTab === 'shared_docs' && (
-            <SharedDocumentsModule
-              driveFiles={driveFiles}
-              onDriveFilesChange={setDriveFiles}
-              currentUser={user}
-            />
-          )}
-        </Suspense>
       </main>
-
-      {/* ── Rodapé ── */}
-      <footer className="bg-[#e0e5ec] border-t border-gray-300 px-3 py-1 flex justify-between items-center text-[10px] text-gray-500 font-medium select-none">
-        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Brain v2.5 - Optimized Engine</span>
-        <DigitalClock />
-        <span>{isDataLoaded ? 'Conectado' : 'Sincronizando...'}</span>
-      </footer>
     </div>
   );
 };

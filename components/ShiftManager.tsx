@@ -1,6 +1,21 @@
 
 import React, { useState, useMemo } from 'react';
-import { Calendar as CalendarIcon, Clock, Plus, Trash2, ArrowRight, Info, Save, Settings, Moon, Sun, Coffee } from 'lucide-react';
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  Plus,
+  Trash2,
+  ArrowRight,
+  Info,
+  Save,
+  Settings,
+  Moon,
+  Sun,
+  Coffee,
+  ChevronLeft,
+  ChevronRight,
+  Zap
+} from 'lucide-react';
 import { ShiftConfig, ShiftSegment } from '../types';
 import { Button } from './ui/Button';
 
@@ -28,7 +43,7 @@ const PRESETS: Record<string, ShiftSegment[]> = {
 
 export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  
+
   const defaultConfig: ShiftConfig = config || {
     startDate: new Date().toISOString().split('T')[0],
     segments: PRESETS['5x2']
@@ -59,33 +74,19 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) 
     });
   };
 
-  // Cálculo da Escala Projetada
+  // Projected Shift Calculation
   const projectedDays = useMemo(() => {
     const startDate = new Date(defaultConfig.startDate + 'T00:00:00');
     const segments = defaultConfig.segments;
     const cycleDuration = segments.reduce((acc, s) => acc + s.days, 0);
-    
+
     if (cycleDuration === 0) return new Map();
 
     const calendarStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const calendarEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
     const result = new Map();
 
-    // Projetamos do início do ciclo até o fim do mês visualizado
-    const cursor = new Date(startDate);
-    const limit = new Date(calendarEnd);
-    limit.setDate(limit.getDate() + 1);
-
-    let dayOffset = 0;
-    
-    // Se a data de início for após o mês atual, não mostramos nada anterior
-    // Se for antes, precisamos calcular onde o ciclo está no dia 1 do mês atual
     const diffTime = calendarStart.getTime() - startDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    // Ajuste do cursor para o início do mês visualizado ou início da escala
-    const startCursor = diffDays > 0 ? diffDays : 0;
-    const endCursor = startCursor + 45; // Projeta 45 dias a partir do início do mês
 
     let currentDayInCycle = 0;
     if (diffDays > 0) {
@@ -96,8 +97,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) 
 
     for (let i = 0; i < 42; i++) {
       const dateStr = projectionDate.toISOString().split('T')[0];
-      
-      // Encontrar qual segmento este dia pertence
+
       let tempDays = 0;
       let targetSegment = segments[0];
       for (const seg of segments) {
@@ -109,7 +109,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) 
       }
 
       result.set(dateStr, targetSegment);
-      
+
       projectionDate.setDate(projectionDate.getDate() + 1);
       currentDayInCycle = (currentDayInCycle + 1) % cycleDuration;
     }
@@ -123,14 +123,10 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) 
     const start = new Date(year, month, 1);
     const end = new Date(year, month + 1, 0);
     const days = [];
-    
-    // Dias vazios no início
+
     for (let i = 0; i < start.getDay(); i++) days.push(null);
-    
-    // Dias do mês
     for (let i = 1; i <= end.getDate(); i++) {
-      const date = new Date(year, month, i);
-      days.push(date);
+      days.push(new Date(year, month, i));
     }
     return days;
   }, [currentMonth]);
@@ -138,73 +134,100 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) 
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
   return (
-    <div className="flex h-full gap-2 bg-win95-bg p-1 overflow-hidden">
-      {/* Painel de Configuração */}
-      <div className="w-80 flex flex-col win95-raised p-2 h-full bg-win95-bg">
-        <div className="bg-win95-blue text-white px-2 py-1 text-[11px] font-black uppercase flex items-center gap-2 mb-2">
-          <Settings size={12} />
-          <span>Configuração de Escala</span>
+    <div className="flex h-full bg-[#f4f7f9] overflow-hidden">
+      {/* Configuration Sidebar */}
+      <div className="w-80 bg-white border-r border-gray-200 flex flex-col shadow-xl z-10 transition-all duration-300">
+        <div className="p-6 border-b border-gray-100 bg-gradient-to-br from-blue-700 to-indigo-800 text-white">
+          <div className="flex items-center gap-2 mb-1">
+            <Settings size={14} className="opacity-60" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Escalador Premium</span>
+          </div>
+          <h2 className="text-xl font-black italic tracking-tighter uppercase leading-tight">Editor de Escalas</h2>
         </div>
 
-        <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-          <div>
-            <label className="text-[10px] font-black uppercase block mb-1">Data Início do Ciclo:</label>
-            <input 
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+          {/* Start Date */}
+          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Início do Ciclo</label>
+            <input
               type="date"
-              className="w-full win95-sunken p-1 text-xs outline-none font-bold text-black"
+              className="w-full bg-white border border-gray-200 px-4 py-2 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               value={defaultConfig.startDate}
               onChange={e => updateConfig({ startDate: e.target.value })}
             />
+            <p className="text-[9px] text-gray-400 mt-2 italic leading-relaxed">Sua escala começará a contar desta data em diante.</p>
           </div>
 
-          <div className="border-t border-win95-shadow pt-2">
-            <label className="text-[10px] font-black uppercase block mb-2">Ciclo de Repetição:</label>
-            <div className="space-y-2">
+          {/* Segments List */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Etapas do Ciclo</label>
+              <button
+                onClick={addSegment}
+                className="p-1 hover:bg-blue-50 text-blue-600 rounded-full transition-colors"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
               {defaultConfig.segments.map((seg, idx) => (
-                <div key={seg.id} className="win95-raised p-2 bg-[#d0d0d0] relative group">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[9px] font-black text-win95-blue">ETAPA {idx + 1}</span>
-                    <button onClick={() => removeSegment(seg.id)} className="text-red-600 hover:bg-red-50 p-0.5"><Trash2 size={10} /></button>
+                <div key={seg.id} className="relative bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group overflow-hidden">
+                  <div className={`absolute top-0 left-0 w-1 h-full ${seg.type === 'work' ? (parseInt(seg.startTime?.split(':')[0] || '0') >= 18 ? 'bg-indigo-900' : 'bg-blue-500') : 'bg-gray-300'}`}></div>
+
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-[10px] font-black italic text-blue-900">ETAPA #{idx + 1}</span>
+                    <button
+                      onClick={() => removeSegment(seg.id)}
+                      className="p-1.5 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[8px] font-bold block">TIPO:</label>
-                      <select 
-                        className="w-full win95-sunken text-[10px] outline-none h-5 px-1 font-bold"
+                      <label className="text-[8px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Tipo</label>
+                      <select
+                        className="w-full bg-gray-50 border border-transparent px-2 py-1 rounded-lg text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none cursor-pointer"
                         value={seg.type}
                         onChange={e => updateSegment(seg.id, { type: e.target.value as 'work' | 'off' })}
                       >
-                        <option value="work">TRABALHO</option>
-                        <option value="off">FOLGA</option>
+                        <option value="work">Trabalho</option>
+                        <option value="off">Folga</option>
                       </select>
                     </div>
                     <div>
-                      <label className="text-[8px] font-bold block">DIAS:</label>
-                      <input 
-                        type="number" 
-                        min="1"
-                        className="w-full win95-sunken text-[10px] outline-none h-5 px-1 font-bold"
-                        value={seg.days}
-                        onChange={e => updateSegment(seg.id, { days: parseInt(e.target.value) || 1 })}
-                      />
+                      <label className="text-[8px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Duração</label>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="1"
+                          className="w-full bg-gray-50 border border-transparent px-2 py-1 rounded-lg text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all"
+                          value={seg.days}
+                          onChange={e => updateSegment(seg.id, { days: parseInt(e.target.value) || 1 })}
+                        />
+                        <span className="text-[8px] font-bold text-gray-400 uppercase">Dias</span>
+                      </div>
                     </div>
                   </div>
+
                   {seg.type === 'work' && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="grid grid-cols-2 gap-3 mt-3 animate-in slide-in-from-top-2 duration-200">
                       <div>
-                        <label className="text-[8px] font-bold block">INÍCIO:</label>
-                        <input 
-                          type="time" 
-                          className="w-full win95-sunken text-[10px] outline-none h-5 px-1 font-bold"
+                        <label className="text-[8px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Início</label>
+                        <input
+                          type="time"
+                          className="w-full bg-gray-50 border border-transparent px-2 py-1 rounded-lg text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all font-mono"
                           value={seg.startTime}
                           onChange={e => updateSegment(seg.id, { startTime: e.target.value })}
                         />
                       </div>
                       <div>
-                        <label className="text-[8px] font-bold block">FIM:</label>
-                        <input 
-                          type="time" 
-                          className="w-full win95-sunken text-[10px] outline-none h-5 px-1 font-bold"
+                        <label className="text-[8px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Término</label>
+                        <input
+                          type="time"
+                          className="w-full bg-gray-50 border border-transparent px-2 py-1 rounded-lg text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all font-mono"
                           value={seg.endTime}
                           onChange={e => updateSegment(seg.id, { endTime: e.target.value })}
                         />
@@ -213,18 +236,26 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) 
                   )}
                 </div>
               ))}
-              <Button onClick={addSegment} className="w-full py-1 text-[10px]" icon={<Plus size={12} />}>ADICIONAR ETAPA</Button>
+              <button
+                onClick={addSegment}
+                className="w-full py-3 bg-blue-50 text-blue-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 border-2 border-dashed border-blue-200"
+              >
+                <Plus size={14} /> Adicionar Etapa
+              </button>
             </div>
           </div>
 
-          <div className="border-t border-win95-shadow pt-2">
-            <label className="text-[10px] font-black uppercase block mb-1">Presets Rápidos:</label>
-            <div className="grid grid-cols-1 gap-1">
+          {/* Quick Presets */}
+          <div className="pt-4 border-t border-gray-100">
+            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3 flex items-center gap-2">
+              <Zap size={10} className="text-yellow-500" /> Modelos Prontos
+            </label>
+            <div className="flex flex-wrap gap-2">
               {Object.keys(PRESETS).map(key => (
-                <button 
+                <button
                   key={key}
                   onClick={() => updateConfig({ segments: PRESETS[key] })}
-                  className="win95-raised px-2 py-1 text-[9px] font-bold hover:bg-white text-left uppercase"
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-blue-600 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
                 >
                   {key.replace('_', ' ')}
                 </button>
@@ -234,79 +265,125 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) 
         </div>
       </div>
 
-      {/* Visualização do Calendário de Turnos */}
-      <div className="flex-1 flex flex-col win95-raised p-2 bg-[#d0d0d0] h-full overflow-hidden">
-        <div className="flex justify-between items-center mb-2 bg-[#808080] p-1 text-white px-3">
-          <div className="flex items-center gap-4">
-             <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="win95-raised bg-win95-bg text-black px-2 py-0.5 text-xs font-bold active:shadow-none">&lt;</button>
-             <span className="text-xs font-black uppercase tracking-widest">{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</span>
-             <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="win95-raised bg-win95-bg text-black px-2 py-0.5 text-xs font-bold active:shadow-none">&gt;</button>
+      {/* Main Preview Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Sub Header */}
+        <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between z-10">
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col">
+              <h3 className="text-xl font-black italic tracking-tighter text-blue-900 uppercase">Projeção da Escala</h3>
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Visualização Mensal Integrada</span>
+            </div>
+
+            <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
+              <button
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+                className="p-1.5 hover:bg-white rounded-lg transition-all text-gray-600 hover:text-blue-600"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="px-4 font-black text-xs text-blue-900 min-w-[140px] text-center uppercase tracking-wide">
+                {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+              </div>
+              <button
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+                className="p-1.5 hover:bg-white rounded-lg transition-all text-gray-600 hover:text-blue-600"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3 text-[10px] font-bold uppercase italic opacity-70">
-            <span className="flex items-center gap-1"><Sun size={10} /> Turno Diurno</span>
-            <span className="flex items-center gap-1"><Moon size={10} /> Turno Noturno</span>
+
+          <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-widest">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+              <span className="text-gray-400">Diurno</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-indigo-900"></div>
+              <span className="text-gray-400">Noturno</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 win95-sunken bg-white p-1 overflow-y-auto custom-scrollbar">
-          <div className="grid grid-cols-7 gap-px bg-[#808080] border border-[#808080]">
-            {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'].map(d => (
-              <div key={d} className="bg-win95-bg text-center py-1 text-[9px] font-black text-black">{d}</div>
-            ))}
-            {monthDays.map((day, i) => {
-              if (!day) return <div key={`empty-${i}`} className="bg-[#f0f0f0] min-h-[80px]" />;
-              
-              const dateStr = day.toISOString().split('T')[0];
-              const shift = projectedDays.get(dateStr);
-              const isWork = shift?.type === 'work';
-              const isNight = isWork && parseInt(shift?.startTime?.split(':')[0] || '0') >= 18;
+        {/* Scrollable Grid Container */}
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-7 gap-6 mb-4">
+              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map(d => (
+                <div key={d} className="text-[10px] font-black text-gray-300 uppercase tracking-widest text-center">{d}</div>
+              ))}
+            </div>
 
-              return (
-                <div 
-                  key={dateStr}
-                  className={`min-h-[80px] p-1 flex flex-col border border-white/20 transition-colors
-                    ${isWork ? (isNight ? 'bg-[#2a2a4a] text-white' : 'bg-blue-50 text-black') : 'bg-white text-gray-400 opacity-60'}`}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-[10px] font-black">{day.getDate()}</span>
-                    {isWork && (isNight ? <Moon size={10} /> : <Sun size={10} />)}
+            <div className="grid grid-cols-7 gap-3">
+              {monthDays.map((day, i) => {
+                if (!day) return <div key={`empty-${i}`} className="min-h-[100px]" />;
+
+                const dateStr = day.toISOString().split('T')[0];
+                const shift = projectedDays.get(dateStr);
+                const isWork = shift?.type === 'work';
+                const isNight = isWork && parseInt(shift?.startTime?.split(':')[0] || '0') >= 18;
+
+                return (
+                  <div
+                    key={dateStr}
+                    className={`
+                      min-h-[100px] rounded-3xl p-4 flex flex-col transition-all group shadow-sm relative overflow-hidden
+                      ${isWork
+                        ? (isNight
+                          ? 'bg-gradient-to-br from-indigo-900 to-slate-900 text-white'
+                          : 'bg-white border-2 border-blue-500 text-gray-900 ring-4 ring-blue-50 shadow-lg')
+                        : 'bg-white border border-gray-100 text-gray-300'}
+                    `}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <span className={`text-lg font-black italic tracking-tighter ${isWork && !isNight ? 'text-blue-600' : ''}`}>
+                        {day.getDate()}
+                      </span>
+                      {isWork && (isNight ? <Moon size={14} className="text-indigo-400" /> : <Sun size={14} className="text-blue-500" />)}
+                    </div>
+
+                    {isWork ? (
+                      <div className="mt-auto space-y-1">
+                        <div className={`text-[8px] font-black uppercase tracking-wider inline-block px-2 py-0.5 rounded-full ${isNight ? 'bg-indigo-800' : 'bg-blue-100 text-blue-700'}`}>
+                          Trabalho
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] font-black italic tracking-tighter opacity-80">
+                          <span>{shift.startTime}</span>
+                          <ArrowRight size={10} className="shrink-0" />
+                          <span>{shift.endTime}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-auto">
+                        <div className="flex items-center gap-1 text-[8px] font-black uppercase text-gray-300 italic tracking-[0.2em]">
+                          <Coffee size={10} /> Folga
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
-                  {isWork ? (
-                    <div className="mt-1">
-                      <div className={`text-[8px] font-black uppercase px-1 mb-1 inline-block ${isNight ? 'bg-indigo-500' : 'bg-blue-600'} text-white`}>
-                        TRABALHO
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <div className="text-[9px] font-mono font-bold flex items-center gap-1">
-                          <Clock size={8} /> {shift.startTime}
-                        </div>
-                        <div className="text-[9px] font-mono font-bold flex items-center gap-1">
-                          <ArrowRight size={8} /> {shift.endTime}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-auto">
-                      <div className="text-[8px] font-black uppercase text-win95-shadow italic flex items-center gap-1">
-                        <Coffee size={10} /> FOLGA
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                );
+              })}
+            </div>
 
-        <div className="mt-2 win95-sunken bg-win95-bg p-2 flex justify-between items-center text-[10px] font-bold text-win95-shadow italic uppercase">
-           <div className="flex items-center gap-4">
-             <span className="flex items-center gap-1 text-blue-800"><Info size={12} /> A escala repete automaticamente a cada ciclo completo.</span>
-           </div>
-           <div className="flex items-center gap-4">
-             <span>Horas/Mês: ~160h (Estimado)</span>
-             <button className="win95-raised bg-win95-bg text-black px-3 py-0.5 flex items-center gap-1 active:shadow-none"><Save size={12} /> Salvar Escala</button>
-           </div>
+            {/* Footer Explanation */}
+            <div className="mt-12 p-8 bg-blue-50 rounded-[3rem] border border-blue-100 flex items-start gap-6">
+              <div className="w-12 h-12 bg-white rounded-2xl shadow-lg flex items-center justify-center text-blue-600 shrink-0">
+                <Info size={24} />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-black text-blue-900 uppercase tracking-widest mb-1">Inteligência de Escala</h4>
+                <p className="text-xs text-blue-700 italic leading-relaxed font-bold">
+                  A escala é calculada automaticamente baseada no seu padrão de repetição (ciclo).
+                  Qualquer alteração nas etapas à esquerda refletirá instantaneamente no calendário acima.
+                  Este agendamento é integrado ao seu calendário principal da aba "Visão Geral".
+                </p>
+              </div>
+              <button className="self-center px-6 py-3 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all flex items-center gap-2">
+                <Save size={16} /> Salvar Alterações
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

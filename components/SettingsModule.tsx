@@ -1,14 +1,14 @@
 
 import React, { useState, useRef } from 'react';
-import { 
-  IconUser, 
-  IconCamera, 
-  IconBrandGoogle, 
-  IconLogout, 
-  IconDeviceFloppy, 
-  IconLoader2, 
-  IconLink, 
-  IconLinkOff 
+import {
+  IconUser,
+  IconCamera,
+  IconBrandGoogle,
+  IconLogout,
+  IconDeviceFloppy,
+  IconLoader2,
+  IconLink,
+  IconLinkOff
 } from '@tabler/icons-react';
 import { User } from '../types';
 import { supabase } from '../supabase';
@@ -34,7 +34,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
     setSuccess('');
     try {
       const { error: updateError } = await supabase.auth.updateUser({
-        data: { 
+        data: {
           username: nick,
           avatar_url: photoUrl
         }
@@ -65,19 +65,24 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
 
   const handleGoogleLink = async () => {
     setLoading(true);
+    setError('');
+    setSuccess('');
     try {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      const { data, error: linkError } = await supabase.auth.linkIdentity({
         provider: 'google',
         options: {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
           },
-          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
+          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly',
           redirectTo: window.location.origin
         }
       });
-      if (oauthError) throw oauthError;
+      if (linkError) throw linkError;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
     } catch (err: any) {
       console.error(err);
       setError('Erro ao vincular conta Google: ' + err.message);
@@ -86,7 +91,30 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
   };
 
   const handleGoogleUnlink = async () => {
-    setError('Para desvincular totalmente, gerencie as permissões na sua conta Google.');
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      const identity = currentUser?.identities?.find(id => id.provider === 'google');
+      if (!identity) {
+        throw new Error('Nenhuma conta Google vinculada encontrada.');
+      }
+
+      const { error: unlinkError } = await supabase.auth.unlinkIdentity(identity);
+      if (unlinkError) throw unlinkError;
+
+      await supabase.auth.refreshSession();
+      onUpdateUser({ ...user, googleAccessToken: undefined });
+      setSuccess('Conta Google desvinculada com sucesso!');
+    } catch (err: any) {
+      console.error(err);
+      setError('Erro ao desvincular conta Google: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -107,18 +135,18 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
                   <IconUser size={64} className="text-gray-300" />
                 )}
               </div>
-              <button 
+              <button
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute bottom-0 right-0 bg-win95-blue text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform"
               >
                 <IconCamera size={16} />
               </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*" 
-                onChange={handlePhotoUpload} 
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handlePhotoUpload}
               />
             </div>
             <span className="text-[10px] font-bold text-gray-500 uppercase">Clique na câmera para mudar a foto</span>
@@ -128,7 +156,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
           <div className="flex-1 w-full space-y-4">
             <div className="space-y-1">
               <label className="text-xs font-bold uppercase text-win95-shadow">Nome de Exibição (Nick):</label>
-              <input 
+              <input
                 type="text"
                 className="w-full px-2 py-1 win95-sunken bg-white text-sm outline-none focus:bg-yellow-50"
                 value={nick}
@@ -160,7 +188,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
         <h2 className="text-lg font-black uppercase mb-4 border-b-2 border-win95-shadow pb-1 flex items-center gap-2">
           <IconBrandGoogle size={20} /> Integração Google
         </h2>
-        
+
         <div className="flex items-center justify-between p-3 win95-sunken bg-white">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-full ${user.googleAccessToken ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
@@ -173,7 +201,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
               </div>
             </div>
           </div>
-          
+
           {user.googleAccessToken ? (
             <Button onClick={handleGoogleUnlink} variant="secondary" className="text-xs flex items-center gap-2">
               <IconLinkOff size={14} /> DESVINCULAR

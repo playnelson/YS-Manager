@@ -7,7 +7,7 @@
   <title>Brain - Sistema Integrado de Gestão</title>
   <meta name="description"
     content="Sistema de gestão empresarial completo para profissionais e empresas. Organização, fluxo e ferramentas integradas em um só lugar." />
-  <meta name="theme-color" content="#e0e5ec" />
+  <meta name="theme-color" content="#111827" />
 
   <!-- SEO Social -->
   <meta property="og:type" content="website" />
@@ -19,16 +19,22 @@
   <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- Fonte Inter para visual moderno e legível -->
+  <!-- Fontes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap"
     rel="stylesheet">
+
+  <!-- Material Symbols Outlined (ícones do novo layout) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet" />
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -36,6 +42,9 @@
             mono: ['JetBrains Mono', 'monospace'],
           },
           colors: {
+            primary: '#111827',
+            'background-light': '#F9FAFB',
+            'background-dark': '#111111',
             win95: {
               bg: '#e0e5ec',
               light: '#ffffff',
@@ -45,79 +54,22 @@
               blueLight: '#60a5fa'
             }
           },
-          boxShadow: {
-            'retro': '3px 3px 6px #b8b9be, -3px -3px 6px #ffffff',
-            'retro-inset': 'inset 2px 2px 5px #b8b9be, inset -3px -3px 7px #ffffff',
-          }
         }
       }
     }
   </script>
   <style>
+    /* Material Symbols default style */
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+      font-size: 20px;
+      vertical-align: middle;
+      line-height: 1;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
-      background-color: #e0e5ec;
-      color: #1f2937;
       -webkit-font-smoothing: antialiased;
-      transition: background-color 0.3s ease;
-    }
-
-    /* Modo Invertido (Dark Mode Moderno) */
-    .invert-colors {
-      filter: invert(1) hue-rotate(180deg);
-    }
-
-    .invert-colors img,
-    .invert-colors video,
-    .invert-colors iframe,
-    .invert-colors .no-invert {
-      filter: invert(1) hue-rotate(180deg);
-    }
-
-    /* Neo-Retro Raised (Relevo Suave) */
-    .win95-raised {
-      background-color: #e0e5ec;
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      border-radius: 6px;
-      box-shadow:
-        4px 4px 8px #a3b1c6,
-        -4px -4px 8px #ffffff;
-      transition: all 0.2s ease;
-    }
-
-    /* Neo-Retro Sunken (Afundado Suave) */
-    .win95-sunken {
-      background-color: #f3f4f6;
-      border-radius: 6px;
-      box-shadow: inset 2px 2px 5px #cbd5e1, inset -2px -2px 5px #ffffff;
-      border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-
-    /* Botão Moderno com toque Retro */
-    .win95-btn {
-      background: #e0e5ec;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 3px 3px 6px #a3b1c6, -3px -3px 6px #ffffff;
-      color: #374151;
-      font-weight: 600;
-      transition: all 0.1s ease;
-    }
-
-    .win95-btn:hover {
-      transform: translateY(-1px);
-      color: #2563eb;
-    }
-
-    .win95-btn:active {
-      box-shadow: inset 2px 2px 5px #a3b1c6, inset -2px -2px 5px #ffffff;
-      transform: translateY(1px);
-    }
-
-    .win95-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
     }
 
     /* Scrollbar Moderna */
@@ -131,22 +83,38 @@
     }
 
     ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
+      background: #d1d5db;
+      border-radius: 10px;
     }
 
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
+    .dark ::-webkit-scrollbar-thumb {
+      background: #374151;
     }
 
-    /* Utilitários de Texto */
-    .text-shadow {
-      text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5);
+    /* Hide scrollbar utility */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Spin animation for lucide */
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .animate-spin {
+      animation: spin 1s linear infinite;
     }
   </style>
 </head>
 
-<body class="min-h-screen select-none bg-[#e0e5ec]">
+<body class="min-h-screen select-none bg-gray-50 dark:bg-[#111111]">
   <div id="root" class="min-h-screen"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
