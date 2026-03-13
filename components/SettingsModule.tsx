@@ -75,7 +75,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
             access_type: 'offline',
             prompt: 'consent',
           },
-          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly',
+          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/contacts.readonly',
           redirectTo: window.location.origin
         }
       });

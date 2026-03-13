@@ -7,6 +7,15 @@ export interface User {
   googleAccessToken?: string;
 }
 
+export interface Contact {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  photoUrl?: string;
+  source: 'google' | 'manual';
+}
+
 // Kanban Types
 export type KanbanPriority = 'low' | 'medium' | 'high';
 
@@ -16,12 +25,15 @@ export interface KanbanCard {
   description: string;
   priority: KanbanPriority;
   createdAt: string;
+  dueDate?: string;      // YYYY-MM-DD
+  labels?: string[];    // list of label names
 }
 
 export interface KanbanColumn {
   id: string;
   title: string;
   cards: KanbanCard[];
+  color?: string; // e.g. 'gray' | 'blue' | 'purple' | 'green' | 'orange' | 'rose'
 }
 
 export interface KanbanState {

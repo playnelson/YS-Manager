@@ -10,11 +10,11 @@ interface StickyNotesWallProps {
 }
 
 const COLORS = [
-  { name: 'sand', bg: 'bg-[#ffff88]', border: 'border-[#e6e600]', bar: 'bg-[#cccc00]', text: 'text-black' }, // Amarelo clássico
-  { name: 'blue', bg: 'bg-[#c0ebff]', border: 'border-[#a0d8f0]', bar: 'bg-[#0064d2]', text: 'text-black' },
-  { name: 'mint', bg: 'bg-[#cfffcf]', border: 'border-[#a8e0a8]', bar: 'bg-[#198754]', text: 'text-black' },
-  { name: 'pink', bg: 'bg-[#ffc0cb]', border: 'border-[#f0a0b0]', bar: 'bg-[#d63384]', text: 'text-black' },
-  { name: 'white', bg: 'bg-palette-lightest', border: 'border-palette-mediumLight', bar: 'bg-palette-mediumDark', text: 'text-black' },
+  { name: 'sand', bg: 'bg-[#FEF9E1]', border: 'border-[#E6D5B8]', bar: 'bg-[#B4B4B8]', text: 'text-palette-darkest' },
+  { name: 'blue', bg: 'bg-[#E3F2FD]', border: 'border-[#BBDEFB]', bar: 'bg-[#B4B4B8]', text: 'text-palette-darkest' },
+  { name: 'mint', bg: 'bg-[#E8F5E9]', border: 'border-[#C8E6C9]', bar: 'bg-[#B4B4B8]', text: 'text-palette-darkest' },
+  { name: 'pink', bg: 'bg-[#FCE4EC]', border: 'border-[#F8BBD0]', bar: 'bg-[#B4B4B8]', text: 'text-palette-darkest' },
+  { name: 'white', bg: 'bg-palette-lightest', border: 'border-palette-mediumDark', bar: 'bg-palette-mediumDark', text: 'text-palette-darkest' },
 ];
 
 export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChange }) => {
@@ -139,7 +139,7 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
 
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         {notes.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-palette-darkest/40 opacity-30">
+          <div className="h-full flex flex-col items-center justify-center text-palette-darkest opacity-30">
             <StickyNote size={64} className="mb-4" />
             <p className="text-xs font-black uppercase tracking-[0.2em]">O mural está vazio</p>
             <p className="text-[10px]">Clique em 'Nova Anotação' para colar um lembrete</p>
@@ -184,7 +184,7 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
                       onChange={(e) => updateNote(note.id, e.target.value)}
                     />
 
-                    <div className="mt-2 flex justify-between items-center pt-2 border-t border-black/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="mt-2 flex justify-between items-center pt-2 border-t border-palette-mediumDark/30 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => changeColor(note.id)}
                         className="p-1 hover:bg-black/5 rounded text-black/60 transition-colors"
@@ -213,7 +213,7 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
         )}
       </div>
 
-      <div className="p-1 px-3 bg-palette-lightest border-t border-white text-[9px] font-bold text-palette-darkest/40 uppercase italic shrink-0">
+      <div className="p-1 px-3 bg-palette-lightest border-t border-palette-mediumDark text-[9px] font-bold text-palette-darkest/60 uppercase italic shrink-0">
         <span>Dica: Use o botão de relatório para salvar suas anotações do turno.</span>
       </div>
 

@@ -76,10 +76,10 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
   }, [selectedId]);
 
   const priorityMeta: Record<NotePriority, { icon: React.ReactNode, color: string, label: string }> = {
-    normal: { icon: <FileText size={12} />, color: 'text-black', label: 'Normal' },
+    normal: { icon: <FileText size={12} />, color: 'text-palette-darkest', label: 'Normal' },
     urgent: { icon: <AlertTriangle size={12} className="text-red-600" />, color: 'text-red-700', label: 'Urgente' },
-    secret: { icon: <Lock size={12} className="text-win95-blue" />, color: 'text-win95-blue', label: 'Confidencial' },
-    archived: { icon: <Archive size={12} className="text-win95-shadow" />, color: 'text-win95-shadow', label: 'Arquivado' }
+    secret: { icon: <Lock size={12} className="text-palette-darkest" />, color: 'text-palette-darkest', label: 'Confidencial' },
+    archived: { icon: <Archive size={12} className="text-palette-darkest/40" />, color: 'text-palette-darkest/40', label: 'Arquivado' }
   };
 
   return (
@@ -127,7 +127,7 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
                       <div
                         key={note.id}
                         onClick={(e) => { e.stopPropagation(); setSelectedId(note.id); }}
-                        className={`flex items-center justify-between px-2 py-1 cursor-pointer text-[11px] group ${selectedId === note.id ? 'bg-palette-darkest text-white' : 'hover:bg-palette-mediumLight/40 text-black'}`}
+                        className={`flex items-center justify-between px-2 py-1 cursor-pointer text-[11px] group ${selectedId === note.id ? 'bg-palette-darkest text-white shadow-md' : 'hover:bg-palette-mediumLight/60 text-palette-darkest/80'}`}
                       >
                         <div className="flex items-center gap-2 truncate">
                           {priorityMeta[note.priority].icon}
@@ -155,7 +155,7 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
                 <span className="uppercase tracking-widest">Editando: {selectedNote.title}.doc</span>
                 <div className="flex gap-1">
                   <select
-                    className="bg-palette-lightest text-black text-[9px] px-1 outline-none border border-black/20 font-black uppercase"
+                    className="bg-palette-lightest text-palette-darkest text-[9px] px-1 outline-none border border-palette-mediumDark font-black uppercase"
                     value={selectedNote.priority}
                     onChange={e => updateNote(selectedNote.id, { priority: e.target.value as NotePriority })}
                   >
@@ -228,7 +228,7 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
                 />
               </div>
 
-              <div className="win95-sunken bg-palette-lightest border-none p-1 px-3 flex justify-between items-center text-[9px] font-bold text-[#555] uppercase italic">
+              <div className="win95-sunken bg-palette-lightest border-none p-1 px-3 flex justify-between items-center text-[9px] font-bold text-palette-darkest/60 uppercase italic">
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1"><Clock size={10} /> Atualizado: {new Date(selectedNote.updatedAt).toLocaleString('pt-BR')}</span>
                   <span>Formato: Rich Text (HTML)</span>

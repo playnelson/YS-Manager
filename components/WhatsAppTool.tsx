@@ -3,10 +3,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   MessageCircle, Smartphone, Globe, Monitor, Zap, User, History,
   Clock, Trash2, RotateCcw, QrCode, Copy, Check, Send,
-  Plus, FileText, Share2, ExternalLink
+  Plus, FileText, Share2, ExternalLink, Search as SearchIcon, RefreshCw, Users, Book
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { QRCodeCanvas } from 'qrcode.react';
+import { Contact } from '../types';
+import { fetchGoogleContacts } from '../services/googleContactsService';
 
 interface HistoryItem {
   id: string;
@@ -30,7 +32,11 @@ const DEFAULT_TEMPLATES: Template[] = [
   { id: '4', title: 'Confirmação', content: 'Olá, estou confirmando nosso compromisso para amanhã.' },
 ];
 
-export const WhatsAppTool: React.FC = () => {
+interface WhatsAppToolProps {
+  googleAccessToken?: string;
+}
+
+export const WhatsAppTool: React.FC<WhatsAppToolProps> = ({ googleAccessToken }) => {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
@@ -46,6 +52,14 @@ export const WhatsAppTool: React.FC = () => {
     const saved = localStorage.getItem('ysoffice_whatsapp_history');
     return saved ? JSON.parse(saved) : [];
   });
+
+  const [contacts, setContacts] = useState<Contact[]>(() => {
+    const saved = localStorage.getItem('ysoffice_whatsapp_contacts');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [activeRightTab, setActiveRightTab] = useState<'history' | 'contacts'>('history');
 
   useEffect(() => {
     const pending = sessionStorage.getItem('ysoffice_pending_wa');
@@ -158,6 +172,35 @@ export const WhatsAppTool: React.FC = () => {
 
   const applyTemplate = (content: string) => {
     setMessage(content);
+  };
+
+  const syncContacts = async () => {
+    if (!googleAccessToken) {
+      alert("Por favor, vincule sua conta Google nas configurações.");
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      const gContacts = await fetchGoogleContacts(googleAccessToken);
+      setContacts(gContacts);
+      localStorage.setItem('ysoffice_whatsapp_contacts', JSON.stringify(gContacts));
+      setActiveRightTab('contacts');
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao sincronizar contatos.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const filteredContacts = contacts.filter(c =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.phone.includes(searchTerm)
+  );
+
+  const selectContact = (c: Contact) => {
+    setName(c.name);
+    setPhone(c.phone);
   };
 
   return (
@@ -349,49 +392,138 @@ export const WhatsAppTool: React.FC = () => {
         </div>
       </div>
 
-      {/* Direita: Histórico */}
-      <div className="w-72 flex flex-col win95-raised p-1 h-full shrink-0">
-        <div className="flex items-center justify-between bg-[#000080] dark:bg-blue-900 text-white p-1 mb-1 px-2">
-          <div className="flex items-center gap-1 text-[10px] font-bold uppercase">
-            <History size={12} /> Histórico Recente
-          </div>
-          <button onClick={clearHistory} className="text-white hover:bg-red-600 p-0.5 rounded" title="Limpar Histórico">
-            <Trash2 size={12} />
+      {/* Direita: Abas de Histórico e Contatos */}
+      <div className="w-80 flex flex-col win95-raised p-1 h-full shrink-0">
+        <div className="flex bg-gray-200 dark:bg-gray-800 p-0.5 gap-1 mb-1">
+          <button
+            onClick={() => setActiveRightTab('history')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold uppercase border ${activeRightTab === 'history' ? 'win95-sunken bg-white dark:bg-gray-900 text-blue-800 dark:text-blue-400' : 'win95-raised hover:bg-gray-100'}`}
+          >
+            <History size={12} /> Histórico
+          </button>
+          <button
+            onClick={() => setActiveRightTab('contacts')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold uppercase border ${activeRightTab === 'contacts' ? 'win95-sunken bg-white dark:bg-gray-900 text-blue-800 dark:text-blue-400' : 'win95-raised hover:bg-gray-100'}`}
+          >
+            <Users size={12} /> Contatos
           </button>
         </div>
 
-        <div className="flex-1 win95-sunken bg-white dark:bg-gray-900 overflow-y-auto custom-scrollbar p-1 space-y-2">
-          {history.length === 0 ? (
-            <div className="text-center p-4 text-[#808080] text-[10px] italic">
-              Nenhuma mensagem enviada.
-            </div>
-          ) : (
-            history.map(item => (
-              <div key={item.id} className="border border-dotted border-gray-300 dark:border-gray-700 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 group relative bg-gray-50 dark:bg-gray-800">
-                <div className="flex justify-between items-start mb-1">
-                  <div className="font-bold text-xs text-blue-800 dark:text-blue-400 truncate max-w-[140px]">{item.name}</div>
-                  <div className="text-[9px] text-gray-500 flex items-center gap-0.5">
-                    <Clock size={8} /> {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-                <div className="text-[10px] font-mono font-bold text-black dark:text-white mb-1">{item.phone}</div>
-                {item.message && (
-                  <div className="text-[9px] text-gray-600 dark:text-gray-400 italic truncate border-t border-gray-200 dark:border-gray-700 pt-1">
-                    "{item.message}"
-                  </div>
-                )}
-
-                <button
-                  onClick={() => loadFromHistory(item)}
-                  className="absolute bottom-1 right-1 p-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100 dark:hover:bg-blue-900/50"
-                  title="Reutilizar dados"
-                >
-                  <RotateCcw size={12} className="text-blue-600 dark:text-blue-400" />
-                </button>
+        {activeRightTab === 'history' ? (
+          <>
+            <div className="flex items-center justify-between bg-[#000080] dark:bg-blue-900 text-white p-1 mb-1 px-2">
+              <div className="flex items-center gap-1 text-[10px] font-bold uppercase">
+                <History size={12} /> Histórico Recente
               </div>
-            ))
-          )}
-        </div>
+              <button onClick={clearHistory} className="text-white hover:bg-red-600 p-0.5 rounded" title="Limpar Histórico">
+                <Trash2 size={12} />
+              </button>
+            </div>
+
+            <div className="flex-1 win95-sunken bg-white dark:bg-gray-900 overflow-y-auto custom-scrollbar p-1 space-y-2">
+              {history.length === 0 ? (
+                <div className="text-center p-4 text-[#808080] text-[10px] italic">
+                  Nenhuma mensagem enviada.
+                </div>
+              ) : (
+                history.map(item => (
+                  <div key={item.id} className="border border-dotted border-gray-300 dark:border-gray-700 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 group relative bg-gray-50 dark:bg-gray-800">
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="font-bold text-xs text-blue-800 dark:text-blue-400 truncate max-w-[140px]">{item.name}</div>
+                      <div className="text-[9px] text-gray-500 flex items-center gap-0.5">
+                        <Clock size={8} /> {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div className="text-[10px] font-mono font-bold text-black dark:text-white mb-1">{item.phone}</div>
+                    {item.message && (
+                      <div className="text-[9px] text-gray-600 dark:text-gray-400 italic truncate border-t border-gray-200 dark:border-gray-700 pt-1">
+                        "{item.message}"
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => loadFromHistory(item)}
+                      className="absolute bottom-1 right-1 p-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                      title="Reutilizar dados"
+                    >
+                      <RotateCcw size={12} className="text-blue-600 dark:text-blue-400" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col h-full overflow-hidden">
+            <div className="bg-[#000080] dark:bg-blue-900 text-white p-1.5 flex items-center justify-between mb-1 px-2">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase">
+                <Book size={12} /> Catálogo
+              </div>
+              <button
+                onClick={syncContacts}
+                disabled={isSyncing}
+                className="text-white hover:bg-blue-700 p-0.5 rounded disabled:opacity-50"
+                title="Sincronizar Google"
+              >
+                <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+              </button>
+            </div>
+
+            <div className="px-2 mb-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Buscar contato..."
+                  className="w-full pl-7 pr-2 py-1.5 win95-sunken bg-white dark:bg-gray-800 text-xs outline-none"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+                <SearchIcon size={12} className="absolute left-2 top-2 text-gray-400" />
+              </div>
+            </div>
+
+            <div className="flex-1 win95-sunken bg-white dark:bg-gray-900 overflow-y-auto custom-scrollbar p-1 space-y-1">
+              {filteredContacts.length === 0 ? (
+                <div className="text-center p-8 text-[#808080] text-[10px] italic">
+                  {contacts.length === 0 ? 'Sincronize sua conta Google para ver seus contatos.' : 'Nenhum contato encontrado.'}
+                </div>
+              ) : (
+                filteredContacts.map(c => (
+                  <div
+                    key={c.id}
+                    onClick={() => selectContact(c)}
+                    className="flex items-center gap-3 p-2 border border-transparent hover:border-gray-300 dark:hover:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-700">
+                      {c.photoUrl ? (
+                        <img src={c.photoUrl} alt={c.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <User size={14} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-gray-900 dark:text-white truncate">{c.name}</div>
+                      <div className="text-[10px] text-gray-500 font-mono">{c.phone}</div>
+                    </div>
+                    {c.source === 'google' && (
+                      <div className="text-[8px] font-black text-blue-600 opacity-40 group-hover:opacity-100">GOOGLE</div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {!googleAccessToken && (
+              <div className="mt-1 p-2 bg-yellow-50 dark:bg-yellow-900/20 border-t border-yellow-200 dark:border-yellow-800">
+                <p className="text-[9px] text-yellow-800 dark:text-yellow-200 flex items-center gap-1">
+                  <ExternalLink size={10} /> Vincule o Google para importar contatos.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile } from '../types';
+import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile, KanbanState } from '../types';
 import { EmailManager } from './EmailManager';
 import { StickyNotesWall } from './StickyNotesWall';
 import { ImportantNotes } from './ImportantNotes';
@@ -12,6 +12,7 @@ import { SignatureManager } from './SignatureManager';
 import { PersonalFileManager } from './DocumentsModule';
 import { PricingCalculator } from './PricingCalculator';
 import { BrasilApiModule } from './BrasilApiModule';
+import { KanbanBoard } from './KanbanBoard';
 
 interface OfficeModuleProps {
   emails: EmailTemplate[];
@@ -33,11 +34,14 @@ interface OfficeModuleProps {
   personalFiles: StoredFile[];
   onFilesChange: (files: StoredFile[]) => void;
   hiddenTabs?: string[];
+  kanbanData: KanbanState;
+  onKanbanChange: (data: KanbanState) => void;
 }
 
-type SubTab = 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'emails' | 'brasil';
+type SubTab = 'kanban' | 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'emails' | 'brasil';
 
 const SUB_TABS: { id: SubTab; label: string }[] = [
+  { id: 'kanban', label: 'Kanban' },
   { id: 'mural', label: 'Mural' },
   { id: 'notes', label: 'Anotações' },
   { id: 'handoff', label: 'Passagem' },
@@ -61,7 +65,8 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   links, onLinkChange,
   extensions, onExtensionChange,
   personalFiles, onFilesChange,
-  hiddenTabs = []
+  hiddenTabs = [],
+  kanbanData, onKanbanChange,
 }) => {
   const showBrasilHub = !hiddenTabs.includes('brasil-hub');
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('mural');
@@ -94,6 +99,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
 
       {/* ── Content ── */}
       <div className="flex-1 overflow-y-auto">
+        {activeSubTab === 'kanban' && <KanbanBoard data={kanbanData} onChange={onKanbanChange} />}
         {activeSubTab === 'mural' && <StickyNotesWall notes={postIts} onChange={onPostItChange} />}
         {activeSubTab === 'notes' && <ImportantNotes notes={importantNotes} onChange={onNoteChange} />}
         {activeSubTab === 'handoff' && <ShiftHandoffModule handoffs={handoffs} onChange={onHandoffChange} currentUser={currentUser} />}

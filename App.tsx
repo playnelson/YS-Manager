@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { GitMerge, MessageSquare, RefreshCw, Calendar as CalendarIcon, Search, Truck, Cloud, Home, DollarSign, Package, Store } from 'lucide-react';
-import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState } from './types';
+import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState, KanbanState } from './types';
 import { Auth } from './components/Auth';
 import { MessageLinker } from './components/MessageLinker';
 import { DigitalClock } from './components/DigitalClock';
@@ -21,6 +21,14 @@ const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 const initialLogistics: LogisticsState = { freightTables: [], checklists: [] };
+const initialKanban: KanbanState = {
+  columns: [
+    { id: 'col_backlog', title: 'Backlog', color: 'gray', cards: [] },
+    { id: 'col_todo', title: 'A Fazer', color: 'blue', cards: [] },
+    { id: 'col_doing', title: 'Em Andamento', color: 'orange', cards: [] },
+    { id: 'col_done', title: 'Concluído', color: 'green', cards: [] },
+  ]
+};
 
 const DEFAULT_TABS = [
   { id: 'office', label: 'Escritório', icon: <Home size={18} /> },
@@ -70,6 +78,7 @@ const App: React.FC = () => {
   const [financialTransactions, setFinancialTransactions] = useState<any[]>([]);
   const [warehouseInventory, setWarehouseInventory] = useState<any[]>([]);
   const [warehouseLogs, setWarehouseLogs] = useState<any[]>([]);
+  const [kanbanData, setKanbanData] = useState<KanbanState>(initialKanban);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -194,6 +203,7 @@ const App: React.FC = () => {
             if (parsed.personalFiles) setPersonalFiles(parsed.personalFiles);
             if (parsed.logistics) setLogisticsData(parsed.logistics);
             if (parsed.hiddenTabs) setHiddenTabs(parsed.hiddenTabs);
+            if (parsed.kanban) setKanbanData(parsed.kanban);
           }
         } else {
           const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
@@ -216,6 +226,7 @@ const App: React.FC = () => {
             setWarehouseInventory(payload.warehouseInventory || []);
             setWarehouseLogs(payload.warehouseLogs || []);
             setHiddenTabs(payload.hiddenTabs || []);
+            setKanbanData(payload.kanban || initialKanban);
           }
         }
       } catch (err) { console.error(err); }
@@ -227,7 +238,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: { columns: [] }, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs, financialTransactions, warehouseInventory, warehouseLogs };
+      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs, financialTransactions, warehouseInventory, warehouseLogs };
       if (user.id === 'demo_user_id') {
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
       } else {
@@ -239,7 +250,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 2500); // Maior intervalo para menos carga
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseLogs]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseLogs, kanbanData]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -260,7 +271,7 @@ const App: React.FC = () => {
             access_type: 'offline',
             prompt: 'consent',
           },
-          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly',
+          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/contacts.readonly',
           redirectTo: window.location.origin
         }
       });
@@ -409,6 +420,7 @@ const App: React.FC = () => {
                 extensions={extensions} onExtensionChange={setExtensions}
                 personalFiles={personalFiles} onFilesChange={setPersonalFiles}
                 hiddenTabs={hiddenTabs}
+                kanbanData={kanbanData} onKanbanChange={setKanbanData}
               />
             )}
             {activeTab === 'calendar' && (
@@ -421,7 +433,7 @@ const App: React.FC = () => {
             {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
             {activeTab === 'logistics' && <LogisticsModule data={logisticsData} onChange={setLogisticsData} />}
             {activeTab === 'consultas' && <ConsultationModule />}
-            {activeTab === 'whatsapp' && <WhatsAppTool />}
+            {activeTab === 'whatsapp' && <WhatsAppTool googleAccessToken={user.googleAccessToken} />}
             {activeTab === 'shared_docs' && (
               <SharedDocumentsModule
                 driveFiles={driveFiles}
