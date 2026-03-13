@@ -176,15 +176,17 @@ interface MovementModalProps {
 const EmployeeDetailModal: React.FC<{
   employee: Employee;
   logs: StockLog[];
+  inventory: InventoryItem[];
+  onReturn: (itemId: string, qty: number) => void;
   onClose: () => void;
-}> = ({ employee, logs, onClose }) => {
+}> = ({ employee, logs, inventory, onReturn, onClose }) => {
   const empLogs = logs.filter(l => l.employeeId === employee.id);
-  const possession: Record<string, { code: string; name: string; qty: number; unit: string }> = {};
+  const possession: Record<string, { itemId: string; code: string; name: string; qty: number; unit: string }> = {};
 
   // Calculate possession: Exits - Entries
   empLogs.forEach(l => {
     if (!possession[l.itemId]) {
-      possession[l.itemId] = { code: l.itemCode, name: l.itemName, qty: 0, unit: '' };
+      possession[l.itemId] = { itemId: l.itemId, code: l.itemCode, name: l.itemName, qty: 0, unit: '' };
     }
     if (l.type === 'exit') {
       possession[l.itemId].qty += l.quantity;
@@ -224,13 +226,17 @@ const EmployeeDetailModal: React.FC<{
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {activePossession.map(p => (
                   <div key={p.code} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl">
-                    <div className="min-w-0">
+                    <div className="min-w-0 pr-2">
                       <p className="text-[10px] font-mono text-blue-600 dark:text-blue-400">{p.code}</p>
                       <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{p.name}</p>
+                      <p className="text-[10px] text-gray-500">Em posse: <span className="font-bold text-blue-600 dark:text-blue-400">{p.qty}</span></p>
                     </div>
-                    <div className="text-right">
-                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{p.qty}</span>
-                    </div>
+                    <button 
+                      onClick={() => onReturn(p.itemId, p.qty)}
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 text-[10px] font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors shadow-sm"
+                    >
+                      <ArrowDownLeft size={12}/> Devolver
+                    </button>
                   </div>
                 ))}
               </div>
@@ -398,6 +404,30 @@ export const WarehouseModule: React.FC = () => {
     const log: StockLog = { id: genId(), itemId: item.id, itemCode: item.code, itemName: item.name, type, quantity: qty, date: new Date().toISOString(), employeeId, employeeName: emp?.name || 'Não informado', note };
     saveLogs([log, ...logs].slice(0, 200));
     setMovementTarget(null);
+  };
+
+  const handleReturnItem = (itemId: string, qty: number) => {
+    if (!selectedEmp) return;
+    const item = inventory.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Direct return logic: creates an entry log
+    const delta = qty; // Returning everything in possession for now, or we could add a partial return modal
+    saveInventory(inventory.map(i => i.id === itemId ? { ...i, quantity: i.quantity + delta, lastUpdated: new Date().toISOString() } : i));
+    
+    const log: StockLog = { 
+      id: genId(), 
+      itemId: item.id, 
+      itemCode: item.code, 
+      itemName: item.name, 
+      type: 'entry', 
+      quantity: delta, 
+      date: new Date().toISOString(), 
+      employeeId: selectedEmp.id, 
+      employeeName: selectedEmp.name, 
+      note: 'Devolução de material' 
+    };
+    saveLogs([log, ...logs].slice(0, 200));
   };
 
   const handleAddEmployee = () => {
@@ -772,7 +802,7 @@ export const WarehouseModule: React.FC = () => {
       {movementTarget && <MovementModal item={movementTarget.item} type={movementTarget.type} employees={employees} onConfirm={handleMovement} onClose={() => setMovementTarget(null)}/>}
 
       {/* ── Employee Detail Modal ── */}
-      {selectedEmp && <EmployeeDetailModal employee={selectedEmp} logs={logs} onClose={() => setSelectedEmp(null)} />}
+      {selectedEmp && <EmployeeDetailModal employee={selectedEmp} logs={logs} inventory={inventory} onReturn={handleReturnItem} onClose={() => setSelectedEmp(null)} />}
 
       {/* ── CSV Import Preview ── */}
       {importPreview && (

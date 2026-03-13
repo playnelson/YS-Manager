@@ -1,4 +1,4 @@
 @echo off
 git add -A
-git commit -m "feat: live inventory export to Excel" -m "- Implemented exportInventory function using SheetJS" -m "- Added 'Exportar Planilha' button to generate formatted XLSX files" -m "- Refactored Warehouse module buttons for better layout" -m "- Updated icons for Template and Import buttons"
+git commit -m "feat: item return functionality for employees" -m "- Added 'Devolver' button to employee possession list" -m "- Implemented handleReturnItem logic to transfer items back to stock" -m "- Automatic 'entry' log generation for returned materials"
 git push origin main
