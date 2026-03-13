@@ -74,16 +74,12 @@ const DEFAULT_INVENTORY: InventoryItem[] = [
 // ── CSV Helpers ──────────────────────────────────────────────────────────────
 
 function downloadTemplate() {
-  const header = 'codigo,descricao,categoria,consumivel,qtd_atual,qtd_minima,unidade';
-  const rows = [
-    'MAT-001,Bota de Segurança Nº 42,EPI,Não,10,5,Par',
-    'MAT-002,Luva de Vaqueta Cano Longo,EPI,Sim,40,10,Par',
-    'MAT-017,Mala de Ferramentas,Ferramenta,Não,3,1,Unid.',
-  ].join('\n');
-  const blob = new Blob([header + '\n' + rows], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'planilha_estoque.csv'; a.click();
-  URL.revokeObjectURL(url);
+  const link = document.createElement('a');
+  link.href = '/planilha_estoque.xlsx';
+  link.download = 'controle_estoque.xlsx';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function parseCSV(text: string): Partial<InventoryItem>[] {
