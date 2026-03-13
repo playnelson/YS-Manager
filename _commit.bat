@@ -1,4 +1,0 @@
-@echo off
-git add -A
-git commit -m "feat: Kanban redesign premium + Warehouse melhorias" -m "KanbanBoard: redesign inspirado em Linear/Trello - cards ricos com etiquetas, prazo e prioridade, drag-and-drop com indicador de posicao, temas de cor por coluna, modo mural fullscreen e modo escritorio integrado." -m "WarehouseModule: importacao CSV com previa, template para download, cadastro de funcionarios com nome/cargo/setor e toggle ativo, modal de movimentacao vinculando cada entrada ou saida ao funcionario responsavel, historico completo com atribuicao." -m "types.ts: dueDate e labels em KanbanCard, color em KanbanColumn." -m "App.tsx: estado kanbanData com persistencia Supabase e localStorage." -m "OfficeModule.tsx: Kanban adicionado como primeira sub-aba no Escritorio."
-git push origin main
