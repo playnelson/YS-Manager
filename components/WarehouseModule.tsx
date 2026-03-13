@@ -5,6 +5,7 @@ import {
   Trash2, Archive, Box, Download, Upload, Users, X, Check, FileSpreadsheet,
   UserPlus
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,6 +102,26 @@ function parseCSV(text: string): Partial<InventoryItem>[] {
       unit:       obj['unidade'] || obj['unit'] || 'Unid.',
     };
   }).filter(i => i.name);
+}
+
+function parseXLSX(data: ArrayBuffer): Partial<InventoryItem>[] {
+  const workbook = XLSX.read(data, { type: 'array' });
+  const firstSheetName = workbook.SheetNames[0];
+  const firstSheet = workbook.Sheets[firstSheetName];
+  const jsonData = XLSX.utils.sheet_to_json<any>(firstSheet);
+
+  return jsonData.map(row => {
+    const consumableStr = String(row['Consumível?'] || row['consumivel'] || row['Consumivel'] || '').toLowerCase();
+    return {
+      code:       String(row['Código']    || row['codigo']    || row['code'] || ''),
+      name:       String(row['Descrição'] || row['descricao'] || row['name'] || row['nome'] || ''),
+      category:   String(row['Categoria'] || row['categoria'] || row['category'] || 'Geral'),
+      consumable: consumableStr === 'sim' || consumableStr === 'yes' || consumableStr === 'true',
+      quantity:   Number(row['Qtd. Atual'] || row['qtd_atual'] || row['quantity'] || 0),
+      minStock:   Number(row['Qtd. Mínima']|| row['qtd_minima']|| row['min_stock'] || 0),
+      unit:       String(row['Unidade']   || row['unidade']   || row['unit'] || 'Unid.'),
+    };
+  }).filter(i => i.name && i.name !== 'undefined');
 }
 
 function nextCode(inventory: InventoryItem[]): string {
@@ -257,9 +278,22 @@ export const WarehouseModule: React.FC = () => {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
+    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
     const reader = new FileReader();
-    reader.onload = ev => setImportPreview(parseCSV(ev.target?.result as string));
-    reader.readAsText(file, 'UTF-8');
+    reader.onload = ev => {
+      if (isXlsx) {
+        setImportPreview(parseXLSX(ev.target?.result as ArrayBuffer));
+      } else {
+        setImportPreview(parseCSV(ev.target?.result as string));
+      }
+    };
+
+    if (isXlsx) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file, 'UTF-8');
+    }
     e.target.value = '';
   };
 
@@ -316,9 +350,9 @@ export const WarehouseModule: React.FC = () => {
               <Download size={13}/><span className="hidden sm:inline">Planilha Modelo</span>
             </button>
             <button onClick={() => fileRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors border border-blue-200 dark:border-blue-800">
-              <Upload size={13}/><span className="hidden sm:inline">Importar CSV</span>
+              <Upload size={13}/><span className="hidden sm:inline">Importar Planilha</span>
             </button>
-            <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden"/>
+            <input ref={fileRef} type="file" accept=".csv,.txt,.xlsx,.xls" onChange={handleFileUpload} className="hidden"/>
             <button onClick={() => { setNewItem({ ...emptyItem, code: nextCode(inventory) }); setShowAddModal(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-100 transition-all shadow-sm">
               <Plus size={13}/> Novo Item

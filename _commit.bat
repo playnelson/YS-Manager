@@ -1,4 +1,4 @@
 @echo off
 git add -A
-git commit -m "feat: use custom Excel file as warehouse template" -m "- Created public directory for static assets" -m "- Copied 'controle_estoque (1).xlsx' to 'public/planilha_estoque.xlsx'" -m "- Updated WarehouseModule.tsx to download the static XLSX file instead of generating a CSV"
+git commit -m "feat: Warehouse XLSX import support" -m "- Installed 'xlsx' library" -m "- Added parseXLSX helper to extract data from Excel sheets" -m "- Updated handleFileUpload to support .csv, .xls, and .xlsx" -m "- Mapped columns to 'Código', 'Descrição', 'Categoria', 'Consumível?', 'Qtd. Atual', 'Qtd. Mínima', 'Unidade'" -m "- Updated UI button text to 'Importar Planilha'"
 git push origin main
