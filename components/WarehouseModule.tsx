@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import {
   Package, Plus, Search, AlertTriangle, History, ArrowUpRight, ArrowDownLeft,
   Trash2, Archive, Box, Download, Upload, Users, X, Check, FileSpreadsheet,
-  UserPlus
+  UserPlus, ShoppingCart, Minus
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -40,6 +40,15 @@ interface StockLog {
   employeeId: string;
   employeeName: string;
   note?: string;
+}
+
+interface CartItem {
+  id: string;
+  itemId: string;
+  code: string;
+  name: string;
+  quantity: number;
+  unit: string;
 }
 
 // ── Default data (from spreadsheet image) ───────────────────────────────────
@@ -278,6 +287,89 @@ const EmployeeDetailModal: React.FC<{
   );
 };
 
+const CartModal: React.FC<{
+  cart: CartItem[];
+  employees: Employee[];
+  onConfirm: (employeeId: string, note: string) => void;
+  onUpdateQty: (id: string, qty: number) => void;
+  onRemove: (id: string) => void;
+  onClose: () => void;
+}> = ({ cart, employees, onConfirm, onUpdateQty, onRemove, onClose }) => {
+  const [empId, setEmpId] = useState('');
+  const [note, setNote] = useState('');
+  const activeEmps = employees.filter(e => e.active);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-6 py-4 bg-gray-900 dark:bg-black text-white flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShoppingCart size={18}/>
+            <span className="font-bold text-sm">Carrinho de Saída ({cart.length})</span>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors"><X size={20}/></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {cart.length === 0 ? (
+            <div className="text-center py-10 text-gray-400">
+              <ShoppingCart size={32} className="mx-auto mb-2 opacity-20"/>
+              <p className="text-sm">Seu carrinho está vazio</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {cart.map(item => (
+                <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-mono text-blue-600 dark:text-blue-400">{item.code}</p>
+                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{item.name}</p>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1">
+                    <button onClick={() => onUpdateQty(item.id, item.quantity - 1)} className="p-1 text-gray-400 hover:text-rose-500"><Minus size={14}/></button>
+                    <span className="text-xs font-bold w-6 text-center">{item.quantity}</span>
+                    <button onClick={() => onUpdateQty(item.id, item.quantity + 1)} className="p-1 text-gray-400 hover:text-emerald-500"><Plus size={14}/></button>
+                  </div>
+                  <button onClick={() => onRemove(item.id)} className="p-2 text-gray-400 hover:text-rose-500 transition-colors"><Trash2 size={16}/></button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {cart.length > 0 && (
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-4">
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1.5 flex items-center gap-1"><Users size={11}/> Funcionário Responsável</label>
+                <select value={empId} onChange={e => setEmpId(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                  <option value="">Selecionar funcionário para retirada...</option>
+                  {activeEmps.map(e => <option key={e.id} value={e.id}>{e.name} — {e.role}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1.5">Observação Global (opcional)</label>
+                <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Ex: Kit de ferramentas para obra X..."
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {cart.length > 0 && (
+          <div className="px-6 pb-6 pt-2">
+            <button 
+              disabled={!empId}
+              onClick={() => onConfirm(empId, note)}
+              className="w-full py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-800 dark:hover:bg-gray-100 transition-all shadow-lg flex items-center justify-center gap-2"
+            >
+              <Check size={16}/> Confirmar Saída em Massa
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const MovementModal: React.FC<MovementModalProps> = ({ item, type, employees, onConfirm, onClose }) => {
   const [qty, setQty] = useState(1);
   const [empId, setEmpId] = useState('');
@@ -359,6 +451,9 @@ export const WarehouseModule: React.FC = () => {
     try { return JSON.parse(localStorage.getItem('ysoffice_warehouse_logs') || 'null') || []; } catch { return []; }
   });
 
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [showCart, setShowCart] = useState(false);
+
   const saveInventory = (data: InventoryItem[]) => { setInventory(data); localStorage.setItem('ysoffice_warehouse_inventory', JSON.stringify(data)); };
   const saveEmployees = (data: Employee[]) => { setEmployees(data); localStorage.setItem('ysoffice_employees', JSON.stringify(data)); };
   const saveLogs     = (data: StockLog[])   => { setLogs(data);      localStorage.setItem('ysoffice_warehouse_logs', JSON.stringify(data)); };
@@ -428,6 +523,55 @@ export const WarehouseModule: React.FC = () => {
       note: 'Devolução de material' 
     };
     saveLogs([log, ...logs].slice(0, 200));
+  };
+
+  const handleAddToCart = (item: InventoryItem) => {
+    if (cart.some(c => c.itemId === item.id)) return;
+    setCart([...cart, {
+      id: genId(),
+      itemId: item.id,
+      code: item.code,
+      name: item.name,
+      quantity: 1,
+      unit: item.unit
+    }]);
+  };
+
+  const handleCheckout = (employeeId: string, note: string) => {
+    const emp = employees.find(e => e.id === employeeId);
+    if (!emp) return;
+
+    let updatedInventory = [...inventory];
+    const newLogs: StockLog[] = [];
+
+    cart.forEach(cartItem => {
+      const invIdx = updatedInventory.findIndex(i => i.id === cartItem.itemId);
+      if (invIdx === -1) return;
+
+      updatedInventory[invIdx] = {
+        ...updatedInventory[invIdx],
+        quantity: Math.max(0, updatedInventory[invIdx].quantity - cartItem.quantity),
+        lastUpdated: new Date().toISOString()
+      };
+
+      newLogs.push({
+        id: genId(),
+        itemId: cartItem.itemId,
+        itemCode: cartItem.code,
+        itemName: cartItem.name,
+        type: 'exit',
+        quantity: cartItem.quantity,
+        date: new Date().toISOString(),
+        employeeId: emp.id,
+        employeeName: emp.name,
+        note: note || 'Saída via carrinho'
+      });
+    });
+
+    saveInventory(updatedInventory);
+    saveLogs([...newLogs, ...logs].slice(0, 200));
+    setCart([]);
+    setShowCart(false);
   };
 
   const handleAddEmployee = () => {
@@ -520,6 +664,11 @@ export const WarehouseModule: React.FC = () => {
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-100 transition-all shadow-sm">
               <Plus size={13}/> Novo Item
             </button>
+            <button onClick={() => setShowCart(true)} className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors border border-amber-200 dark:border-amber-800">
+              <ShoppingCart size={13}/>
+              {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">{cart.length}</span>}
+              <span className="hidden sm:inline">Carrinho</span>
+            </button>
           </>}
           {activeTab === 'employees' && (
             <button onClick={() => setShowAddEmp(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-100 transition-all shadow-sm">
@@ -598,12 +747,20 @@ export const WarehouseModule: React.FC = () => {
                         <td className={`px-4 py-2.5 text-center font-bold font-mono ${low ? 'text-rose-600 dark:text-rose-400' : 'text-gray-800 dark:text-white'}`}>{item.quantity}</td>
                         <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400">{item.minStock || '—'}</td>
                         <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400 text-xs">{item.unit}</td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => setMovementTarget({ item, type: 'entry' })} className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 transition-colors" title="Entrada"><ArrowDownLeft size={13}/></button>
-                            <button onClick={() => setMovementTarget({ item, type: 'exit' })} className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 transition-colors" title="Saída"><ArrowUpRight size={13}/></button>
-                            <button onClick={() => { if (confirm('Remover item?')) saveInventory(inventory.filter(i => i.id !== item.id)); }} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-500 transition-colors" title="Excluir"><Trash2 size={13}/></button>
-                          </div>
+                        <td className="px-4 py-2.5 text-right flex items-center justify-end gap-1.5">
+                          <button onClick={() => handleAddToCart(item)} title="Adicionar ao Carrinho"
+                            className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+                            <ShoppingCart size={14}/>
+                          </button>
+                          <button onClick={() => setMovementTarget({ item, type: 'entry' })} title="Entrada"
+                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors">
+                            <ArrowDownLeft size={15}/>
+                          </button>
+                          <button onClick={() => setMovementTarget({ item, type: 'exit' })} title="Saída"
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors">
+                            <ArrowUpRight size={15}/>
+                          </button>
+                          <button onClick={() => { if (confirm('Remover item?')) saveInventory(inventory.filter(i => i.id !== item.id)); }} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-500 transition-colors" title="Excluir"><Trash2 size={13}/></button>
                         </td>
                       </tr>
                     );
@@ -803,6 +960,18 @@ export const WarehouseModule: React.FC = () => {
 
       {/* ── Employee Detail Modal ── */}
       {selectedEmp && <EmployeeDetailModal employee={selectedEmp} logs={logs} inventory={inventory} onReturn={handleReturnItem} onClose={() => setSelectedEmp(null)} />}
+
+      {/* ── Cart Modal ── */}
+      {showCart && (
+        <CartModal 
+          cart={cart} 
+          employees={employees} 
+          onConfirm={handleCheckout}
+          onUpdateQty={(id, q) => setCart(cart.map(c => c.id === id ? { ...c, quantity: Math.max(1, q) } : c))}
+          onRemove={(id) => setCart(cart.filter(c => c.id !== id))}
+          onClose={() => setShowCart(false)} 
+        />
+      )}
 
       {/* ── CSV Import Preview ── */}
       {importPreview && (
