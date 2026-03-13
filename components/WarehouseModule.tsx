@@ -1,9 +1,8 @@
-
 import React, { useState, useRef } from 'react';
 import {
   Package, Plus, Search, AlertTriangle, History, ArrowUpRight, ArrowDownLeft,
   Trash2, Archive, Box, Download, Upload, Users, X, Check, FileSpreadsheet,
-  UserPlus, ShoppingCart, Minus
+  UserPlus, ShoppingCart, Minus, Printer
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -170,6 +169,93 @@ function nextCode(inventory: InventoryItem[]): string {
   });
   const next = (Math.max(0, ...nums) + 1);
   return `MAT-${String(next).padStart(3, '0')}`;
+}
+
+function printMaterialForm(employee: Employee, items: { code: string; name: string; qty: number; unit: string }[]) {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  const date = new Date().toLocaleDateString('pt-BR');
+  const itemsHtml = items.map(item => `
+    <tr>
+      <td style="border: 1px solid #ddd; padding: 8px; font-family: monospace;">${item.code}</td>
+      <td style="border: 1px solid #ddd; padding: 8px;">${item.name}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.qty} ${item.unit}</td>
+    </tr>
+  `).join('');
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Ficha de Cautela - ${employee.name}</title>
+        <style>
+          body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+          .info { margin-bottom: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 50px; }
+          th { background: #f4f4f4; border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; }
+          .signature-area { margin-top: 100px; display: flex; flex-direction: column; align-items: center; }
+          .line { width: 300px; border-top: 1px solid #333; margin-bottom: 5px; }
+          .footer { margin-top: 50px; font-size: 10px; color: #666; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1 style="margin:0; font-size: 24px;">FICHA DE CAUTELA E ENTREGA DE MATERIAIS</h1>
+          <p style="margin:5px 0 0; opacity: 0.7;">YS-Manager - Sistema de Gestão Interna</p>
+        </div>
+        
+        <div class="info">
+          <div><strong>Colaborador:</strong> ${employee.name}</div>
+          <div><strong>Cargo:</strong> ${employee.role}</div>
+          <div><strong>Departamento:</strong> ${employee.department}</div>
+          <div><strong>Data de Emissão:</strong> ${date}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Descrição do Material / EPI</th>
+              <th>Quantidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <p style="font-size: 11px; text-align: justify;">
+          Declaro para os devidos fins que recebi os materiais/EPIs acima listados em perfeitas condições de uso, 
+          comprometendo-me a utilizá-los apenas para as finalidades a que se destinam e a zelar pela sua guarda e conservação. 
+          Estou ciente de que o extravio ou dano por uso inadequado poderá acarretar em reposição conforme normas internas da empresa.
+        </p>
+
+        <div class="signature-area">
+          <div class="line" style="margin-top: 40px;"></div>
+          <div><strong>${employee.name}</strong></div>
+          <div style="font-size: 10px; margin-top: 5px;">Assinatura do Colaborador</div>
+          
+          <div class="line" style="margin-top: 60px;"></div>
+          <div style="font-size: 10px; margin-top: 5px;">Responsável pelo Almoxarifado</div>
+        </div>
+
+        <div class="footer">
+          Gerado em ${new Date().toLocaleString('pt-BR')}
+        </div>
+        
+        <script>
+          window.onload = function() { 
+            setTimeout(() => {
+              window.print(); 
+              window.close();
+            }, 500);
+          };
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
 // ── Movement Modal ────────────────────────────────────────────────────────────
