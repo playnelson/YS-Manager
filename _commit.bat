@@ -1,4 +1,4 @@
 @echo off
 git add -A
-git commit -m "feat: Warehouse XLSX import support" -m "- Installed 'xlsx' library" -m "- Added parseXLSX helper to extract data from Excel sheets" -m "- Updated handleFileUpload to support .csv, .xls, and .xlsx" -m "- Mapped columns to 'Código', 'Descrição', 'Categoria', 'Consumível?', 'Qtd. Atual', 'Qtd. Mínima', 'Unidade'" -m "- Updated UI button text to 'Importar Planilha'"
+git commit -m "feat: detailed employee history and item possession tracking" -m "- Added EmployeeDetailModal with possession and history views" -m "- Implemented balance logic (Exits - Entries) for items held by employees" -m "- Added 'Ver detalhes' link to employee management cards"
 git push origin main

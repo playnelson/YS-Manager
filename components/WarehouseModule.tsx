@@ -143,6 +143,105 @@ interface MovementModalProps {
   onClose: () => void;
 }
 
+const EmployeeDetailModal: React.FC<{
+  employee: Employee;
+  logs: StockLog[];
+  onClose: () => void;
+}> = ({ employee, logs, onClose }) => {
+  const empLogs = logs.filter(l => l.employeeId === employee.id);
+  const possession: Record<string, { code: string; name: string; qty: number; unit: string }> = {};
+
+  // Calculate possession: Exits - Entries
+  empLogs.forEach(l => {
+    if (!possession[l.itemId]) {
+      possession[l.itemId] = { code: l.itemCode, name: l.itemName, qty: 0, unit: '' };
+    }
+    if (l.type === 'exit') {
+      possession[l.itemId].qty += l.quantity;
+    } else {
+      possession[l.itemId].qty -= l.quantity;
+    }
+  });
+
+  const activePossession = Object.values(possession).filter(p => p.qty > 0);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-6 py-4 bg-gray-900 dark:bg-black text-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center font-bold">
+              {employee.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="font-bold text-sm">{employee.name}</p>
+              <p className="text-[10px] opacity-70 uppercase tracking-wider">{employee.role} • {employee.department}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors"><X size={20}/></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Possession Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <Package size={16} className="text-blue-500"/>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Itens em Posse</h3>
+            </div>
+            {activePossession.length === 0 ? (
+              <p className="text-xs text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl text-center">Nenhum item em posse no momento.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {activePossession.map(p => (
+                  <div key={p.code} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-mono text-blue-600 dark:text-blue-400">{p.code}</p>
+                      <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{p.name}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{p.qty}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* History Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <History size={16} className="text-gray-500"/>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Histórico de Movimentações</h3>
+            </div>
+            {empLogs.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">Nenhuma movimentação registrada para este funcionário.</p>
+            ) : (
+              <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
+                {empLogs.map((log, idx) => (
+                  <div key={log.id} className={`flex items-center gap-3 px-4 py-3 text-xs ${idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/50'} border-b border-gray-100 dark:border-gray-800 last:border-0`}>
+                    <div className={log.type === 'entry' ? 'text-emerald-500' : 'text-rose-500'}>
+                      {log.type === 'entry' ? <ArrowDownLeft size={14}/> : <ArrowUpRight size={14}/>}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-800 dark:text-gray-200">{log.itemName}</p>
+                      <p className="text-[10px] text-gray-400">{new Date(log.date).toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-bold ${log.type === 'entry' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {log.type === 'entry' ? '+' : '-'}{log.quantity}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MovementModal: React.FC<MovementModalProps> = ({ item, type, employees, onConfirm, onClose }) => {
   const [qty, setQty] = useState(1);
   const [empId, setEmpId] = useState('');
@@ -239,6 +338,7 @@ export const WarehouseModule: React.FC = () => {
   const [newItem, setNewItem] = useState<Partial<InventoryItem>>(emptyItem);
 
   const [showAddEmp, setShowAddEmp] = useState(false);
+  const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
   const [newEmp, setNewEmp] = useState<Partial<Employee>>({ name: '', role: '', department: '', active: true });
 
   const handleAddItem = () => {
@@ -471,7 +571,12 @@ export const WarehouseModule: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{emp.name}</p>
-                      <p className="text-[11px] text-gray-400 truncate">{emp.role}{emp.department ? ` · ${emp.department}` : ''}</p>
+                      <button 
+                        onClick={() => setSelectedEmp(emp)}
+                        className="text-[11px] text-blue-500 hover:underline flex items-center gap-1"
+                      >
+                        Ver detalhes & histórico
+                      </button>
                     </div>
                     <div className="flex items-center gap-2">
                       <button onClick={() => saveEmployees(employees.map(e => e.id === emp.id ? { ...e, active: !e.active } : e))}
@@ -632,6 +737,9 @@ export const WarehouseModule: React.FC = () => {
 
       {/* ── Movement Modal ── */}
       {movementTarget && <MovementModal item={movementTarget.item} type={movementTarget.type} employees={employees} onConfirm={handleMovement} onClose={() => setMovementTarget(null)}/>}
+
+      {/* ── Employee Detail Modal ── */}
+      {selectedEmp && <EmployeeDetailModal employee={selectedEmp} logs={logs} onClose={() => setSelectedEmp(null)} />}
 
       {/* ── CSV Import Preview ── */}
       {importPreview && (
