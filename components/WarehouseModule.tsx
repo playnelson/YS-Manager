@@ -83,6 +83,36 @@ function downloadTemplate() {
   document.body.removeChild(link);
 }
 
+function exportInventory(inventory: InventoryItem[]) {
+  const data = inventory.map(item => ({
+    'Código': item.code,
+    'Descrição': item.name,
+    'Categoria': item.category,
+    'Consumível?': item.consumable ? 'Sim' : 'Não',
+    'Qtd. Atual': item.quantity,
+    'Qtd. Mínima': item.minStock,
+    'Unidade': item.unit
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Estoque Atual');
+  
+  // Apply some basic column widths
+  const wscols = [
+    { wch: 15 }, // Código
+    { wch: 40 }, // Descrição
+    { wch: 15 }, // Categoria
+    { wch: 12 }, // Consumível
+    { wch: 10 }, // Qtd Atual
+    { wch: 10 }, // Qtd Minima
+    { wch: 10 }  // Unidade
+  ];
+  worksheet['!cols'] = wscols;
+
+  XLSX.writeFile(workbook, `estoque_atual_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
 function parseCSV(text: string): Partial<InventoryItem>[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
@@ -446,11 +476,14 @@ export const WarehouseModule: React.FC = () => {
 
         <div className="flex items-center gap-2 flex-wrap">
           {activeTab === 'inventory' && <>
+            <button onClick={() => exportInventory(inventory)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800">
+              <Download size={13}/><span className="hidden sm:inline">Exportar Planilha</span>
+            </button>
             <button onClick={downloadTemplate} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-700">
-              <Download size={13}/><span className="hidden sm:inline">Planilha Modelo</span>
+              <FileSpreadsheet size={13}/><span className="hidden sm:inline">Modelo</span>
             </button>
             <button onClick={() => fileRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors border border-blue-200 dark:border-blue-800">
-              <Upload size={13}/><span className="hidden sm:inline">Importar Planilha</span>
+              <Upload size={13}/><span className="hidden sm:inline">Importar</span>
             </button>
             <input ref={fileRef} type="file" accept=".csv,.txt,.xlsx,.xls" onChange={handleFileUpload} className="hidden"/>
             <button onClick={() => { setNewItem({ ...emptyItem, code: nextCode(inventory) }); setShowAddModal(true); }}
