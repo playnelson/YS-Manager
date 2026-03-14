@@ -378,3 +378,19 @@ export interface LogisticsState {
   checklists: LogisticsChecklist[];
   savedRoutes?: SavedRoute[];
 }
+
+// WhatsApp Tool Types
+export interface WhatsAppHistoryItem {
+  id: string;
+  name: string;
+  phone: string;
+  message: string;
+  timestamp: string;
+  method: 'api' | 'web' | 'app';
+}
+
+export interface WhatsAppTemplate {
+  id: string;
+  title: string;
+  content: string;
+}

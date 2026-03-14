@@ -7,51 +7,30 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Contact } from '../types';
+import { Contact, WhatsAppHistoryItem, WhatsAppTemplate } from '../types';
 import { fetchGoogleContacts } from '../services/googleContactsService';
-
-interface HistoryItem {
-  id: string;
-  name: string;
-  phone: string;
-  message: string;
-  timestamp: string;
-  method: 'api' | 'web' | 'app';
-}
-
-interface Template {
-  id: string;
-  title: string;
-  content: string;
-}
-
-const DEFAULT_TEMPLATES: Template[] = [
-  { id: '1', title: 'Saudação Inicial', content: 'Olá! Gostaria de mais informações sobre seus serviços.' },
-  { id: '2', title: 'Agendamento', content: 'Olá, gostaria de agendar um horário. Quais são as datas disponíveis?' },
-  { id: '3', title: 'Orçamento', content: 'Olá! Poderia me enviar um orçamento para este serviço?' },
-  { id: '4', title: 'Confirmação', content: 'Olá, estou confirmando nosso compromisso para amanhã.' },
-];
 
 interface WhatsAppToolProps {
   googleAccessToken?: string;
+  templates: WhatsAppTemplate[];
+  onTemplatesChange: (data: WhatsAppTemplate[]) => void;
+  history: WhatsAppHistoryItem[];
+  onHistoryChange: (data: WhatsAppHistoryItem[]) => void;
 }
 
-export const WhatsAppTool: React.FC<WhatsAppToolProps> = ({ googleAccessToken }) => {
+export const WhatsAppTool: React.FC<WhatsAppToolProps> = ({
+  googleAccessToken,
+  templates,
+  onTemplatesChange,
+  history,
+  onHistoryChange
+}) => {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [openMethod, setOpenMethod] = useState<'api' | 'web' | 'app'>('api');
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
-  const [templates, setTemplates] = useState<Template[]>(() => {
-    const saved = localStorage.getItem('ysoffice_whatsapp_templates');
-    return saved ? JSON.parse(saved) : DEFAULT_TEMPLATES;
-  });
-
-  const [history, setHistory] = useState<HistoryItem[]>(() => {
-    const saved = localStorage.getItem('ysoffice_whatsapp_history');
-    return saved ? JSON.parse(saved) : [];
-  });
 
   const [contacts, setContacts] = useState<Contact[]>(() => {
     const saved = localStorage.getItem('ysoffice_whatsapp_contacts');
@@ -73,14 +52,7 @@ export const WhatsAppTool: React.FC<WhatsAppToolProps> = ({ googleAccessToken })
     }
   }, []);
 
-  // Salvar histórico no localStorage sempre que mudar
-  useEffect(() => {
-    localStorage.setItem('ysoffice_whatsapp_history', JSON.stringify(history));
-  }, [history]);
-
-  useEffect(() => {
-    localStorage.setItem('ysoffice_whatsapp_templates', JSON.stringify(templates));
-  }, [templates]);
+  // Removed local storage effects as data is now managed by App.tsx props
 
   // Formatação Automática de Telefone
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,7 +109,7 @@ export const WhatsAppTool: React.FC<WhatsAppToolProps> = ({ googleAccessToken })
     const url = getFinalUrl();
 
     // Adicionar ao Histórico
-    const newItem: HistoryItem = {
+    const newItem: WhatsAppHistoryItem = {
       id: Date.now().toString(),
       name: name || 'Sem identificação',
       phone: phone,
@@ -146,7 +118,7 @@ export const WhatsAppTool: React.FC<WhatsAppToolProps> = ({ googleAccessToken })
       method: openMethod
     };
 
-    setHistory(prev => [newItem, ...prev].slice(0, 50));
+    onHistoryChange([newItem, ...history].slice(0, 50));
     window.open(url, '_blank');
   };
 
@@ -157,7 +129,7 @@ export const WhatsAppTool: React.FC<WhatsAppToolProps> = ({ googleAccessToken })
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const loadFromHistory = (item: HistoryItem) => {
+  const loadFromHistory = (item: WhatsAppHistoryItem) => {
     setPhone(item.phone);
     setName(item.name);
     setMessage(item.message);
@@ -166,7 +138,7 @@ export const WhatsAppTool: React.FC<WhatsAppToolProps> = ({ googleAccessToken })
 
   const clearHistory = () => {
     if (confirm('Limpar todo o histórico?')) {
-      setHistory([]);
+      onHistoryChange([]);
     }
   };
 

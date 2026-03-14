@@ -77,7 +77,10 @@ const App: React.FC = () => {
   const [logisticsData, setLogisticsData] = useState<LogisticsState>(initialLogistics);
   const [financialTransactions, setFinancialTransactions] = useState<any[]>([]);
   const [warehouseInventory, setWarehouseInventory] = useState<any[]>([]);
+  const [warehouseEmployees, setWarehouseEmployees] = useState<any[]>([]);
   const [warehouseLogs, setWarehouseLogs] = useState<any[]>([]);
+  const [whatsappTemplates, setWhatsappTemplates] = useState<any[]>([]);
+  const [whatsappHistory, setWhatsappHistory] = useState<any[]>([]);
   const [kanbanData, setKanbanData] = useState<KanbanState>(initialKanban);
 
   const [isSyncing, setIsSyncing] = useState(false);
@@ -211,7 +214,8 @@ const App: React.FC = () => {
           const [
             kanbanCols, kanbanCards, calendarEvts, notes, postItList,
             trans, freight, settings, emailList, linkList, extList,
-            sigs, files, flowState, logData, whData
+            sigs, files, flowState, logData, whData,
+            whEmployees, whLogs, waTemplates, waHistory
           ] = await Promise.all([
             supabase.from('kanban_columns').select('*').eq('user_id', user.id).order('order'),
             supabase.from('kanban_cards').select('*').eq('user_id', user.id).order('order'),
@@ -228,7 +232,11 @@ const App: React.FC = () => {
             supabase.from('personal_files').select('*').eq('user_id', user.id),
             supabase.from('flow_builder_states').select('payload').eq('user_id', user.id).maybeSingle(),
             supabase.from('logistics_data').select('checklists, saved_routes').eq('user_id', user.id).maybeSingle(),
-            supabase.from('warehouse_data').select('inventory, logs').eq('user_id', user.id).maybeSingle()
+            supabase.from('warehouse_inventory').select('*').eq('user_id', user.id),
+            supabase.from('warehouse_employees').select('*').eq('user_id', user.id),
+            supabase.from('warehouse_logs').select('*').eq('user_id', user.id),
+            supabase.from('whatsapp_templates').select('*').eq('user_id', user.id),
+            supabase.from('whatsapp_history').select('*').eq('user_id', user.id).limit(50).order('timestamp', { ascending: false })
           ]);
 
           if (kanbanCols.data) {
@@ -267,10 +275,28 @@ const App: React.FC = () => {
             setLogisticsData(prev => ({ ...prev, freightTables: freight.data }));
           }
 
-          if (whData.data) {
-            setWarehouseInventory(whData.data.inventory || []);
-            setWarehouseLogs(whData.data.logs || []);
+          if (whData?.data && whData.data.length > 0) {
+            setWarehouseInventory(whData.data);
+          } else if (!whData?.data || whData.data.length === 0) {
+            // Se for novo usuário ou sem dados, poderíamos carregar defaults aqui se necessário
+            // O componente WarehouseModule já lida com visualização vazia amigável
           }
+
+          if (whEmployees?.data) setWarehouseEmployees(whEmployees.data);
+          if (whLogs?.data) setWarehouseLogs(whLogs.data);
+          
+          if (waTemplates?.data && waTemplates.data.length > 0) {
+            setWhatsappTemplates(waTemplates.data);
+          } else {
+            // Default templates para WhatsApp
+            setWhatsappTemplates([
+              { id: '1', title: 'Saudação Inicial', content: 'Olá! Gostaria de mais informações sobre seus serviços.' },
+              { id: '2', title: 'Agendamento', content: 'Olá, gostaria de agendar um horário. Quais são as datas disponíveis?' },
+              { id: '3', title: 'Orçamento', content: 'Olá! Poderia me enviar um orçamento para este serviço?' },
+              { id: '4', title: 'Confirmação', content: 'Olá, estou confirmando nosso compromisso para amanhã.' },
+            ]);
+          }
+          if (waHistory?.data) setWhatsappHistory(waHistory.data);
         }
       } catch (err) { console.error('Erro ao carregar dados:', err); }
       finally { setIsSyncing(false); setIsDataLoaded(true); }
@@ -322,11 +348,11 @@ const App: React.FC = () => {
             saved_routes: logisticsData.savedRoutes
           }),
           supabase.from('logistics_freight_tables').upsert(logisticsData.freightTables.map(t => ({ ...t, user_id: user.id }))),
-          supabase.from('warehouse_data').upsert({
-            user_id: user.id,
-            inventory: warehouseInventory,
-            logs: warehouseLogs
-          })
+          supabase.from('warehouse_inventory').upsert(warehouseInventory.map(i => ({ ...i, user_id: user.id }))),
+          supabase.from('warehouse_employees').upsert(warehouseEmployees.map(e => ({ ...e, user_id: user.id }))),
+          supabase.from('warehouse_logs').upsert(warehouseLogs.map(l => ({ ...l, user_id: user.id }))),
+          supabase.from('whatsapp_templates').upsert(whatsappTemplates.map(t => ({ ...t, user_id: user.id }))),
+          supabase.from('whatsapp_history').upsert(whatsappHistory.map(h => ({ ...h, user_id: user.id })))
         ]);
       } catch (err) {
         console.error('Erro ao salvar dados:', err);
@@ -334,7 +360,7 @@ const App: React.FC = () => {
     };
     const timeout = setTimeout(saveData, 3000);
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseLogs, kanbanData]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, whatsappTemplates, whatsappHistory, kanbanData]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -517,7 +543,15 @@ const App: React.FC = () => {
             {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
             {activeTab === 'logistics' && <LogisticsModule data={logisticsData} onChange={setLogisticsData} />}
             {activeTab === 'consultas' && <ConsultationModule />}
-            {activeTab === 'whatsapp' && <WhatsAppTool googleAccessToken={user.googleAccessToken} />}
+            {activeTab === 'whatsapp' && (
+              <WhatsAppTool
+                googleAccessToken={user.googleAccessToken}
+                templates={whatsappTemplates}
+                onTemplatesChange={setWhatsappTemplates}
+                history={whatsappHistory}
+                onHistoryChange={setWhatsappHistory}
+              />
+            )}
             {activeTab === 'shared_docs' && (
               <SharedDocumentsModule
                 driveFiles={driveFiles}
@@ -531,7 +565,16 @@ const App: React.FC = () => {
                 onChange={setFinancialTransactions}
               />
             )}
-            {activeTab === 'warehouse' && <WarehouseModule />}
+            {activeTab === 'warehouse' && (
+              <WarehouseModule
+                inventory={warehouseInventory}
+                onInventoryChange={setWarehouseInventory}
+                employees={warehouseEmployees}
+                onEmployeesChange={setWarehouseEmployees}
+                logs={warehouseLogs}
+                onLogsChange={setWarehouseLogs}
+              />
+            )}
             {activeTab === 'modules' && (
               <ModuleStore
                 hiddenTabs={hiddenTabs}

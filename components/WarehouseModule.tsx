@@ -518,31 +518,31 @@ function genId() { return `wh_${Date.now()}_${Math.random().toString(36).slice(2
 const CATEGORIES = ['Geral','EPI','Ferramenta','Escritório','Limpeza','Equipamento','Manutenção','TI','Elétrico','Hidráulico'];
 const UNITS = ['Unid.','Par','Resma','Kg','L','m','m²','cx','pct','rolo'];
 
-export const WarehouseModule: React.FC = () => {
+interface WarehouseModuleProps {
+  inventory: InventoryItem[];
+  onInventoryChange: (data: InventoryItem[]) => void;
+  employees: Employee[];
+  onEmployeesChange: (data: Employee[]) => void;
+  logs: StockLog[];
+  onLogsChange: (data: StockLog[]) => void;
+}
+
+export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
+  inventory,
+  onInventoryChange,
+  employees,
+  onEmployeesChange,
+  logs,
+  onLogsChange
+}) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('inventory');
-
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('ysoffice_warehouse_inventory');
-      if (saved) { const p = JSON.parse(saved); if (p?.length) return p; }
-    } catch {}
-    return DEFAULT_INVENTORY;
-  });
-
-  const [employees, setEmployees] = useState<Employee[]>(() => {
-    try { return JSON.parse(localStorage.getItem('ysoffice_employees') || 'null') || []; } catch { return []; }
-  });
-
-  const [logs, setLogs] = useState<StockLog[]>(() => {
-    try { return JSON.parse(localStorage.getItem('ysoffice_warehouse_logs') || 'null') || []; } catch { return []; }
-  });
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
 
-  const saveInventory = (data: InventoryItem[]) => { setInventory(data); localStorage.setItem('ysoffice_warehouse_inventory', JSON.stringify(data)); };
-  const saveEmployees = (data: Employee[]) => { setEmployees(data); localStorage.setItem('ysoffice_employees', JSON.stringify(data)); };
-  const saveLogs     = (data: StockLog[])   => { setLogs(data);      localStorage.setItem('ysoffice_warehouse_logs', JSON.stringify(data)); };
+  const saveInventory = (data: InventoryItem[]) => { onInventoryChange(data); };
+  const saveEmployees = (data: Employee[]) => { onEmployeesChange(data); };
+  const saveLogs     = (data: StockLog[])   => { onLogsChange(data); };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
