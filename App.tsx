@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { GitMerge, MessageSquare, RefreshCw, Calendar as CalendarIcon, Search, Truck, Cloud, Home, DollarSign, Package, Store } from 'lucide-react';
-import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState, KanbanState } from './types';
+import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState, KanbanState, KanbanPriority, NotePriority } from './types';
 import { Auth } from './components/Auth';
 import { MessageLinker } from './components/MessageLinker';
 import { DigitalClock } from './components/DigitalClock';
 import { LoadingPlaceholder } from './components/LoadingPlaceholder';
 import { supabase } from './supabase';
+import { SEED_DATA } from './seeds';
 
 // Lazy Loading de Módulos Pesados para rapidez inicial
 const OfficeModule = lazy(() => import('./components/OfficeModule').then(m => ({ default: m.OfficeModule })));
@@ -85,6 +86,7 @@ const App: React.FC = () => {
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const initializedTables = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (isDark) document.documentElement.classList.add('dark');
@@ -210,114 +212,173 @@ const App: React.FC = () => {
             if (parsed.financialTransactions) setFinancialTransactions(parsed.financialTransactions || []);
           }
         } else {
-          // Parallel fetching for better performance
+          // Helper to fetch and log individual table status
+          const safeFetch = async (query: any, tableName: string) => {
+            try {
+              const res = await query;
+              if (res.error) {
+                console.warn(`Safe Fetch: Erro em ${tableName}:`, res.error);
+                return { data: null, error: res.error };
+              }
+              return res;
+            } catch (e) {
+              console.error(`Safe Fetch: Exceção crítica em ${tableName}:`, e);
+              return { data: null, error: e };
+            }
+          };
+
           const [
-            kanbanCols, kanbanCards, calendarEvts, notes, postItList,
-            trans, freight, settings, emailList, linkList, extList,
-            sigs, files, flowState, logData, whData,
-            whEmployees, whLogs, waTemplates, waHistory
+            kbCols, kbCards, evts, notes, pts, trans, freight, settings, emailsRes, linksRes, exts, sigs, files, flow, logData, whInv, whEmps, whLogs, waTemp, waHist
           ] = await Promise.all([
-            supabase.from('kanban_columns').select('*').eq('user_id', user.id).order('order'),
-            supabase.from('kanban_cards').select('*').eq('user_id', user.id).order('order'),
-            supabase.from('calendar_events').select('*').eq('user_id', user.id),
-            supabase.from('important_notes').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
-            supabase.from('post_its').select('*').eq('user_id', user.id),
-            supabase.from('financial_transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }),
-            supabase.from('logistics_freight_tables').select('*').eq('user_id', user.id),
-            supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
-            supabase.from('email_templates').select('*').eq('user_id', user.id),
-            supabase.from('professional_links').select('*').eq('user_id', user.id),
-            supabase.from('extensions').select('*').eq('user_id', user.id),
-            supabase.from('signatures').select('*').eq('user_id', user.id),
-            supabase.from('personal_files').select('*').eq('user_id', user.id),
-            supabase.from('flow_builder_states').select('payload').eq('user_id', user.id).maybeSingle(),
-            supabase.from('logistics_data').select('checklists, saved_routes').eq('user_id', user.id).maybeSingle(),
-            supabase.from('warehouse_inventory').select('*').eq('user_id', user.id),
-            supabase.from('warehouse_employees').select('*').eq('user_id', user.id),
-            supabase.from('warehouse_logs').select('*').eq('user_id', user.id),
-            supabase.from('whatsapp_templates').select('*').eq('user_id', user.id),
-            supabase.from('whatsapp_history').select('*').eq('user_id', user.id).limit(50).order('timestamp', { ascending: false })
+            safeFetch(supabase.from('kanban_columns').select('*').eq('user_id', user.id).order('order'), 'kanban_columns'),
+            safeFetch(supabase.from('kanban_cards').select('*').eq('user_id', user.id).order('order'), 'kanban_cards'),
+            safeFetch(supabase.from('calendar_events').select('*').eq('user_id', user.id), 'calendar_events'),
+            safeFetch(supabase.from('important_notes').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }), 'important_notes'),
+            safeFetch(supabase.from('post_its').select('*').eq('user_id', user.id), 'post_its'),
+            safeFetch(supabase.from('financial_transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }), 'financial_transactions'),
+            safeFetch(supabase.from('logistics_freight_tables').select('*').eq('user_id', user.id), 'logistics_freight_tables'),
+            safeFetch(supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(), 'user_settings'),
+            safeFetch(supabase.from('email_templates').select('*').eq('user_id', user.id), 'email_templates'),
+            safeFetch(supabase.from('professional_links').select('*').eq('user_id', user.id), 'professional_links'),
+            safeFetch(supabase.from('extensions').select('*').eq('user_id', user.id), 'extensions'),
+            safeFetch(supabase.from('signatures').select('*').eq('user_id', user.id), 'signatures'),
+            safeFetch(supabase.from('personal_files').select('*').eq('user_id', user.id), 'personal_files'),
+            safeFetch(supabase.from('flow_builder_states').select('payload').eq('user_id', user.id).maybeSingle(), 'flow_builder_states'),
+            safeFetch(supabase.from('logistics_data').select('checklists, saved_routes').eq('user_id', user.id).maybeSingle(), 'logistics_data'),
+            safeFetch(supabase.from('warehouse_inventory').select('*').eq('user_id', user.id), 'warehouse_inventory'),
+            safeFetch(supabase.from('warehouse_employees').select('*').eq('user_id', user.id), 'warehouse_employees'),
+            safeFetch(supabase.from('warehouse_logs').select('*').eq('user_id', user.id), 'warehouse_logs'),
+            safeFetch(supabase.from('whatsapp_templates').select('*').eq('user_id', user.id), 'whatsapp_templates'),
+            safeFetch(supabase.from('whatsapp_history').select('*').eq('user_id', user.id).limit(50).order('timestamp', { ascending: false }), 'whatsapp_history')
           ]);
 
-          if (kanbanCols.data) {
+          // --- Kanban ---
+          if (kbCols.data && kbCols.data.length > 0) {
+            initializedTables.current.add('kanban_columns');
+            initializedTables.current.add('kanban_cards');
             setKanbanData({
-              columns: kanbanCols.data.map(col => ({
-                ...col,
-                cards: kanbanCards.data?.filter(c => c.column_id === col.id) || []
+              columns: kbCols.data.map((col: any) => ({
+                id: col.id, title: col.title, color: col.color,
+                cards: (kbCards.data || []).filter((c: any) => c.column_id === col.id).map((c: any) => ({
+                  id: c.id, title: c.title, description: c.description || '',
+                  priority: (c.priority as KanbanPriority) || 'medium', createdAt: c.created_at,
+                  dueDate: c.due_date, labels: c.labels || []
+                }))
               }))
             });
+          } else {
+            setKanbanData(SEED_DATA.kanban as any);
+            initializedTables.current.add('kanban_columns');
+            initializedTables.current.add('kanban_cards');
           }
-          if (calendarEvts.data) setCalendarEvents(calendarEvts.data);
-          if (notes.data) setImportantNotes(notes.data);
-          if (postItList.data) setPostIts(postItList.data);
-          if (trans.data) setFinancialTransactions(trans.data);
-          if (emailList.data) setEmails(emailList.data);
-          if (linkList.data) setLinks(linkList.data);
-          if (extList.data) setExtensions(extList.data);
-          if (sigs.data) setSignatures(sigs.data);
-          if (files.data) setPersonalFiles(files.data);
-          
+
+          // --- Warehouse ---
+          if (whInv.data && whInv.data.length > 0) {
+            initializedTables.current.add('warehouse_inventory');
+            setWarehouseInventory(whInv.data.map((i: any) => ({
+              id: i.id, code: i.code, name: i.name, category: i.category,
+              consumable: i.consumable ?? false, quantity: i.quantity, minStock: i.min_stock,
+              unit: i.unit, lastUpdated: i.last_updated
+            })));
+          } else {
+            setWarehouseInventory(SEED_DATA.warehouse.inventory);
+            initializedTables.current.add('warehouse_inventory');
+          }
+
+          if (whEmps.data && whEmps.data.length > 0) {
+            initializedTables.current.add('warehouse_employees');
+            setWarehouseEmployees(whEmps.data);
+          } else {
+            setWarehouseEmployees(SEED_DATA.warehouse.employees);
+            initializedTables.current.add('warehouse_employees');
+          }
+
+          if (whLogs.data) {
+            initializedTables.current.add('warehouse_logs');
+            setWarehouseLogs(whLogs.data.map((l: any) => ({
+              id: l.id, itemId: l.item_id, type: l.type, quantity: l.quantity,
+              employeeId: l.employee_id || '', employeeName: l.employee_name,
+              note: l.note, date: l.date, itemCode: l.item_code || '', itemName: l.item_name || ''
+            })));
+          }
+
+          // --- Logistics ---
+          if (freight.data && freight.data.length > 0) {
+            initializedTables.current.add('logistics');
+            setLogisticsData({
+              freightTables: freight.data.map((t: any) => ({
+                id: t.id, name: t.name, fuelPrice: t.fuel_price, avgConsumption: t.avg_consumption,
+                driverPerDieum: t.driver_per_dieum, insuranceRate: t.insurance_rate,
+                updatedAt: t.updated_at || new Date().toISOString()
+              })),
+              checklists: logData.data?.checklists || SEED_DATA.logistics.checklists,
+              savedRoutes: logData.data?.saved_routes || []
+            });
+          } else {
+            setLogisticsData(SEED_DATA.logistics as any);
+            initializedTables.current.add('logistics');
+          }
+
+          // --- Financial ---
+          if (trans.data && trans.data.length > 0) {
+            initializedTables.current.add('financial_transactions');
+            setFinancialTransactions(trans.data);
+          } else {
+            setFinancialTransactions(SEED_DATA.financial);
+            initializedTables.current.add('financial_transactions');
+          }
+
+          // --- Notes ---
+          if (notes.data && notes.data.length > 0) {
+            initializedTables.current.add('important_notes');
+            setImportantNotes(notes.data.map((n: any) => ({
+              ...n,
+              priority: (n.priority as NotePriority) || 'normal'
+            })));
+          } else {
+            setImportantNotes(SEED_DATA.notes as any);
+            initializedTables.current.add('important_notes');
+          }
+
+          // --- WhatsApp ---
+          if (waTemp.data && waTemp.data.length > 0) {
+            initializedTables.current.add('whatsapp_templates');
+            setWhatsappTemplates(waTemp.data);
+          } else {
+            setWhatsappTemplates(SEED_DATA.whatsapp.templates);
+            initializedTables.current.add('whatsapp_templates');
+          }
+
+          if (waHist.data) {
+            initializedTables.current.add('whatsapp_history');
+            setWhatsappHistory(waHist.data);
+          }
+
+          // --- Settings & Metadata ---
           if (settings.data) {
+            initializedTables.current.add('user_settings');
             setCalendarConfig(settings.data.calendar_config || { uf: 'SP', city: 'São Paulo' });
             setHiddenTabs(settings.data.hidden_tabs || []);
             setShiftConfig(settings.data.shift_config);
-          }
-          
-          if (flowState.data?.payload) setFlowData(flowState.data.payload);
-          
-          if (logData.data) {
-            setLogisticsData({
-              freightTables: freight.data || [],
-              checklists: logData.data.checklists || [],
-              savedRoutes: logData.data.saved_routes || []
-            });
-          } else if (freight.data) {
-            setLogisticsData(prev => ({ ...prev, freightTables: freight.data }));
-          }
-
-          if (whData?.data && whData.data.length > 0) {
-            setWarehouseInventory(whData.data.map(i => ({
-              id: i.id,
-              code: i.code,
-              name: i.name,
-              category: i.category,
-              consumable: i.consumable ?? false,
-              quantity: i.quantity,
-              minStock: i.min_stock,
-              unit: i.unit,
-              lastUpdated: i.last_updated
-            })));
-          }
-
-          if (whEmployees?.data) setWarehouseEmployees(whEmployees.data);
-          
-          if (whLogs?.data) {
-            setWarehouseLogs(whLogs.data.map(l => ({
-              id: l.id,
-              itemId: l.item_id,
-              type: l.type,
-              quantity: l.quantity,
-              employeeId: l.employee_id || '',
-              employeeName: l.employee_name,
-              note: l.note,
-              date: l.date,
-              itemCode: l.item_code || '', 
-              itemName: l.item_name || ''
-            })));
-          }
-          
-          if (waTemplates?.data && waTemplates.data.length > 0) {
-            setWhatsappTemplates(waTemplates.data);
           } else {
-            // Default templates para WhatsApp
-            setWhatsappTemplates([
-              { id: '1', title: 'Saudação Inicial', content: 'Olá! Gostaria de mais informações sobre seus serviços.' },
-              { id: '2', title: 'Agendamento', content: 'Olá, gostaria de agendar um horário. Quais são as datas disponíveis?' },
-              { id: '3', title: 'Orçamento', content: 'Olá! Poderia me enviar um orçamento para este serviço?' },
-              { id: '4', title: 'Confirmação', content: 'Olá, estou confirmando nosso compromisso para amanhã.' },
-            ]);
+            initializedTables.current.add('user_settings');
           }
-          if (waHistory?.data) setWhatsappHistory(waHistory.data);
+
+          // --- Rest ---
+          if (evts.data) { initializedTables.current.add('calendar_events'); setCalendarEvents(evts.data); }
+          if (pts.data) { initializedTables.current.add('post_its'); setPostIts(pts.data); }
+          if (emailsRes.data) { initializedTables.current.add('email_templates'); setEmails(emailsRes.data); }
+          if (linksRes.data && linksRes.data.length > 0) {
+            initializedTables.current.add('professional_links');
+            setLinks(linksRes.data.map((l: any) => ({ ...l, customIcon: l.custom_icon })));
+          } else {
+            setLinks(SEED_DATA.links);
+            initializedTables.current.add('professional_links');
+          }
+          if (exts.data) { initializedTables.current.add('extensions'); setExtensions(exts.data); }
+          if (sigs.data) { initializedTables.current.add('signatures'); setSignatures(sigs.data.map((s: any) => ({ ...s, dataUrl: s.data_url }))); }
+          if (files.data) { initializedTables.current.add('personal_files'); setPersonalFiles(files.data); }
+          if (flow.data) { initializedTables.current.add('flow_builder_states'); setFlowData(flow.data.payload || initialFlow); }
         }
       } catch (err) { console.error('Erro ao carregar dados:', err); }
       finally { setIsSyncing(false); setIsDataLoaded(true); }
@@ -334,74 +395,96 @@ const App: React.FC = () => {
         return;
       }
 
-      setIsSyncing(true);
-      try {
-        // We use granular upserts only for what changed or bulk save for simplicity in this refactor
-        // A more advanced version would track dirty states for each table.
-        // For now, we standardize the save to match the new schema.
-        
+         try {
         const kanbanCols = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
-        const kanbanCards = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ ...card, user_id: user.id, column_id: col.id, order: idx })));
+        const kanbanCards = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ 
+            id: card.id,
+            user_id: user.id,
+            column_id: col.id,
+            order: idx,
+            title: card.title,
+            description: card.description || '',
+            priority: card.priority || 'medium',
+            due_date: card.dueDate,
+            labels: card.labels || [],
+            created_at: card.createdAt || new Date().toISOString()
+        })));
+
+        const safeSave = async (query: any, tableName: string) => {
+          try {
+            const res = await query;
+            if (res.error) console.warn(`Safe Save: Erro em ${tableName}:`, res.error);
+            return res;
+          } catch (e) {
+            console.error(`Safe Save: Exceção crítica em ${tableName}:`, e);
+          }
+        };
+
+        const logisticsFreightToSave = logisticsData.freightTables.map(t => ({
+          id: t.id, user_id: user.id, name: t.name, fuel_price: t.fuelPrice,
+          avg_consumption: t.avgConsumption, driver_per_dieum: t.driverPerDieum,
+          insurance_rate: t.insuranceRate, updated_at: t.updatedAt
+        }));
 
         await Promise.all([
-          supabase.from('kanban_columns').upsert(kanbanCols),
-          supabase.from('kanban_cards').upsert(kanbanCards),
-          supabase.from('calendar_events').upsert(calendarEvents.map(e => ({ ...e, user_id: user.id }))),
-          supabase.from('important_notes').upsert(importantNotes.map(n => ({ ...n, user_id: user.id }))),
-          supabase.from('post_its').upsert(postIts.map(p => ({ ...p, user_id: user.id }))),
-          supabase.from('financial_transactions').upsert(financialTransactions.map(t => ({ ...t, user_id: user.id }))),
-          supabase.from('email_templates').upsert(emails.map(e => ({ ...e, user_id: user.id }))),
-          supabase.from('professional_links').upsert(links.map(l => ({ ...l, user_id: user.id }))),
-          supabase.from('extensions').upsert(extensions.map(e => ({ ...e, user_id: user.id }))),
-          supabase.from('signatures').upsert(signatures.map(s => ({ ...s, user_id: user.id }))),
-          supabase.from('personal_files').upsert(personalFiles.map(f => ({ ...f, user_id: user.id }))),
-          supabase.from('user_settings').upsert({
-            user_id: user.id,
-            calendar_config: calendarConfig,
-            hidden_tabs: hiddenTabs,
-            shift_config: shiftConfig,
-            updated_at: new Date().toISOString()
-          }),
-          supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData }),
-          supabase.from('logistics_data').upsert({
-            user_id: user.id,
-            checklists: logisticsData.checklists,
-            saved_routes: logisticsData.savedRoutes
-          }),
-          supabase.from('logistics_freight_tables').upsert(logisticsData.freightTables.map(t => ({ ...t, user_id: user.id }))),
-          supabase.from('warehouse_inventory').upsert(warehouseInventory.map(i => ({ 
-            id: i.id,
-            user_id: user.id,
-            code: i.code,
-            name: i.name,
-            category: i.category,
-            quantity: i.quantity,
-            min_stock: i.minStock,
-            unit: i.unit,
-            consumable: i.consumable,
-            last_updated: i.lastUpdated
-          }))),
-          supabase.from('warehouse_employees').upsert(warehouseEmployees.map(e => ({ ...e, user_id: user.id }))),
-          supabase.from('warehouse_logs').upsert(warehouseLogs.map(l => ({ 
-            id: l.id,
-            user_id: user.id,
-            item_id: l.itemId,
-            item_code: l.itemCode,
-            item_name: l.itemName,
-            type: l.type,
-            quantity: l.quantity,
-            employee_id: l.employeeId,
-            employee_name: l.employeeName,
-            note: l.note,
-            date: l.date
-          }))),
-          supabase.from('whatsapp_templates').upsert(whatsappTemplates.map(t => ({ ...t, user_id: user.id }))),
-          supabase.from('whatsapp_history').upsert(whatsappHistory.map(h => ({ ...h, user_id: user.id })))
-        ]);
+          initializedTables.current.has('kanban_columns') && safeSave(supabase.from('kanban_columns').upsert(kanbanCols), 'kanban_columns'),
+          initializedTables.current.has('kanban_cards') && safeSave(supabase.from('kanban_cards').upsert(kanbanCards), 'kanban_cards'),
+          initializedTables.current.has('calendar_events') && safeSave(supabase.from('calendar_events').upsert(calendarEvents.map(e => ({ 
+            id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description
+          }))), 'calendar_events'),
+          initializedTables.current.has('important_notes') && safeSave(supabase.from('important_notes').upsert(importantNotes.map(n => ({ 
+            id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt
+          }))), 'important_notes'),
+          initializedTables.current.has('post_its') && safeSave(supabase.from('post_its').upsert(postIts.map(p => ({ 
+            id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation
+          }))), 'post_its'),
+          initializedTables.current.has('financial_transactions') && safeSave(supabase.from('financial_transactions').upsert(financialTransactions.map(t => ({ 
+            id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date
+          }))), 'financial_transactions'),
+          initializedTables.current.has('email_templates') && safeSave(supabase.from('email_templates').upsert(emails.map(e => ({ 
+            id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt
+          }))), 'email_templates'),
+          initializedTables.current.has('professional_links') && safeSave(supabase.from('professional_links').upsert(links.map(l => ({ 
+            id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon
+          }))), 'professional_links'),
+          initializedTables.current.has('extensions') && safeSave(supabase.from('extensions').upsert(extensions.map(e => ({ 
+            id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes
+          }))), 'extensions'),
+          initializedTables.current.has('signatures') && safeSave(supabase.from('signatures').upsert(signatures.map(s => ({ 
+            id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt
+          }))), 'signatures'),
+          initializedTables.current.has('personal_files') && safeSave(supabase.from('personal_files').upsert(personalFiles.map(f => ({ 
+            id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt
+          }))), 'personal_files'),
+          initializedTables.current.has('user_settings') && safeSave(supabase.from('user_settings').upsert({
+            user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, updated_at: new Date().toISOString()
+          }), 'user_settings'),
+          initializedTables.current.has('flow_builder_states') && safeSave(supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData }), 'flow_builder_states'),
+          initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_data').upsert({
+            user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes
+          }), 'logistics_data'),
+          initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_freight_tables').upsert(logisticsFreightToSave), 'logistics_freight_tables'),
+          initializedTables.current.has('warehouse_inventory') && safeSave(supabase.from('warehouse_inventory').upsert(warehouseInventory.map(i => ({ 
+            id: i.id, user_id: user.id, code: i.code, name: i.name, category: i.category, quantity: i.quantity, min_stock: i.minStock, unit: i.unit, consumable: i.consumable, last_updated: i.lastUpdated
+          }))), 'warehouse_inventory'),
+          initializedTables.current.has('warehouse_employees') && safeSave(supabase.from('warehouse_employees').upsert(warehouseEmployees.map(e => ({ 
+            id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active
+          }))), 'warehouse_employees'),
+          initializedTables.current.has('warehouse_logs') && safeSave(supabase.from('warehouse_logs').upsert(warehouseLogs.map(l => ({ 
+            id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: l.employeeId || null, employee_name: l.employeeName, note: l.note, date: l.date
+          }))), 'warehouse_logs'),
+          initializedTables.current.has('whatsapp_templates') && safeSave(supabase.from('whatsapp_templates').upsert(whatsappTemplates.map(t => ({ 
+            id: t.id, user_id: user.id, title: t.title, content: t.content
+          }))), 'whatsapp_templates'),
+          initializedTables.current.has('whatsapp_history') && safeSave(supabase.from('whatsapp_history').upsert(whatsappHistory.map(h => ({ 
+            id: h.id, user_id: user.id, name: h.name, phone: h.phone, message: h.message, method: h.method, timestamp: h.timestamp
+          }))), 'whatsapp_history')
+        ].filter(Boolean));
       } catch (err) {
         console.error('Erro ao salvar dados:', err);
       } finally { setIsSyncing(false); }
     };
+
     const timeout = setTimeout(saveData, 3000);
     return () => clearTimeout(timeout);
   }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, whatsappTemplates, whatsappHistory, kanbanData]);
