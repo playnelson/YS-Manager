@@ -513,7 +513,13 @@ const MovementModal: React.FC<MovementModalProps> = ({ item, type, employees, on
 // ── Main Module ───────────────────────────────────────────────────────────────
 
 type ActiveTab = 'inventory' | 'employees' | 'history';
-function genId() { return `wh_${Date.now()}_${Math.random().toString(36).slice(2,6)}`; }
+function genId() { 
+  try {
+    return crypto.randomUUID();
+  } catch (e) {
+    return `wh_${Date.now()}_${Math.random().toString(36).slice(2,6)}`; 
+  }
+}
 
 const CATEGORIES = ['Geral','EPI','Ferramenta','Escritório','Limpeza','Equipamento','Manutenção','TI','Elétrico','Hidráulico'];
 const UNITS = ['Unid.','Par','Resma','Kg','L','m','m²','cx','pct','rolo'];

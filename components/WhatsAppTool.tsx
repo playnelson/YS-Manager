@@ -110,7 +110,7 @@ export const WhatsAppTool: React.FC<WhatsAppToolProps> = ({
 
     // Adicionar ao Histórico
     const newItem: WhatsAppHistoryItem = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: name || 'Sem identificação',
       phone: phone,
       message,

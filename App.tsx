@@ -276,14 +276,35 @@ const App: React.FC = () => {
           }
 
           if (whData?.data && whData.data.length > 0) {
-            setWarehouseInventory(whData.data);
-          } else if (!whData?.data || whData.data.length === 0) {
-            // Se for novo usuário ou sem dados, poderíamos carregar defaults aqui se necessário
-            // O componente WarehouseModule já lida com visualização vazia amigável
+            setWarehouseInventory(whData.data.map(i => ({
+              id: i.id,
+              code: i.code,
+              name: i.name,
+              category: i.category,
+              consumable: i.consumable ?? false,
+              quantity: i.quantity,
+              minStock: i.min_stock,
+              unit: i.unit,
+              lastUpdated: i.last_updated
+            })));
           }
 
           if (whEmployees?.data) setWarehouseEmployees(whEmployees.data);
-          if (whLogs?.data) setWarehouseLogs(whLogs.data);
+          
+          if (whLogs?.data) {
+            setWarehouseLogs(whLogs.data.map(l => ({
+              id: l.id,
+              itemId: l.item_id,
+              type: l.type,
+              quantity: l.quantity,
+              employeeId: l.employee_id || '',
+              employeeName: l.employee_name,
+              note: l.note,
+              date: l.date,
+              itemCode: l.item_code || '', 
+              itemName: l.item_name || ''
+            })));
+          }
           
           if (waTemplates?.data && waTemplates.data.length > 0) {
             setWhatsappTemplates(waTemplates.data);
@@ -348,9 +369,32 @@ const App: React.FC = () => {
             saved_routes: logisticsData.savedRoutes
           }),
           supabase.from('logistics_freight_tables').upsert(logisticsData.freightTables.map(t => ({ ...t, user_id: user.id }))),
-          supabase.from('warehouse_inventory').upsert(warehouseInventory.map(i => ({ ...i, user_id: user.id }))),
+          supabase.from('warehouse_inventory').upsert(warehouseInventory.map(i => ({ 
+            id: i.id,
+            user_id: user.id,
+            code: i.code,
+            name: i.name,
+            category: i.category,
+            quantity: i.quantity,
+            min_stock: i.minStock,
+            unit: i.unit,
+            consumable: i.consumable,
+            last_updated: i.lastUpdated
+          }))),
           supabase.from('warehouse_employees').upsert(warehouseEmployees.map(e => ({ ...e, user_id: user.id }))),
-          supabase.from('warehouse_logs').upsert(warehouseLogs.map(l => ({ ...l, user_id: user.id }))),
+          supabase.from('warehouse_logs').upsert(warehouseLogs.map(l => ({ 
+            id: l.id,
+            user_id: user.id,
+            item_id: l.itemId,
+            item_code: l.itemCode,
+            item_name: l.itemName,
+            type: l.type,
+            quantity: l.quantity,
+            employee_id: l.employeeId,
+            employee_name: l.employeeName,
+            note: l.note,
+            date: l.date
+          }))),
           supabase.from('whatsapp_templates').upsert(whatsappTemplates.map(t => ({ ...t, user_id: user.id }))),
           supabase.from('whatsapp_history').upsert(whatsappHistory.map(h => ({ ...h, user_id: user.id })))
         ]);
