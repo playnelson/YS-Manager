@@ -191,45 +191,88 @@ const App: React.FC = () => {
             const parsed: any = JSON.parse(saved);
             if (parsed.flow) setFlowData({ ...initialFlow, ...parsed.flow });
             if (parsed.calendarConfig) setCalendarConfig(parsed.calendarConfig);
-            if (parsed.calendarEvents) setCalendarEvents(parsed.calendarEvents);
-            if (parsed.emails) setEmails(parsed.emails);
-            if (parsed.links) setLinks(parsed.links);
-            if (parsed.extensions) setExtensions(parsed.extensions);
-            if (parsed.postIts) setPostIts(parsed.postIts);
-            if (parsed.importantNotes) setImportantNotes(parsed.importantNotes);
-            if (parsed.shiftHandoffs) setShiftHandoffs(parsed.shiftHandoffs);
+            if (parsed.calendarEvents) setCalendarEvents(parsed.calendarEvents || []);
+            if (parsed.emails) setEmails(parsed.emails || []);
+            if (parsed.links) setLinks(parsed.links || []);
+            if (parsed.extensions) setExtensions(parsed.extensions || []);
+            if (parsed.postIts) setPostIts(parsed.postIts || []);
+            if (parsed.importantNotes) setImportantNotes(parsed.importantNotes || []);
+            if (parsed.shiftHandoffs) setShiftHandoffs(parsed.shiftHandoffs || []);
             if (parsed.shiftConfig) setShiftConfig(parsed.shiftConfig);
-            if (parsed.signatures) setSignatures(parsed.signatures);
-            if (parsed.personalFiles) setPersonalFiles(parsed.personalFiles);
-            if (parsed.logistics) setLogisticsData(parsed.logistics);
-            if (parsed.hiddenTabs) setHiddenTabs(parsed.hiddenTabs);
-            if (parsed.kanban) setKanbanData(parsed.kanban);
+            if (parsed.signatures) setSignatures(parsed.signatures || []);
+            if (parsed.personalFiles) setPersonalFiles(parsed.personalFiles || []);
+            if (parsed.logistics) setLogisticsData(parsed.logistics || initialLogistics);
+            if (parsed.hiddenTabs) setHiddenTabs(parsed.hiddenTabs || []);
+            if (parsed.kanban) setKanbanData(parsed.kanban || initialKanban);
+            if (parsed.financialTransactions) setFinancialTransactions(parsed.financialTransactions || []);
           }
         } else {
-          const { data, error } = await supabase.from('user_data').select('payload').eq('user_id', user.id).maybeSingle();
-          if (!error && data?.payload) {
-            const payload = data.payload as any;
-            setFlowData({ ...initialFlow, ...(payload.flow || {}) });
-            setCalendarConfig(payload.calendarConfig || { uf: 'SP', city: 'São Paulo' });
-            setCalendarEvents(payload.calendarEvents || []);
-            setEmails(payload.emails || []);
-            setLinks(payload.links || []);
-            setExtensions(payload.extensions || []);
-            setPostIts(payload.postIts || []);
-            setImportantNotes(payload.importantNotes || []);
-            setShiftHandoffs(payload.shiftHandoffs || []);
-            setShiftConfig(payload.shiftConfig);
-            setSignatures(payload.signatures || []);
-            setPersonalFiles(payload.personalFiles || []);
-            setLogisticsData(payload.logistics || initialLogistics);
-            setFinancialTransactions(payload.financialTransactions || []);
-            setWarehouseInventory(payload.warehouseInventory || []);
-            setWarehouseLogs(payload.warehouseLogs || []);
-            setHiddenTabs(payload.hiddenTabs || []);
-            setKanbanData(payload.kanban || initialKanban);
+          // Parallel fetching for better performance
+          const [
+            kanbanCols, kanbanCards, calendarEvts, notes, postItList,
+            trans, freight, settings, emailList, linkList, extList,
+            sigs, files, flowState, logData, whData
+          ] = await Promise.all([
+            supabase.from('kanban_columns').select('*').eq('user_id', user.id).order('order'),
+            supabase.from('kanban_cards').select('*').eq('user_id', user.id).order('order'),
+            supabase.from('calendar_events').select('*').eq('user_id', user.id),
+            supabase.from('important_notes').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
+            supabase.from('post_its').select('*').eq('user_id', user.id),
+            supabase.from('financial_transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+            supabase.from('logistics_freight_tables').select('*').eq('user_id', user.id),
+            supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
+            supabase.from('email_templates').select('*').eq('user_id', user.id),
+            supabase.from('professional_links').select('*').eq('user_id', user.id),
+            supabase.from('extensions').select('*').eq('user_id', user.id),
+            supabase.from('signatures').select('*').eq('user_id', user.id),
+            supabase.from('personal_files').select('*').eq('user_id', user.id),
+            supabase.from('flow_builder_states').select('payload').eq('user_id', user.id).maybeSingle(),
+            supabase.from('logistics_data').select('checklists, saved_routes').eq('user_id', user.id).maybeSingle(),
+            supabase.from('warehouse_data').select('inventory, logs').eq('user_id', user.id).maybeSingle()
+          ]);
+
+          if (kanbanCols.data) {
+            setKanbanData({
+              columns: kanbanCols.data.map(col => ({
+                ...col,
+                cards: kanbanCards.data?.filter(c => c.column_id === col.id) || []
+              }))
+            });
+          }
+          if (calendarEvts.data) setCalendarEvents(calendarEvts.data);
+          if (notes.data) setImportantNotes(notes.data);
+          if (postItList.data) setPostIts(postItList.data);
+          if (trans.data) setFinancialTransactions(trans.data);
+          if (emailList.data) setEmails(emailList.data);
+          if (linkList.data) setLinks(linkList.data);
+          if (extList.data) setExtensions(extList.data);
+          if (sigs.data) setSignatures(sigs.data);
+          if (files.data) setPersonalFiles(files.data);
+          
+          if (settings.data) {
+            setCalendarConfig(settings.data.calendar_config || { uf: 'SP', city: 'São Paulo' });
+            setHiddenTabs(settings.data.hidden_tabs || []);
+            setShiftConfig(settings.data.shift_config);
+          }
+          
+          if (flowState.data?.payload) setFlowData(flowState.data.payload);
+          
+          if (logData.data) {
+            setLogisticsData({
+              freightTables: freight.data || [],
+              checklists: logData.data.checklists || [],
+              savedRoutes: logData.data.saved_routes || []
+            });
+          } else if (freight.data) {
+            setLogisticsData(prev => ({ ...prev, freightTables: freight.data }));
+          }
+
+          if (whData.data) {
+            setWarehouseInventory(whData.data.inventory || []);
+            setWarehouseLogs(whData.data.logs || []);
           }
         }
-      } catch (err) { console.error(err); }
+      } catch (err) { console.error('Erro ao carregar dados:', err); }
       finally { setIsSyncing(false); setIsDataLoaded(true); }
     };
     fetchData();
@@ -238,17 +281,58 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
-      const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs, financialTransactions, warehouseInventory, warehouseLogs };
       if (user.id === 'demo_user_id') {
+        const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs, financialTransactions, warehouseInventory, warehouseLogs };
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
-      } else {
-        setIsSyncing(true);
-        try {
-          await supabase.from('user_data').upsert({ user_id: user.id, payload, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
-        } finally { setIsSyncing(false); }
+        return;
       }
+
+      setIsSyncing(true);
+      try {
+        // We use granular upserts only for what changed or bulk save for simplicity in this refactor
+        // A more advanced version would track dirty states for each table.
+        // For now, we standardize the save to match the new schema.
+        
+        const kanbanCols = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
+        const kanbanCards = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ ...card, user_id: user.id, column_id: col.id, order: idx })));
+
+        await Promise.all([
+          supabase.from('kanban_columns').upsert(kanbanCols),
+          supabase.from('kanban_cards').upsert(kanbanCards),
+          supabase.from('calendar_events').upsert(calendarEvents.map(e => ({ ...e, user_id: user.id }))),
+          supabase.from('important_notes').upsert(importantNotes.map(n => ({ ...n, user_id: user.id }))),
+          supabase.from('post_its').upsert(postIts.map(p => ({ ...p, user_id: user.id }))),
+          supabase.from('financial_transactions').upsert(financialTransactions.map(t => ({ ...t, user_id: user.id }))),
+          supabase.from('email_templates').upsert(emails.map(e => ({ ...e, user_id: user.id }))),
+          supabase.from('professional_links').upsert(links.map(l => ({ ...l, user_id: user.id }))),
+          supabase.from('extensions').upsert(extensions.map(e => ({ ...e, user_id: user.id }))),
+          supabase.from('signatures').upsert(signatures.map(s => ({ ...s, user_id: user.id }))),
+          supabase.from('personal_files').upsert(personalFiles.map(f => ({ ...f, user_id: user.id }))),
+          supabase.from('user_settings').upsert({
+            user_id: user.id,
+            calendar_config: calendarConfig,
+            hidden_tabs: hiddenTabs,
+            shift_config: shiftConfig,
+            updated_at: new Date().toISOString()
+          }),
+          supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData }),
+          supabase.from('logistics_data').upsert({
+            user_id: user.id,
+            checklists: logisticsData.checklists,
+            saved_routes: logisticsData.savedRoutes
+          }),
+          supabase.from('logistics_freight_tables').upsert(logisticsData.freightTables.map(t => ({ ...t, user_id: user.id }))),
+          supabase.from('warehouse_data').upsert({
+            user_id: user.id,
+            inventory: warehouseInventory,
+            logs: warehouseLogs
+          })
+        ]);
+      } catch (err) {
+        console.error('Erro ao salvar dados:', err);
+      } finally { setIsSyncing(false); }
     };
-    const timeout = setTimeout(saveData, 2500); // Maior intervalo para menos carga
+    const timeout = setTimeout(saveData, 3000);
     return () => clearTimeout(timeout);
   }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseLogs, kanbanData]);
 
