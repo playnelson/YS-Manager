@@ -114,7 +114,7 @@ const SignatureCreator: React.FC<SignatureManagerProps> = ({ signatures, onChang
   const saveSignature = () => {
     if (!processedImage || !name) return alert("Defina um nome para salvar.");
     const newSig: Signature = {
-      id: `sig_${Date.now()}`,
+      id: crypto.randomUUID(),
       name,
       dataUrl: processedImage,
       createdAt: new Date().toISOString()
@@ -365,7 +365,7 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
 
       const now = new Date();
       onAddEvent({
-        id: `sign_${Date.now()}`,
+        id: crypto.randomUUID(),
         date: now.toISOString().split('T')[0],
         title: `Assinou: ${pdfFile.name}`,
         type: 'meeting',

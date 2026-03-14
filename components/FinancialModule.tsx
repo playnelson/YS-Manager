@@ -50,7 +50,7 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({ transactions =
     if (!desc || !amount) return;
 
     const newEntry: FinancialTransaction = {
-      id: `tx_${Date.now()}`,
+      id: crypto.randomUUID(),
       description: desc,
       amount: parseFloat(amount),
       type,

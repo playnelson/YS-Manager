@@ -113,7 +113,7 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
     if (!formData.name) return alert("Por favor, dê um nome ao modelo");
 
     const newEmail: EmailTemplate = {
-      id: selectedId || `email_${Date.now()}`,
+      id: selectedId || crypto.randomUUID(),
       name: formData.name || 'Sem Título',
       category: formData.category || 'Geral',
       to: formData.to || '',

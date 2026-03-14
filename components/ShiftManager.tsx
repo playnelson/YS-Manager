@@ -55,7 +55,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) 
 
   const addSegment = () => {
     const newSegment: ShiftSegment = {
-      id: `seg_${Date.now()}`,
+      id: crypto.randomUUID(),
       days: 1,
       type: 'work',
       startTime: '08:00',

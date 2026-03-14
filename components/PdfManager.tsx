@@ -30,7 +30,7 @@ export const PdfManager: React.FC = () => {
 
     if (mode === 'split') {
       const file = selectedFiles[0];
-      const pdfFile = { id: `pdf_${Date.now()}`, file, name: file.name, size: file.size };
+      const pdfFile = { id: crypto.randomUUID(), file, name: file.name, size: file.size };
       setFiles([pdfFile]);
       
       try {

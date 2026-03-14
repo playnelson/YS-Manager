@@ -41,7 +41,7 @@ const LABEL_COLORS = [
   { label: 'Infraestrutura', color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },
 ];
 
-function genId() { return `id_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`; }
+function genId() { return crypto.randomUUID(); }
 
 // ── Card Detail Modal ────────────────────────────────────────────────────────
 

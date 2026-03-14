@@ -57,7 +57,7 @@ export const PricingCalculator: React.FC = () => {
   const saveCalculation = () => {
     if (!name || sellingPrice <= 0) return alert("Dê um nome e insira um custo válido.");
     const newItem: PricingCalculation = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name,
       cost: parseFloat(cost),
       markup: parseFloat(markup),

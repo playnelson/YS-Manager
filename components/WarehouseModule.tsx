@@ -517,7 +517,7 @@ function genId() {
   try {
     return crypto.randomUUID();
   } catch (e) {
-    return `wh_${Date.now()}_${Math.random().toString(36).slice(2,6)}`; 
+    return crypto.randomUUID();
   }
 }
 

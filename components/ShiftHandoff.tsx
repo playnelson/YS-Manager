@@ -39,7 +39,7 @@ export const ShiftHandoffModule: React.FC<ShiftHandoffProps> = ({ handoffs = [],
     }
 
     const newHandoff: ShiftHandoff = {
-      id: `hd_${Date.now()}`,
+      id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
       userNick: currentUser?.nick || 'Desconhecido',
       shiftPeriod: formData.shiftPeriod || 'Geral',

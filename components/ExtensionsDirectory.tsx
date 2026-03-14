@@ -34,7 +34,7 @@ export const ExtensionsDirectory: React.FC<ExtensionsDirectoryProps> = ({ extens
     if (!formData.name || !formData.number) return;
 
     const newExtension: Extension = {
-      id: editingExtension?.id || `ext_${Date.now()}`,
+      id: editingExtension?.id || crypto.randomUUID(),
       name: formData.name || '',
       department: formData.department || 'Geral',
       number: formData.number || '',

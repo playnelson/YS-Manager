@@ -426,59 +426,49 @@ const App: React.FC = () => {
           insurance_rate: t.insuranceRate, updated_at: t.updatedAt
         }));
 
+        const syncTableData = async (tableName: string, currentData: any[], initKey: string = tableName) => {
+          if (!initializedTables.current.has(initKey)) return;
+          try {
+            const currentIds = currentData.map(item => item.id).filter(Boolean);
+            if (currentIds.length > 0) {
+              const { data: existing } = await supabase.from(tableName).select('id').eq('user_id', user.id);
+              if (existing) {
+                const idsToDelete = existing.map(r => r.id).filter(id => !currentIds.includes(id));
+                if (idsToDelete.length > 0) {
+                  await supabase.from(tableName).delete().in('id', idsToDelete);
+                }
+              }
+              await safeSave(supabase.from(tableName).upsert(currentData), tableName);
+            } else {
+              await supabase.from(tableName).delete().eq('user_id', user.id);
+            }
+          } catch (e) {
+            console.error(`Erro na sincronização de ${tableName}:`, e);
+          }
+        };
+
         await Promise.all([
-          initializedTables.current.has('kanban_columns') && safeSave(supabase.from('kanban_columns').upsert(kanbanCols), 'kanban_columns'),
-          initializedTables.current.has('kanban_cards') && safeSave(supabase.from('kanban_cards').upsert(kanbanCards), 'kanban_cards'),
-          initializedTables.current.has('calendar_events') && safeSave(supabase.from('calendar_events').upsert(calendarEvents.map(e => ({ 
-            id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description
-          }))), 'calendar_events'),
-          initializedTables.current.has('important_notes') && safeSave(supabase.from('important_notes').upsert(importantNotes.map(n => ({ 
-            id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt
-          }))), 'important_notes'),
-          initializedTables.current.has('post_its') && safeSave(supabase.from('post_its').upsert(postIts.map(p => ({ 
-            id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation
-          }))), 'post_its'),
-          initializedTables.current.has('financial_transactions') && safeSave(supabase.from('financial_transactions').upsert(financialTransactions.map(t => ({ 
-            id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date
-          }))), 'financial_transactions'),
-          initializedTables.current.has('email_templates') && safeSave(supabase.from('email_templates').upsert(emails.map(e => ({ 
-            id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt
-          }))), 'email_templates'),
-          initializedTables.current.has('professional_links') && safeSave(supabase.from('professional_links').upsert(links.map(l => ({ 
-            id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon
-          }))), 'professional_links'),
-          initializedTables.current.has('extensions') && safeSave(supabase.from('extensions').upsert(extensions.map(e => ({ 
-            id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes
-          }))), 'extensions'),
-          initializedTables.current.has('signatures') && safeSave(supabase.from('signatures').upsert(signatures.map(s => ({ 
-            id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt
-          }))), 'signatures'),
-          initializedTables.current.has('personal_files') && safeSave(supabase.from('personal_files').upsert(personalFiles.map(f => ({ 
-            id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt
-          }))), 'personal_files'),
-          initializedTables.current.has('user_settings') && safeSave(supabase.from('user_settings').upsert({
-            user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, updated_at: new Date().toISOString()
-          }), 'user_settings'),
+          syncTableData('kanban_columns', kanbanCols),
+          syncTableData('kanban_cards', kanbanCards),
+          syncTableData('calendar_events', calendarEvents.map(e => ({ id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description }))),
+          syncTableData('important_notes', importantNotes.map(n => ({ id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt }))),
+          syncTableData('post_its', postIts.map(p => ({ id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation }))),
+          syncTableData('financial_transactions', financialTransactions.map(t => ({ id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date }))),
+          syncTableData('email_templates', emails.map(e => ({ id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt }))),
+          syncTableData('professional_links', links.map(l => ({ id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon }))),
+          syncTableData('extensions', extensions.map(e => ({ id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes }))),
+          syncTableData('signatures', signatures.map(s => ({ id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt }))),
+          syncTableData('personal_files', personalFiles.map(f => ({ id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt }))),
+          syncTableData('warehouse_inventory', warehouseInventory.map(i => ({ id: i.id, user_id: user.id, code: i.code, name: i.name, category: i.category, quantity: i.quantity, min_stock: i.minStock, unit: i.unit, consumable: i.consumable, last_updated: i.lastUpdated }))),
+          syncTableData('warehouse_employees', warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active }))),
+          syncTableData('warehouse_logs', warehouseLogs.map(l => ({ id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: l.employeeId || null, employee_name: l.employeeName, note: l.note, date: l.date }))),
+          syncTableData('whatsapp_templates', whatsappTemplates.map(t => ({ id: t.id, user_id: user.id, title: t.title, content: t.content }))),
+          syncTableData('whatsapp_history', whatsappHistory.map(h => ({ id: h.id, user_id: user.id, name: h.name, phone: h.phone, message: h.message, method: h.method, timestamp: h.timestamp }))),
+          syncTableData('logistics_freight_tables', logisticsFreightToSave, 'logistics'),
+          
+          initializedTables.current.has('user_settings') && safeSave(supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, updated_at: new Date().toISOString() }), 'user_settings'),
           initializedTables.current.has('flow_builder_states') && safeSave(supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData }), 'flow_builder_states'),
-          initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_data').upsert({
-            user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes
-          }), 'logistics_data'),
-          initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_freight_tables').upsert(logisticsFreightToSave), 'logistics_freight_tables'),
-          initializedTables.current.has('warehouse_inventory') && safeSave(supabase.from('warehouse_inventory').upsert(warehouseInventory.map(i => ({ 
-            id: i.id, user_id: user.id, code: i.code, name: i.name, category: i.category, quantity: i.quantity, min_stock: i.minStock, unit: i.unit, consumable: i.consumable, last_updated: i.lastUpdated
-          }))), 'warehouse_inventory'),
-          initializedTables.current.has('warehouse_employees') && safeSave(supabase.from('warehouse_employees').upsert(warehouseEmployees.map(e => ({ 
-            id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active
-          }))), 'warehouse_employees'),
-          initializedTables.current.has('warehouse_logs') && safeSave(supabase.from('warehouse_logs').upsert(warehouseLogs.map(l => ({ 
-            id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: l.employeeId || null, employee_name: l.employeeName, note: l.note, date: l.date
-          }))), 'warehouse_logs'),
-          initializedTables.current.has('whatsapp_templates') && safeSave(supabase.from('whatsapp_templates').upsert(whatsappTemplates.map(t => ({ 
-            id: t.id, user_id: user.id, title: t.title, content: t.content
-          }))), 'whatsapp_templates'),
-          initializedTables.current.has('whatsapp_history') && safeSave(supabase.from('whatsapp_history').upsert(whatsappHistory.map(h => ({ 
-            id: h.id, user_id: user.id, name: h.name, phone: h.phone, message: h.message, method: h.method, timestamp: h.timestamp
-          }))), 'whatsapp_history')
+          initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes }), 'logistics_data')
         ].filter(Boolean));
       } catch (err) {
         console.error('Erro ao salvar dados:', err);

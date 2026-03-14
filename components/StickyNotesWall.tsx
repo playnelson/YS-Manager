@@ -30,7 +30,7 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
 
   const addNote = () => {
     const newNote: PostIt = {
-      id: `note_${Date.now()}`,
+      id: crypto.randomUUID(),
       text: '',
       color: 'sand',
       rotation: 0,

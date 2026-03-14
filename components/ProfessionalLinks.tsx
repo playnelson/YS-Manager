@@ -37,7 +37,7 @@ export const ProfessionalLinks: React.FC<ProfessionalLinksProps> = ({ links, onC
     if (!url.startsWith('http')) url = `https://${url}`;
 
     const newLink: ProfessionalLink = {
-      id: editingLink?.id || `link_${Date.now()}`,
+      id: editingLink?.id || crypto.randomUUID(),
       title: formData.title,
       url: url,
       category: formData.category,

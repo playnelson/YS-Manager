@@ -38,7 +38,7 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
 
   const addNote = () => {
     const newNote: ImportantNote = {
-      id: `note_${Date.now()}`,
+      id: crypto.randomUUID(),
       title: 'Nova Anotação',
       content: '',
       category: activeCategory !== 'Todas' ? activeCategory : 'Geral',

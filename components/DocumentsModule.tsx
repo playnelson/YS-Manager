@@ -56,7 +56,7 @@ export const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (fil
       const targetCat = activeCategory === 'Todos' ? 'Geral' : activeCategory;
 
       const newFile: StoredFile = {
-        id: `file_${Date.now()}`,
+        id: crypto.randomUUID(),
         name: selectedFile.name,
         type: selectedFile.type,
         size: selectedFile.size,
