@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useMemo } from 'react';
 import { Phone, Plus, Search, Trash2, Edit2, Copy } from 'lucide-react';
 import { Extension } from '../types';
@@ -34,7 +35,7 @@ export const ExtensionsDirectory: React.FC<ExtensionsDirectoryProps> = ({ extens
     if (!formData.name || !formData.number) return;
 
     const newExtension: Extension = {
-      id: editingExtension?.id || crypto.randomUUID(),
+      id: editingExtension?.id || generateUUID(),
       name: formData.name || '',
       department: formData.department || 'Geral',
       number: formData.number || '',

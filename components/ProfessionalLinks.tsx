@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useMemo } from 'react';
 import { Plus, Globe, ExternalLink, Trash2, Search, Tag, Edit2, Upload, Image as ImageIcon, MoreVertical, X } from 'lucide-react';
 import { ProfessionalLink } from '../types';
@@ -37,7 +38,7 @@ export const ProfessionalLinks: React.FC<ProfessionalLinksProps> = ({ links, onC
     if (!url.startsWith('http')) url = `https://${url}`;
 
     const newLink: ProfessionalLink = {
-      id: editingLink?.id || crypto.randomUUID(),
+      id: editingLink?.id || generateUUID(),
       title: formData.title,
       url: url,
       category: formData.category,

@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   IconCalculator,
@@ -94,7 +95,7 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
   const handleSaveTable = () => {
     if (!tableName) return;
     const newTable: FreightTable = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: tableName,
       fuelPrice: calc.fuelPrice,
       avgConsumption: calc.avgConsumption,
@@ -340,9 +341,9 @@ export const LogisticsModule: React.FC<LogisticsModuleProps> = ({ data, onChange
     }
 
     const newList: LogisticsChecklist = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       title,
-      items: items.map(label => ({ id: crypto.randomUUID(), label, completed: false })),
+      items: items.map(label => ({ id: generateUUID(), label, completed: false })),
       updatedAt: new Date().toISOString()
     };
 

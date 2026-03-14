@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { FolderOpen, FileText, PenTool, Upload, Download, Trash2, File, AlertCircle, HardDrive, Folder, FolderPlus, ArrowRightLeft, Edit2, Check, X, CornerDownRight } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -56,7 +57,7 @@ export const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (fil
       const targetCat = activeCategory === 'Todos' ? 'Geral' : activeCategory;
 
       const newFile: StoredFile = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: selectedFile.name,
         type: selectedFile.type,
         size: selectedFile.size,

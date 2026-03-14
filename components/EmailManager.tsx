@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useMemo, useRef } from 'react';
 import { Plus, Save, Mail, Trash2, Send, ExternalLink, Filter, Tag, Folder, FolderPlus, Edit2, Check, X, ArrowRightLeft, FileText, LayoutList } from 'lucide-react';
 import { EmailTemplate } from '../types';
@@ -113,7 +114,7 @@ export const EmailManager: React.FC<EmailManagerProps> = ({ emails, onChange }) 
     if (!formData.name) return alert("Por favor, dê um nome ao modelo");
 
     const newEmail: EmailTemplate = {
-      id: selectedId || crypto.randomUUID(),
+      id: selectedId || generateUUID(),
       name: formData.name || 'Sem Título',
       category: formData.category || 'Geral',
       to: formData.to || '',

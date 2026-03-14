@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Calculator, Percent, TrendingUp, Info, RefreshCw, Save, Trash2, History } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -57,7 +58,7 @@ export const PricingCalculator: React.FC = () => {
   const saveCalculation = () => {
     if (!name || sellingPrice <= 0) return alert("Dê um nome e insira um custo válido.");
     const newItem: PricingCalculation = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       cost: parseFloat(cost),
       markup: parseFloat(markup),

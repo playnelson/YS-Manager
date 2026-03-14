@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useMemo } from 'react';
 import {
   Wallet, TrendingUp, TrendingDown, Plus, Trash2,
@@ -50,7 +51,7 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({ transactions =
     if (!desc || !amount) return;
 
     const newEntry: FinancialTransaction = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       description: desc,
       amount: parseFloat(amount),
       type,

@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   MessageCircle, Smartphone, Globe, Monitor, Zap, User, History,
@@ -110,7 +111,7 @@ export const WhatsAppTool: React.FC<WhatsAppToolProps> = ({
 
     // Adicionar ao Histórico
     const newItem: WhatsAppHistoryItem = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: name || 'Sem identificação',
       phone: phone,
       message,

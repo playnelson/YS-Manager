@@ -1,3 +1,4 @@
+import { generateUUID } from '../uuid';
 import React, { useState, useRef } from 'react';
 import {
   Package, Plus, Search, AlertTriangle, History, ArrowUpRight, ArrowDownLeft,
@@ -515,9 +516,9 @@ const MovementModal: React.FC<MovementModalProps> = ({ item, type, employees, on
 type ActiveTab = 'inventory' | 'employees' | 'history';
 function genId() { 
   try {
-    return crypto.randomUUID();
+    return generateUUID();
   } catch (e) {
-    return crypto.randomUUID();
+    return generateUUID();
   }
 }
 

@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useRef } from 'react';
 import { FileUp, Scissors, Combine, Download, Trash2, ArrowUp, ArrowDown, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -30,7 +31,7 @@ export const PdfManager: React.FC = () => {
 
     if (mode === 'split') {
       const file = selectedFiles[0];
-      const pdfFile = { id: crypto.randomUUID(), file, name: file.name, size: file.size };
+      const pdfFile = { id: generateUUID(), file, name: file.name, size: file.size };
       setFiles([pdfFile]);
       
       try {

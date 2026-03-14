@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Folder, FileText, Plus, Search, Trash2, Save, AlertTriangle,
@@ -38,7 +39,7 @@ export const ImportantNotes: React.FC<ImportantNotesProps> = ({ notes = [], onCh
 
   const addNote = () => {
     const newNote: ImportantNote = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       title: 'Nova Anotação',
       content: '',
       category: activeCategory !== 'Todas' ? activeCategory : 'Geral',

@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useRef, useCallback } from 'react';
 import {
   Plus, X, Trash2, Edit2, Check, Flag, Calendar,
@@ -41,7 +42,7 @@ const LABEL_COLORS = [
   { label: 'Infraestrutura', color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },
 ];
 
-function genId() { return crypto.randomUUID(); }
+function genId() { return generateUUID(); }
 
 // ── Card Detail Modal ────────────────────────────────────────────────────────
 

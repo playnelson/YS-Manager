@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useMemo } from 'react';
 import {
   Calendar as CalendarIcon,
@@ -55,7 +56,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) 
 
   const addSegment = () => {
     const newSegment: ShiftSegment = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       days: 1,
       type: 'work',
       startTime: '08:00',

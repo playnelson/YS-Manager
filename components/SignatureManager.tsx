@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useRef, useEffect } from 'react';
 import { PenTool, Upload, Eraser, Save, FileCheck, Trash2, Download, MousePointer2, Move, ZoomIn, ZoomOut, Loader2, Sliders, Calendar, Type, Stamp } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -114,7 +115,7 @@ const SignatureCreator: React.FC<SignatureManagerProps> = ({ signatures, onChang
   const saveSignature = () => {
     if (!processedImage || !name) return alert("Defina um nome para salvar.");
     const newSig: Signature = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       dataUrl: processedImage,
       createdAt: new Date().toISOString()
@@ -365,7 +366,7 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
 
       const now = new Date();
       onAddEvent({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         date: now.toISOString().split('T')[0],
         title: `Assinou: ${pdfFile.name}`,
         type: 'meeting',

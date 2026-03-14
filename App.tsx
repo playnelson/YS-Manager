@@ -251,6 +251,7 @@ const App: React.FC = () => {
             safeFetch(supabase.from('whatsapp_templates').select('*').eq('user_id', user.id), 'whatsapp_templates'),
             safeFetch(supabase.from('whatsapp_history').select('*').eq('user_id', user.id).limit(50).order('timestamp', { ascending: false }), 'whatsapp_history')
           ]);
+          const isFirstTimeUser = !settings.data;
 
           // --- Kanban ---
           if (kbCols.data && kbCols.data.length > 0) {
@@ -266,8 +267,12 @@ const App: React.FC = () => {
                 }))
               }))
             });
-          } else {
+          } else if (isFirstTimeUser) {
             setKanbanData(SEED_DATA.kanban as any);
+            initializedTables.current.add('kanban_columns');
+            initializedTables.current.add('kanban_cards');
+          } else {
+            setKanbanData({ columns: [] });
             initializedTables.current.add('kanban_columns');
             initializedTables.current.add('kanban_cards');
           }
@@ -280,16 +285,22 @@ const App: React.FC = () => {
               consumable: i.consumable ?? false, quantity: i.quantity, minStock: i.min_stock,
               unit: i.unit, lastUpdated: i.last_updated
             })));
-          } else {
+          } else if (isFirstTimeUser) {
             setWarehouseInventory(SEED_DATA.warehouse.inventory);
+            initializedTables.current.add('warehouse_inventory');
+          } else {
+            setWarehouseInventory([]);
             initializedTables.current.add('warehouse_inventory');
           }
 
           if (whEmps.data && whEmps.data.length > 0) {
             initializedTables.current.add('warehouse_employees');
             setWarehouseEmployees(whEmps.data);
-          } else {
+          } else if (isFirstTimeUser) {
             setWarehouseEmployees(SEED_DATA.warehouse.employees);
+            initializedTables.current.add('warehouse_employees');
+          } else {
+            setWarehouseEmployees([]);
             initializedTables.current.add('warehouse_employees');
           }
 
@@ -314,8 +325,11 @@ const App: React.FC = () => {
               checklists: logData.data?.checklists || SEED_DATA.logistics.checklists,
               savedRoutes: logData.data?.saved_routes || []
             });
-          } else {
+          } else if (isFirstTimeUser) {
             setLogisticsData(SEED_DATA.logistics as any);
+            initializedTables.current.add('logistics');
+          } else {
+            setLogisticsData({ freightTables: [], checklists: [], savedRoutes: [] });
             initializedTables.current.add('logistics');
           }
 
@@ -323,8 +337,11 @@ const App: React.FC = () => {
           if (trans.data && trans.data.length > 0) {
             initializedTables.current.add('financial_transactions');
             setFinancialTransactions(trans.data);
-          } else {
+          } else if (isFirstTimeUser) {
             setFinancialTransactions(SEED_DATA.financial);
+            initializedTables.current.add('financial_transactions');
+          } else {
+            setFinancialTransactions([]);
             initializedTables.current.add('financial_transactions');
           }
 
@@ -335,8 +352,11 @@ const App: React.FC = () => {
               ...n,
               priority: (n.priority as NotePriority) || 'normal'
             })));
-          } else {
+          } else if (isFirstTimeUser) {
             setImportantNotes(SEED_DATA.notes as any);
+            initializedTables.current.add('important_notes');
+          } else {
+            setImportantNotes([]);
             initializedTables.current.add('important_notes');
           }
 
@@ -344,8 +364,11 @@ const App: React.FC = () => {
           if (waTemp.data && waTemp.data.length > 0) {
             initializedTables.current.add('whatsapp_templates');
             setWhatsappTemplates(waTemp.data);
-          } else {
+          } else if (isFirstTimeUser) {
             setWhatsappTemplates(SEED_DATA.whatsapp.templates);
+            initializedTables.current.add('whatsapp_templates');
+          } else {
+            setWhatsappTemplates([]);
             initializedTables.current.add('whatsapp_templates');
           }
 
@@ -371,8 +394,11 @@ const App: React.FC = () => {
           if (linksRes.data && linksRes.data.length > 0) {
             initializedTables.current.add('professional_links');
             setLinks(linksRes.data.map((l: any) => ({ ...l, customIcon: l.custom_icon })));
-          } else {
+          } else if (isFirstTimeUser) {
             setLinks(SEED_DATA.links);
+            initializedTables.current.add('professional_links');
+          } else {
+            setLinks([]);
             initializedTables.current.add('professional_links');
           }
           if (exts.data) { initializedTables.current.add('extensions'); setExtensions(exts.data); }

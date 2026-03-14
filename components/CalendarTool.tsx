@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   IconChevronLeft,
@@ -251,7 +252,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
     e.preventDefault();
     if (!newEvent.title) return;
     const event: UserEvent = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       date: selectedDayStr,
       title: newEvent.title,
       type: newEvent.type as any || 'reminder',

@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState } from 'react';
 import { ClipboardList, Plus, AlertTriangle, CheckCircle2, Siren, Search, Clock, User, CalendarDays, History } from 'lucide-react';
 import { ShiftHandoff, HandoffStatus, User as AppUser } from '../types';
@@ -39,7 +40,7 @@ export const ShiftHandoffModule: React.FC<ShiftHandoffProps> = ({ handoffs = [],
     }
 
     const newHandoff: ShiftHandoff = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       timestamp: new Date().toISOString(),
       userNick: currentUser?.nick || 'Desconhecido',
       shiftPeriod: formData.shiftPeriod || 'Geral',

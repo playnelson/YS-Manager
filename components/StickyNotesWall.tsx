@@ -1,4 +1,5 @@
 
+import { generateUUID } from '../uuid';
 import React, { useState } from 'react';
 import { Plus, Trash2, Palette, Calendar, StickyNote, Download, Clock, X, FileText, ArrowRight } from 'lucide-react';
 import { PostIt } from '../types';
@@ -30,7 +31,7 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
 
   const addNote = () => {
     const newNote: PostIt = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       text: '',
       color: 'sand',
       rotation: 0,
