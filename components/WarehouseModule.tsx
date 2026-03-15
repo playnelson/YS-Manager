@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import {
   Package, Plus, Search, AlertTriangle, History, ArrowUpRight, ArrowDownLeft,
   Trash2, Archive, Box, Download, Upload, Users, X, Check, FileSpreadsheet,
-  UserPlus, ShoppingCart, Minus, Printer, Edit, PackagePlus
+  UserPlus, ShoppingCart, Minus, Printer, Edit, PackagePlus, ChevronDown
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -315,7 +315,7 @@ const EmployeeDetailModal: React.FC<{
             </div>
             <div>
               <p className="font-bold text-sm">{employee.name}</p>
-              <p className="text-[10px] opacity-70 uppercase tracking-wider">{employee.role} • CPF: {applyCPFMask(employee.cpf)}</p>
+              <p className="text-[10px] opacity-70 uppercase tracking-wider">{employee.role} • CPF: {applyCPFMask(employee.cpf || '')}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors"><X size={20}/></button>
@@ -950,7 +950,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                         ? 'bg-white dark:bg-gray-900'
                         : 'bg-[#eef2f7] dark:bg-gray-800/50';
                     return (
-                      <tr key={item.id} className={`${rowBg} border-b border-gray-200 dark:border-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors`}>
+                      <tr key={item.id} className={`${rowBg} border-b border-gray-200 dark:border-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors group`}>
                         <td className="px-4 py-2.5 font-mono text-xs font-semibold text-[#3a5f8a] dark:text-blue-400">{item.code}</td>
                         <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-100">{item.name}</td>
                         <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400 text-xs">{item.category}</td>
@@ -962,38 +962,56 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                         <td className={`px-4 py-2.5 text-center font-bold font-mono ${low ? 'text-rose-600 dark:text-rose-400' : 'text-gray-800 dark:text-white'}`}>{item.quantity}</td>
                         <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400">{item.minStock || '—'}</td>
                         <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400 text-xs">{item.unit}</td>
-                        <td className="px-4 py-2.5 text-right flex items-center justify-end gap-1.5">
-                          {item.itemsPerContainer && item.itemsPerContainer > 1 && item.quantity >= 1 && (
-                            <button onClick={() => handleUnpack(item)} title={`Desmembrar 1 ${item.unit} em ${item.itemsPerContainer} unidades`}
-                              className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors">
-                              <Box size={14}/>
+                        <td className="px-4 py-2.5 text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setQuantityTarget(item)} title="Adicionar ao Carrinho"
+                              className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+                              <ShoppingCart size={14}/>
                             </button>
-                          )}
-                          <button onClick={() => setQuantityTarget(item)} title="Adicionar ao Carrinho"
-                            className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
-                            <ShoppingCart size={14}/>
-                          </button>
-                          <button onClick={() => { setNewItem(item); setEditingItem(item); setShowAddModal(true); }} title="Editar"
-                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
-                            <Edit size={14}/>
-                          </button>
-                          <button onClick={() => setMovementTarget({ item, type: 'entry' })} title="Entrada"
-                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors">
-                            <ArrowDownLeft size={15}/>
-                          </button>
-                          <button onClick={() => handleMovement(item.itemsPerContainer || 1, 'system', 'Recebimento de Caixa')} title={`Adicionar 1 Caixa (${item.itemsPerContainer || 1} ${item.unit})`}
-                            className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors">
-                            <PackagePlus size={15}/>
-                          </button>
-                          <button onClick={() => handleMovement(1, 'system', 'Remoção de 1 Unidade')} title={`Remover 1 ${item.unit}`}
-                            className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors">
-                            <Minus size={14}/>
-                          </button>
-                          <button onClick={() => setMovementTarget({ item, type: 'exit' })} title="Saída"
-                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors">
-                            <ArrowUpRight size={15}/>
-                          </button>
-                          <button onClick={() => { if (confirm('Remover item?')) saveInventory(inventory.filter(i => i.id !== item.id)); }} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-500 transition-colors" title="Excluir"><Trash2 size={13}/></button>
+                            <button onClick={() => { setNewItem(item); setEditingItem(item); setShowAddModal(true); }} title="Editar"
+                              className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+                              <Edit size={14}/>
+                            </button>
+                            
+                            {/* Movement Menu */}
+                            <div className="relative group/menu">
+                              <button className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-0.5" title="Movimentação">
+                                <Plus size={14}/>
+                                <ChevronDown size={10}/>
+                              </button>
+                              
+                              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-20 py-2 hidden group-hover/menu:block">
+                                <button onClick={() => setMovementTarget({ item, type: 'entry' })} 
+                                  className="w-full px-3 py-1.5 text-left text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2">
+                                  <ArrowDownLeft size={14}/> Entrada Manual
+                                </button>
+                                <button onClick={() => handleMovement(item.itemsPerContainer || 1, 'system', 'Recebimento de Caixa')} 
+                                  className="w-full px-3 py-1.5 text-left text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center gap-2">
+                                  <PackagePlus size={14}/> Adicionar Caixa (+{item.itemsPerContainer || 1})
+                                </button>
+                                <div className="h-px bg-gray-100 dark:bg-gray-700 my-1"></div>
+                                <button onClick={() => setMovementTarget({ item, type: 'exit' })} 
+                                  className="w-full px-3 py-1.5 text-left text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2">
+                                  <ArrowUpRight size={14}/> Saída Manual
+                                </button>
+                                <button onClick={() => handleMovement(1, 'system', 'Remoção de 1 Unidade')} 
+                                  className="w-full px-3 py-1.5 text-left text-xs text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 flex items-center gap-2">
+                                  <Minus size={14}/> Remover 1 Unidade
+                                </button>
+                                {item.itemsPerContainer && item.itemsPerContainer > 1 && item.quantity >= 1 && (
+                                  <button onClick={() => handleUnpack(item)} 
+                                    className="w-full px-3 py-1.5 text-left text-xs text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-2">
+                                    <Box size={14}/> Desmembrar Caixa
+                                  </button>
+                                )}
+                                <div className="h-px bg-gray-100 dark:bg-gray-700 my-1"></div>
+                                <button onClick={() => { if (confirm('Remover item?')) saveInventory(inventory.filter(i => i.id !== item.id)); }} 
+                                  className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                                  <Trash2 size={13}/> Excluir Item
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1024,7 +1042,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{emp.name}</p>
-                      <p className="text-[10px] text-gray-500 font-mono">{applyCPFMask(emp.cpf)}</p>
+                      <p className="text-[10px] text-gray-500 font-mono">{applyCPFMask(emp.cpf || '')}</p>
                       <div className="flex items-center gap-2">
                         <button 
                           onClick={() => setSelectedEmp(emp)}
