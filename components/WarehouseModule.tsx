@@ -479,7 +479,7 @@ const MovementModal: React.FC<MovementModalProps> = ({ item, type, employees, on
         <div className="p-5 space-y-4">
           <div>
             <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1.5">Quantidade</label>
-            <input type="number" min={1} value={qty} onChange={e => setQty(Math.max(1, Number(e.target.value)))}
+            <input type="number" step="any" min={0} value={qty} onChange={e => setQty(Math.max(0, Number(e.target.value)))}
               className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
             <p className="text-[10px] text-gray-400 mt-1">Estoque atual: <b>{item.quantity}</b> {item.unit}</p>
           </div>
@@ -1013,13 +1013,13 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
               {/* Qtd Atual */}
               <div>
                 <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Qtd. Atual</label>
-                <input type="number" min={0} value={newItem.quantity||0} onChange={e => setNewItem({...newItem,quantity:Number(e.target.value)})}
+                <input type="number" step="any" min={0} value={newItem.quantity||0} onChange={e => setNewItem({...newItem,quantity:Number(e.target.value)})}
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
               </div>
               {/* Qtd Mínima */}
               <div>
                 <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Qtd. Mínima</label>
-                <input type="number" min={0} value={newItem.minStock||0} onChange={e => setNewItem({...newItem,minStock:Number(e.target.value)})}
+                <input type="number" step="any" min={0} value={newItem.minStock||0} onChange={e => setNewItem({...newItem,minStock:Number(e.target.value)})}
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
               </div>
               {/* Unidade */}

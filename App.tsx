@@ -284,54 +284,52 @@ const App: React.FC = () => {
           const isFirstTimeUser = !settings.data;
 
           // --- Kanban ---
-          if (kbCols.data && kbCols.data.length > 0) {
+          if (kbCols.data && kbCards.data) {
             initializedTables.current.add('kanban_columns');
             initializedTables.current.add('kanban_cards');
-            setKanbanData({
-              columns: kbCols.data.map((col: any) => ({
-                id: col.id, title: col.title, color: col.color,
-                cards: (kbCards.data || []).filter((c: any) => c.column_id === col.id).map((c: any) => ({
-                  id: c.id, title: c.title, description: c.description || '',
-                  priority: (c.priority as KanbanPriority) || 'medium', createdAt: c.created_at,
-                  dueDate: c.due_date, labels: c.labels || []
+            if (kbCols.data.length > 0) {
+              setKanbanData({
+                columns: kbCols.data.map((col: any) => ({
+                  id: col.id, title: col.title, color: col.color,
+                  cards: (kbCards.data || []).filter((c: any) => c.column_id === col.id).map((c: any) => ({
+                    id: c.id, title: c.title, description: c.description || '',
+                    priority: (c.priority as KanbanPriority) || 'medium', createdAt: c.created_at,
+                    dueDate: c.due_date, labels: c.labels || []
+                  }))
                 }))
-              }))
-            });
-          } else if (isFirstTimeUser) {
-            setKanbanData(SEED_DATA.kanban as any);
-            initializedTables.current.add('kanban_columns');
-            initializedTables.current.add('kanban_cards');
-          } else {
-            setKanbanData({ columns: [] });
-            initializedTables.current.add('kanban_columns');
-            initializedTables.current.add('kanban_cards');
+              });
+            } else if (isFirstTimeUser) {
+              setKanbanData(SEED_DATA.kanban as any);
+            } else {
+              setKanbanData({ columns: [] });
+            }
           }
 
           // --- Warehouse ---
-          if (whInv.data && whInv.data.length > 0) {
+          if (whInv.data) {
             initializedTables.current.add('warehouse_inventory');
-            setWarehouseInventory(whInv.data.map((i: any) => ({
-              id: i.id, code: i.code, name: i.name, category: i.category,
-              consumable: i.consumable ?? false, quantity: i.quantity, minStock: i.min_stock,
-              unit: i.unit, lastUpdated: i.last_updated
-            })));
-          } else if (isFirstTimeUser) {
-            setWarehouseInventory(SEED_DATA.warehouse.inventory);
-            initializedTables.current.add('warehouse_inventory');
-          } else {
-            setWarehouseInventory([]);
-            initializedTables.current.add('warehouse_inventory');
+            if (whInv.data.length > 0) {
+              setWarehouseInventory(whInv.data.map((i: any) => ({
+                id: i.id, code: i.code, name: i.name, category: i.category,
+                consumable: i.consumable ?? false, quantity: i.quantity, minStock: i.min_stock,
+                unit: i.unit, lastUpdated: i.last_updated
+              })));
+            } else if (isFirstTimeUser) {
+              setWarehouseInventory(SEED_DATA.warehouse.inventory);
+            } else {
+              setWarehouseInventory([]);
+            }
           }
 
-          if (whEmps.data && whEmps.data.length > 0) {
+          if (whEmps.data) {
             initializedTables.current.add('warehouse_employees');
-            setWarehouseEmployees(whEmps.data);
-          } else if (isFirstTimeUser) {
-            setWarehouseEmployees(SEED_DATA.warehouse.employees);
-            initializedTables.current.add('warehouse_employees');
-          } else {
-            setWarehouseEmployees([]);
-            initializedTables.current.add('warehouse_employees');
+            if (whEmps.data.length > 0) {
+              setWarehouseEmployees(whEmps.data);
+            } else if (isFirstTimeUser) {
+              setWarehouseEmployees(SEED_DATA.warehouse.employees);
+            } else {
+              setWarehouseEmployees([]);
+            }
           }
 
           if (whLogs.data) {
@@ -344,62 +342,62 @@ const App: React.FC = () => {
           }
 
           // --- Logistics ---
-          if (freight.data && freight.data.length > 0) {
+          if (freight.data) {
             initializedTables.current.add('logistics');
-            setLogisticsData({
-              freightTables: freight.data.map((t: any) => ({
-                id: t.id, name: t.name, fuelPrice: t.fuel_price, avgConsumption: t.avg_consumption,
-                driverPerDieum: t.driver_per_dieum, insuranceRate: t.insurance_rate,
-                updatedAt: t.updated_at || new Date().toISOString()
-              })),
-              checklists: logData.data?.checklists || SEED_DATA.logistics.checklists,
-              savedRoutes: logData.data?.saved_routes || []
-            });
-          } else if (isFirstTimeUser) {
-            setLogisticsData(SEED_DATA.logistics as any);
-            initializedTables.current.add('logistics');
-          } else {
-            setLogisticsData({ freightTables: [], checklists: [], savedRoutes: [] });
-            initializedTables.current.add('logistics');
+            if (freight.data.length > 0) {
+              setLogisticsData({
+                freightTables: freight.data.map((t: any) => ({
+                  id: t.id, name: t.name, fuelPrice: t.fuel_price, avgConsumption: t.avg_consumption,
+                  driverPerDieum: t.driver_per_dieum, insuranceRate: t.insurance_rate,
+                  updatedAt: t.updated_at || new Date().toISOString()
+                })),
+                checklists: logData.data?.checklists || SEED_DATA.logistics.checklists,
+                savedRoutes: logData.data?.saved_routes || []
+              });
+            } else if (isFirstTimeUser) {
+              setLogisticsData(SEED_DATA.logistics as any);
+            } else {
+              setLogisticsData({ freightTables: [], checklists: [], savedRoutes: [] });
+            }
           }
 
           // --- Financial ---
-          if (trans.data && trans.data.length > 0) {
+          if (trans.data) {
             initializedTables.current.add('financial_transactions');
-            setFinancialTransactions(trans.data);
-          } else if (isFirstTimeUser) {
-            setFinancialTransactions(SEED_DATA.financial);
-            initializedTables.current.add('financial_transactions');
-          } else {
-            setFinancialTransactions([]);
-            initializedTables.current.add('financial_transactions');
+            if (trans.data.length > 0) {
+              setFinancialTransactions(trans.data);
+            } else if (isFirstTimeUser) {
+              setFinancialTransactions(SEED_DATA.financial);
+            } else {
+              setFinancialTransactions([]);
+            }
           }
 
           // --- Notes ---
-          if (notes.data && notes.data.length > 0) {
+          if (notes.data) {
             initializedTables.current.add('important_notes');
-            setImportantNotes(notes.data.map((n: any) => ({
-              ...n,
-              priority: (n.priority as NotePriority) || 'normal'
-            })));
-          } else if (isFirstTimeUser) {
-            setImportantNotes(SEED_DATA.notes as any);
-            initializedTables.current.add('important_notes');
-          } else {
-            setImportantNotes([]);
-            initializedTables.current.add('important_notes');
+            if (notes.data.length > 0) {
+              setImportantNotes(notes.data.map((n: any) => ({
+                ...n,
+                priority: (n.priority as NotePriority) || 'normal'
+              })));
+            } else if (isFirstTimeUser) {
+              setImportantNotes(SEED_DATA.notes as any);
+            } else {
+              setImportantNotes([]);
+            }
           }
 
           // --- WhatsApp ---
-          if (waTemp.data && waTemp.data.length > 0) {
+          if (waTemp.data) {
             initializedTables.current.add('whatsapp_templates');
-            setWhatsappTemplates(waTemp.data);
-          } else if (isFirstTimeUser) {
-            setWhatsappTemplates(SEED_DATA.whatsapp.templates);
-            initializedTables.current.add('whatsapp_templates');
-          } else {
-            setWhatsappTemplates([]);
-            initializedTables.current.add('whatsapp_templates');
+            if (waTemp.data.length > 0) {
+              setWhatsappTemplates(waTemp.data);
+            } else if (isFirstTimeUser) {
+              setWhatsappTemplates(SEED_DATA.whatsapp.templates);
+            } else {
+              setWhatsappTemplates([]);
+            }
           }
 
           if (waHist.data) {
@@ -421,15 +419,15 @@ const App: React.FC = () => {
           if (evts.data) { initializedTables.current.add('calendar_events'); setCalendarEvents(evts.data); }
           if (pts.data) { initializedTables.current.add('post_its'); setPostIts(pts.data); }
           if (emailsRes.data) { initializedTables.current.add('email_templates'); setEmails(emailsRes.data); }
-          if (linksRes.data && linksRes.data.length > 0) {
+          if (linksRes.data) {
             initializedTables.current.add('professional_links');
-            setLinks(linksRes.data.map((l: any) => ({ ...l, customIcon: l.custom_icon })));
-          } else if (isFirstTimeUser) {
-            setLinks(SEED_DATA.links);
-            initializedTables.current.add('professional_links');
-          } else {
-            setLinks([]);
-            initializedTables.current.add('professional_links');
+            if (linksRes.data.length > 0) {
+              setLinks(linksRes.data.map((l: any) => ({ ...l, customIcon: l.custom_icon })));
+            } else if (isFirstTimeUser) {
+              setLinks(SEED_DATA.links);
+            } else {
+              setLinks([]);
+            }
           }
           if (exts.data) { initializedTables.current.add('extensions'); setExtensions(exts.data); }
           if (sigs.data) { initializedTables.current.add('signatures'); setSignatures(sigs.data.map((s: any) => ({ ...s, dataUrl: s.data_url }))); }
@@ -469,7 +467,6 @@ const App: React.FC = () => {
 
          try {
         const kanbanCols = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
-        // ... rest of mapping logic remains the same ...
 
         const kanbanCards = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ 
             id: card.id,
