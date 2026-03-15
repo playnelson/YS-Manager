@@ -25,7 +25,7 @@ interface Employee {
   id: string;
   name: string;
   role: string;
-  department: string;
+  cpf: string;
   active: boolean;
 }
 
@@ -211,7 +211,7 @@ function printMaterialForm(employee: Employee, items: { code: string; name: stri
         <div class="info">
           <div><strong>Colaborador:</strong> ${employee.name}</div>
           <div><strong>Cargo:</strong> ${employee.role}</div>
-          <div><strong>Departamento:</strong> ${employee.department}</div>
+          <div><strong>CPF:</strong> ${employee.cpf}</div>
           <div><strong>Data de Emissão:</strong> ${date}</div>
         </div>
 
@@ -305,7 +305,7 @@ const EmployeeDetailModal: React.FC<{
             </div>
             <div>
               <p className="font-bold text-sm">{employee.name}</p>
-              <p className="text-[10px] opacity-70 uppercase tracking-wider">{employee.role} • {employee.department}</p>
+              <p className="text-[10px] opacity-70 uppercase tracking-wider">{employee.role} • CPF: {employee.cpf}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors"><X size={20}/></button>
@@ -565,7 +565,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
 
   const [showAddEmp, setShowAddEmp] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
-  const [newEmp, setNewEmp] = useState<Partial<Employee>>({ name: '', role: '', department: '', active: true });
+  const [newEmp, setNewEmp] = useState<Partial<Employee>>({ name: '', role: '', cpf: '', active: true });
 
   const handleAddItem = () => {
     if (!newItem.name?.trim()) return;
@@ -671,8 +671,8 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
 
   const handleAddEmployee = () => {
     if (!newEmp.name?.trim()) return;
-    saveEmployees([...employees, { id: genId(), name: newEmp.name, role: newEmp.role || '', department: newEmp.department || '', active: true }]);
-    setShowAddEmp(false); setNewEmp({ name: '', role: '', department: '', active: true });
+    saveEmployees([...employees, { id: genId(), name: newEmp.name, role: newEmp.role || '', cpf: newEmp.cpf || '', active: true }]);
+    setShowAddEmp(false); setNewEmp({ name: '', role: '', cpf: '', active: true });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1050,7 +1050,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
               <button onClick={() => setShowAddEmp(false)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15}/></button>
             </div>
             <div className="p-5 space-y-3">
-              {[{label:'Nome Completo *',key:'name',ph:'Ex: João da Silva'},{label:'Cargo',key:'role',ph:'Ex: Almoxarife'},{label:'Setor',key:'department',ph:'Ex: Produção, TI...'}].map(f => (
+              {[{label:'Nome Completo *',key:'name',ph:'Ex: João da Silva'},{label:'Cargo',key:'role',ph:'Ex: Almoxarife'},{label:'CPF',key:'cpf',ph:'000.000.000-00'}].map(f => (
                 <div key={f.key}>
                   <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">{f.label}</label>
                   <input type="text" placeholder={f.ph} value={(newEmp as any)[f.key]||''} onChange={e => setNewEmp({...newEmp,[f.key]:e.target.value})}
