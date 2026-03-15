@@ -1,5 +1,34 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { GitMerge, MessageSquare, RefreshCw, Calendar as CalendarIcon, Search, Truck, Cloud, Home, DollarSign, Package, Store } from 'lucide-react';
+import {
+  LogOut,
+  CalendarDays,
+  Menu,
+  X,
+  RefreshCw,
+  Box,
+  Truck,
+  Users,
+  Settings,
+  Link, // renamed below
+  StickyNote,
+  DollarSign,
+  Cloud,
+  Puzzle,
+  FileSignature,
+  FolderOpen,
+  LayoutDashboard,
+  KanbanSquare,
+  Network,
+  MessageCircle,
+  Check,
+  GitMerge,
+  MessageSquare,
+  Calendar as CalendarIcon,
+  Search,
+  Home,
+  Package,
+  Store
+} from 'lucide-react';
 import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState, KanbanState, KanbanPriority, NotePriority } from './types';
 import { Auth } from './components/Auth';
 import { MessageLinker } from './components/MessageLinker';
@@ -613,12 +642,21 @@ const App: React.FC = () => {
               <span className="material-symbols-outlined text-gray-500" style={{ fontSize: '16px' }}>calendar_month</span>
               <span className="text-xs font-medium">{getFullDate()}</span>
             </div>
-            {isSyncing && (
-              <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                <RefreshCw size={12} className="animate-spin" />
-                <span className="hidden sm:inline">Salvando...</span>
-              </div>
-            )}
+            
+            {/* Sync Indicator */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/50 dark:bg-gray-800/50 border border-palette-mediumDark dark:border-gray-700">
+              {isSyncing ? (
+                <>
+                  <RefreshCw size={13} className="animate-spin text-blue-500" />
+                  <span className="text-blue-600 dark:text-blue-400">Salvando...</span>
+                </>
+              ) : (
+                <>
+                  <Check size={14} className="text-emerald-500" />
+                  <span className="text-emerald-600 dark:text-emerald-400">Sincronizado</span>
+                </>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-1">
             {user.id !== 'demo_user_id' && !user.googleAccessToken && (
