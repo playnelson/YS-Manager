@@ -114,6 +114,7 @@ const App: React.FC = () => {
   const [kanbanData, setKanbanData] = useState<KanbanState>(initialKanban);
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const initializedTables = useRef<Set<string>>(new Set());
 
@@ -439,19 +440,37 @@ const App: React.FC = () => {
       finally { setIsSyncing(false); setIsDataLoaded(true); }
     };
     fetchData();
-  }, [user]);
+  }, [user?.id]);
+
+  // Page Unload Protection
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'Você tem alterações que ainda não foram salvas. Deseja realmente sair?';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
     if (!user || !isDataLoaded) return;
+    setIsSyncing(true);
+    setHasUnsavedChanges(true);
     const saveData = async () => {
       if (user.id === 'demo_user_id') {
         const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs, financialTransactions, warehouseInventory, warehouseLogs };
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
+        setHasUnsavedChanges(false);
+        setIsSyncing(false);
         return;
       }
 
          try {
         const kanbanCols = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
+        // ... rest of mapping logic remains the same ...
+
         const kanbanCards = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ 
             id: card.id,
             user_id: user.id,
@@ -527,10 +546,13 @@ const App: React.FC = () => {
         ].filter(Boolean));
       } catch (err) {
         console.error('Erro ao salvar dados:', err);
-      } finally { setIsSyncing(false); }
+      } finally { 
+        setIsSyncing(false); 
+        setHasUnsavedChanges(false);
+      }
     };
 
-    const timeout = setTimeout(saveData, 3000);
+    const timeout = setTimeout(saveData, 1000);
     return () => clearTimeout(timeout);
   }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, whatsappTemplates, whatsappHistory, kanbanData]);
 
@@ -645,7 +667,7 @@ const App: React.FC = () => {
             
             {/* Sync Indicator */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/50 dark:bg-gray-800/50 border border-palette-mediumDark dark:border-gray-700">
-              {isSyncing ? (
+              {(isSyncing || hasUnsavedChanges) ? (
                 <>
                   <RefreshCw size={13} className="animate-spin text-blue-500" />
                   <span className="text-blue-600 dark:text-blue-400">Salvando...</span>

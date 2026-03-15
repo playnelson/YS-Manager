@@ -132,6 +132,7 @@ function parseCSV(text: string): Partial<InventoryItem>[] {
     headers.forEach((h, i) => { obj[h] = vals[i] ?? ''; });
     const consumivel = (obj['consumivel'] || '').toLowerCase();
     return {
+      id:         generateUUID(),
       code:       obj['codigo']    || obj['code']     || '',
       name:       obj['descricao'] || obj['name']     || obj['nome'] || '',
       category:   obj['categoria'] || obj['category'] || 'Geral',
@@ -152,6 +153,7 @@ function parseXLSX(data: ArrayBuffer): Partial<InventoryItem>[] {
   return jsonData.map(row => {
     const consumableStr = String(row['Consumível?'] || row['consumivel'] || row['Consumivel'] || '').toLowerCase();
     return {
+      id:         generateUUID(),
       code:       String(row['Código']    || row['codigo']    || row['code'] || ''),
       name:       String(row['Descrição'] || row['descricao'] || row['name'] || row['nome'] || ''),
       category:   String(row['Categoria'] || row['categoria'] || row['category'] || 'Geral'),
@@ -696,10 +698,28 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
 
   const handleImportConfirm = () => {
     if (!importPreview) return;
-    const newItems: InventoryItem[] = importPreview.map(p => ({
-      id: genId(), code: p.code || nextCode(inventory), name: p.name!, category: p.category || 'Geral',
-      consumable: !!p.consumable, quantity: Number(p.quantity) || 0, minStock: Number(p.minStock) || 0,
-      unit: p.unit || 'Unid.', lastUpdated: new Date().toISOString(),
+    
+    // Get the base number for new MAT-XXX codes once
+    const getBaseCodeNum = () => {
+      const nums = inventory.map(i => {
+        const m = i.code.match(/MAT-(\d+)/);
+        return m ? parseInt(m[1]) : 0;
+      });
+      return Math.max(0, ...nums);
+    };
+    
+    const baseNum = getBaseCodeNum();
+    
+    const newItems: InventoryItem[] = importPreview.map((p, idx) => ({
+      id: p.id || generateUUID(), 
+      code: p.code || `MAT-${String(baseNum + idx + 1).padStart(3, '0')}`, 
+      name: p.name!, 
+      category: p.category || 'Geral',
+      consumable: !!p.consumable, 
+      quantity: Number(p.quantity) || 0, 
+      minStock: Number(p.minStock) || 0,
+      unit: p.unit || 'Unid.', 
+      lastUpdated: new Date().toISOString(),
     }));
     saveInventory([...inventory, ...newItems]);
     setImportPreview(null);
