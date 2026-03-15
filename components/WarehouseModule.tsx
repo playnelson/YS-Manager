@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import {
   Package, Plus, Search, AlertTriangle, History, ArrowUpRight, ArrowDownLeft,
   Trash2, Archive, Box, Download, Upload, Users, X, Check, FileSpreadsheet,
-  UserPlus, ShoppingCart, Minus, Printer
+  UserPlus, ShoppingCart, Minus, Printer, Edit, PackagePlus
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -18,6 +18,7 @@ interface InventoryItem {
   quantity: number;     // Qtd. Atual
   minStock: number;     // Qtd. Mínima
   unit: string;         // Unidade
+  itemsPerContainer?: number; // Qtd. por Caixa/Embalagem
   lastUpdated: string;
 }
 
@@ -105,7 +106,7 @@ function exportInventory(inventory: InventoryItem[]) {
 
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Estoque Atual');
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Almoxarifado Atual');
   
   // Apply some basic column widths
   const wscols = [
@@ -119,7 +120,7 @@ function exportInventory(inventory: InventoryItem[]) {
   ];
   worksheet['!cols'] = wscols;
 
-  XLSX.writeFile(workbook, `estoque_atual_${new Date().toISOString().split('T')[0]}.xlsx`);
+  XLSX.writeFile(workbook, `almoxarifado_atual_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
 function parseCSV(text: string): Partial<InventoryItem>[] {
@@ -164,6 +165,15 @@ function parseXLSX(data: ArrayBuffer): Partial<InventoryItem>[] {
     };
   }).filter(i => i.name && i.name !== 'undefined');
 }
+
+const applyCPFMask = (value: string) => {
+  const nums = value.replace(/\D/g, '').slice(0, 11);
+  return nums
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+    .replace(/(-\d{2})\d+?$/, '$1');
+};
 
 function nextCode(inventory: InventoryItem[]): string {
   const nums = inventory.map(i => {
@@ -305,7 +315,7 @@ const EmployeeDetailModal: React.FC<{
             </div>
             <div>
               <p className="font-bold text-sm">{employee.name}</p>
-              <p className="text-[10px] opacity-70 uppercase tracking-wider">{employee.role} • CPF: {employee.cpf}</p>
+              <p className="text-[10px] opacity-70 uppercase tracking-wider">{employee.role} • CPF: {applyCPFMask(employee.cpf)}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors"><X size={20}/></button>
@@ -459,6 +469,36 @@ const CartModal: React.FC<{
   );
 };
 
+const QuantityModal: React.FC<{
+  item: InventoryItem;
+  onConfirm: (qty: number) => void;
+  onClose: () => void;
+}> = ({ item, onConfirm, onClose }) => {
+  const [qty, setQty] = useState(1);
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xs border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-5 py-4 bg-amber-500 text-white flex items-center justify-between">
+          <span className="font-bold text-sm">Quantidade p/ Carrinho</span>
+          <button onClick={onClose}><X size={18}/></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">{item.name}</p>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setQty(Math.max(1, qty - 1))} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg"><Minus size={16}/></button>
+            <input type="number" value={qty} onChange={e => setQty(Math.max(1, Number(e.target.value)))}
+              className="flex-1 bg-gray-50 dark:bg-gray-800 border-none text-center font-bold text-lg rounded-lg py-2 focus:ring-0" />
+            <button onClick={() => setQty(qty + 1)} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg"><Plus size={16}/></button>
+          </div>
+          <button onClick={() => onConfirm(qty)} className="w-full py-2.5 bg-amber-500 text-white rounded-xl font-bold shadow-lg hover:bg-amber-600 transition-colors">
+            Adicionar {qty} {item.unit}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MovementModal: React.FC<MovementModalProps> = ({ item, type, employees, onConfirm, onClose }) => {
   const [qty, setQty] = useState(1);
   const [empId, setEmpId] = useState('');
@@ -481,7 +521,7 @@ const MovementModal: React.FC<MovementModalProps> = ({ item, type, employees, on
             <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1.5">Quantidade</label>
             <input type="number" step="any" min={0} value={qty} onChange={e => setQty(Math.max(0, Number(e.target.value)))}
               className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
-            <p className="text-[10px] text-gray-400 mt-1">Estoque atual: <b>{item.quantity}</b> {item.unit}</p>
+            <p className="text-[10px] text-gray-400 mt-1">Quantidade atual: <b>{item.quantity}</b> {item.unit}</p>
           </div>
           <div>
             <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1.5 flex items-center gap-1"><Users size={11}/> Funcionário Responsável</label>
@@ -556,21 +596,25 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  
   const [movementTarget, setMovementTarget] = useState<{ item: InventoryItem; type: 'entry' | 'exit' } | null>(null);
+  const [quantityTarget, setQuantityTarget] = useState<InventoryItem | null>(null);
   const [importPreview, setImportPreview] = useState<Partial<InventoryItem>[] | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const emptyItem: Partial<InventoryItem> = { code: '', name: '', category: 'EPI', consumable: false, quantity: 0, minStock: 0, unit: 'Unid.' };
+  const emptyItem: Partial<InventoryItem> = { code: '', name: '', category: 'EPI', consumable: false, quantity: 0, minStock: 0, unit: 'Unid.', itemsPerContainer: 1 };
   const [newItem, setNewItem] = useState<Partial<InventoryItem>>(emptyItem);
 
   const [showAddEmp, setShowAddEmp] = useState(false);
+  const [editingEmp, setEditingEmp] = useState<Employee | null>(null);
   const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
   const [newEmp, setNewEmp] = useState<Partial<Employee>>({ name: '', role: '', cpf: '', active: true });
 
   const handleAddItem = () => {
     if (!newItem.name?.trim()) return;
     const item: InventoryItem = {
-      id: genId(),
+      id: editingItem?.id || genId(),
       code: newItem.code?.trim() || nextCode(inventory),
       name: newItem.name,
       category: newItem.category || 'Geral',
@@ -578,9 +622,17 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
       quantity: Number(newItem.quantity) || 0,
       minStock: Number(newItem.minStock) || 0,
       unit: newItem.unit || 'Unid.',
+      itemsPerContainer: Number(newItem.itemsPerContainer) || 1,
       lastUpdated: new Date().toISOString(),
     };
-    saveInventory([...inventory, item]);
+    
+    if (editingItem) {
+      saveInventory(inventory.map(i => i.id === editingItem.id ? item : i));
+      setEditingItem(null);
+    } else {
+      saveInventory([...inventory, item]);
+    }
+    
     setShowAddModal(false);
     setNewItem(emptyItem);
   };
@@ -620,16 +672,51 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
     saveLogs([log, ...logs].slice(0, 200));
   };
 
-  const handleAddToCart = (item: InventoryItem) => {
-    if (cart.some(c => c.itemId === item.id)) return;
-    setCart([...cart, {
-      id: genId(),
-      itemId: item.id,
-      code: item.code,
-      name: item.name,
-      quantity: 1,
-      unit: item.unit
-    }]);
+  const handleUnpack = (item: InventoryItem) => {
+    if (!item.itemsPerContainer || item.itemsPerContainer <= 1) return;
+    if (item.quantity < 1) return;
+
+    const updated = inventory.map(i => {
+      if (i.id === item.id) {
+        return {
+          ...i,
+          quantity: i.quantity - 1 + (item.itemsPerContainer || 0),
+          lastUpdated: new Date().toISOString()
+        };
+      }
+      return i;
+    });
+    saveInventory(updated);
+    
+    const log: StockLog = { 
+      id: genId(), 
+      itemId: item.id, 
+      itemCode: item.code, 
+      itemName: item.name, 
+      type: 'entry', 
+      quantity: item.itemsPerContainer - 1, 
+      date: new Date().toISOString(), 
+      employeeId: 'system', 
+      employeeName: 'Sistema', 
+      note: 'Desmembramento de caixa/container' 
+    };
+    saveLogs([log, ...logs].slice(0, 200));
+  };
+
+  const handleAddToCart = (item: InventoryItem, qty: number = 1) => {
+    const existing = cart.find(c => c.itemId === item.id);
+    if (existing) {
+      setCart(cart.map(c => c.itemId === item.id ? { ...c, quantity: c.quantity + qty } : c));
+    } else {
+      setCart([...cart, {
+        id: genId(),
+        itemId: item.id,
+        code: item.code,
+        name: item.name,
+        quantity: qty,
+        unit: item.unit
+      }]);
+    }
   };
 
   const handleCheckout = (employeeId: string, note: string) => {
@@ -671,8 +758,23 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
 
   const handleAddEmployee = () => {
     if (!newEmp.name?.trim()) return;
-    saveEmployees([...employees, { id: genId(), name: newEmp.name, role: newEmp.role || '', cpf: newEmp.cpf || '', active: true }]);
-    setShowAddEmp(false); setNewEmp({ name: '', role: '', cpf: '', active: true });
+    const employee: Employee = {
+      id: editingEmp?.id || genId(),
+      name: newEmp.name,
+      role: newEmp.role || '',
+      cpf: newEmp.cpf || '',
+      active: true
+    };
+
+    if (editingEmp) {
+      saveEmployees(employees.map(e => e.id === editingEmp.id ? employee : e));
+      setEditingEmp(null);
+    } else {
+      saveEmployees([...employees, employee]);
+    }
+    
+    setShowAddEmp(false); 
+    setNewEmp({ name: '', role: '', cpf: '', active: true });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -733,7 +835,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
   const lowStock = inventory.filter(i => i.minStock > 0 && i.quantity <= i.minStock);
 
   const TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'inventory', label: 'Estoque', icon: <Package size={14}/> },
+    { id: 'inventory', label: 'Almoxarifado', icon: <Package size={14}/> },
     { id: 'employees', label: 'Funcionários', icon: <Users size={14}/> },
     { id: 'history',   label: 'Histórico',    icon: <History size={14}/> },
   ];
@@ -861,13 +963,31 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                         <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400">{item.minStock || '—'}</td>
                         <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400 text-xs">{item.unit}</td>
                         <td className="px-4 py-2.5 text-right flex items-center justify-end gap-1.5">
-                          <button onClick={() => handleAddToCart(item)} title="Adicionar ao Carrinho"
+                          {item.itemsPerContainer && item.itemsPerContainer > 1 && item.quantity >= 1 && (
+                            <button onClick={() => handleUnpack(item)} title={`Desmembrar 1 ${item.unit} em ${item.itemsPerContainer} unidades`}
+                              className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors">
+                              <Box size={14}/>
+                            </button>
+                          )}
+                          <button onClick={() => setQuantityTarget(item)} title="Adicionar ao Carrinho"
                             className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
                             <ShoppingCart size={14}/>
+                          </button>
+                          <button onClick={() => { setNewItem(item); setEditingItem(item); setShowAddModal(true); }} title="Editar"
+                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+                            <Edit size={14}/>
                           </button>
                           <button onClick={() => setMovementTarget({ item, type: 'entry' })} title="Entrada"
                             className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors">
                             <ArrowDownLeft size={15}/>
+                          </button>
+                          <button onClick={() => handleMovement(item.itemsPerContainer || 1, 'system', 'Recebimento de Caixa')} title={`Adicionar 1 Caixa (${item.itemsPerContainer || 1} ${item.unit})`}
+                            className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors">
+                            <PackagePlus size={15}/>
+                          </button>
+                          <button onClick={() => handleMovement(1, 'system', 'Remoção de 1 Unidade')} title={`Remover 1 ${item.unit}`}
+                            className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors">
+                            <Minus size={14}/>
                           </button>
                           <button onClick={() => setMovementTarget({ item, type: 'exit' })} title="Saída"
                             className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors">
@@ -904,12 +1024,21 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{emp.name}</p>
-                      <button 
-                        onClick={() => setSelectedEmp(emp)}
-                        className="text-[11px] text-blue-500 hover:underline flex items-center gap-1"
-                      >
-                        Ver detalhes & histórico
-                      </button>
+                      <p className="text-[10px] text-gray-500 font-mono">{applyCPFMask(emp.cpf)}</p>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setSelectedEmp(emp)}
+                          className="text-[11px] text-blue-500 hover:underline flex items-center gap-1"
+                        >
+                          Ver detalhes
+                        </button>
+                        <button 
+                          onClick={() => { setNewEmp(emp); setEditingEmp(emp); setShowAddEmp(true); }}
+                          className="text-[11px] text-gray-400 hover:text-blue-500 flex items-center gap-1"
+                        >
+                          • Editar
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button onClick={() => saveEmployees(employees.map(e => e.id === emp.id ? { ...e, active: !e.active } : e))}
@@ -974,8 +1103,8 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-              <span className="font-bold text-sm text-gray-800 dark:text-white">Novo Item de Estoque</span>
-              <button onClick={() => setShowAddModal(false)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15}/></button>
+              <span className="font-bold text-sm text-gray-800 dark:text-white">{editingItem ? 'Editar Item' : 'Novo Item de Almoxarifado'}</span>
+              <button onClick={() => { setShowAddModal(false); setEditingItem(null); setNewItem(emptyItem); }} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15}/></button>
             </div>
             <div className="p-5 grid grid-cols-2 gap-3">
               {/* Código */}
@@ -1023,18 +1152,24 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
               </div>
               {/* Unidade */}
-              <div className="col-span-2">
+              <div>
                 <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Unidade</label>
                 <select value={newItem.unit||'Unid.'} onChange={e => setNewItem({...newItem,unit:e.target.value})}
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30">
                   {UNITS.map(u => <option key={u}>{u}</option>)}
                 </select>
               </div>
+              {/* Qtd. por Container */}
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Qtd. p/ Container</label>
+                <input type="number" min={1} value={newItem.itemsPerContainer||1} onChange={e => setNewItem({...newItem,itemsPerContainer:Number(e.target.value)})} placeholder="Ex: 50 para uma caixa"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+              </div>
             </div>
             <div className="px-5 pb-5 flex justify-end gap-2">
-              <button onClick={() => setShowAddModal(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Cancelar</button>
+              <button onClick={() => { setShowAddModal(false); setEditingItem(null); setNewItem(emptyItem); }} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Cancelar</button>
               <button onClick={handleAddItem} className="px-5 py-2 rounded-xl text-sm font-semibold bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm hover:bg-gray-700 transition-all">
-                <Check size={13} className="inline mr-1.5"/>Salvar Item
+                <Check size={13} className="inline mr-1.5"/>{editingItem ? 'Atualizar' : 'Salvar Item'}
               </button>
             </div>
           </div>
@@ -1046,26 +1181,43 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-              <span className="font-bold text-sm text-gray-800 dark:text-white">Cadastrar Funcionário</span>
-              <button onClick={() => setShowAddEmp(false)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15}/></button>
+              <span className="font-bold text-sm text-gray-800 dark:text-white">{editingEmp ? 'Editar Funcionário' : 'Cadastrar Funcionário'}</span>
+              <button onClick={() => { setShowAddEmp(false); setEditingEmp(null); setNewEmp({ name: '', role: '', cpf: '', active: true }); }} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15}/></button>
             </div>
             <div className="p-5 space-y-3">
-              {[{label:'Nome Completo *',key:'name',ph:'Ex: João da Silva'},{label:'Cargo',key:'role',ph:'Ex: Almoxarife'},{label:'CPF',key:'cpf',ph:'000.000.000-00'}].map(f => (
-                <div key={f.key}>
-                  <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">{f.label}</label>
-                  <input type="text" placeholder={f.ph} value={(newEmp as any)[f.key]||''} onChange={e => setNewEmp({...newEmp,[f.key]:e.target.value})}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
-                </div>
-              ))}
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Nome Completo *</label>
+                <input type="text" placeholder="Ex: João da Silva" value={newEmp.name||''} onChange={e => setNewEmp({...newEmp, name: e.target.value})}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Cargo</label>
+                <input type="text" placeholder="Ex: Almoxarife" value={newEmp.role||''} onChange={e => setNewEmp({...newEmp, role: e.target.value})}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">CPF</label>
+                <input type="text" placeholder="000.000.000-00" maxLength={14} value={newEmp.cpf||''} onChange={e => setNewEmp({...newEmp, cpf: applyCPFMask(e.target.value)})}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+              </div>
             </div>
             <div className="px-5 pb-5 flex justify-end gap-2">
-              <button onClick={() => setShowAddEmp(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Cancelar</button>
+              <button onClick={() => { setShowAddEmp(false); setEditingEmp(null); setNewEmp({ name: '', role: '', cpf: '', active: true }); }} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Cancelar</button>
               <button onClick={handleAddEmployee} className="px-5 py-2 rounded-xl text-sm font-semibold bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm hover:bg-gray-700 transition-all">
-                <Check size={13} className="inline mr-1.5"/>Cadastrar
+                <Check size={13} className="inline mr-1.5"/>{editingEmp ? 'Atualizar' : 'Cadastrar'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Quantity Selector ── */}
+      {quantityTarget && (
+        <QuantityModal 
+          item={quantityTarget} 
+          onConfirm={(q) => { handleAddToCart(quantityTarget, q); setQuantityTarget(null); }} 
+          onClose={() => setQuantityTarget(null)} 
+        />
       )}
 
       {/* ── Movement Modal ── */}

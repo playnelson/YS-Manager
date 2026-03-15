@@ -69,7 +69,7 @@ const DEFAULT_TABS = [
   { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={18} /> },
   { id: 'shared_docs', label: 'Docs', icon: <Cloud size={18} /> },
   { id: 'financial', label: 'Financeiro', icon: <DollarSign size={18} /> },
-  { id: 'warehouse', label: 'Estoque', icon: <Package size={18} /> },
+  { id: 'warehouse', label: 'Almoxarifado', icon: <Package size={18} /> },
   { id: 'modules', label: 'Loja', icon: <Store size={18} /> },
 ];
 
