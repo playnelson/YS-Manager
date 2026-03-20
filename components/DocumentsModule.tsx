@@ -322,29 +322,3 @@ export const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (fil
     </div>
   );
 };
-
-export const DocumentsModule: React.FC<{ personalFiles: StoredFile[], onFilesChange: (files: StoredFile[]) => void }> = ({ personalFiles, onFilesChange }) => {
-  const [activeTab, setActiveTab] = useState<'manager' | 'generator' | 'signatures'>('manager');
-
-  return (
-    <div className="h-full flex flex-col bg-win95-bg">
-      <div className="flex bg-[#d0d0d0] p-1 gap-1 shrink-0 border-b border-gray-400">
-        <button onClick={() => setActiveTab('manager')} className={`px-4 py-1.5 text-xs font-bold uppercase transition-all flex items-center gap-2 ${activeTab === 'manager' ? 'win95-sunken bg-white' : 'win95-raised hover:bg-gray-100'}`}>
-          <FolderOpen size={14} className="text-blue-600"/> Arquivos
-        </button>
-        <button onClick={() => setActiveTab('generator')} className={`px-4 py-1.5 text-xs font-bold uppercase transition-all flex items-center gap-2 ${activeTab === 'generator' ? 'win95-sunken bg-white' : 'win95-raised hover:bg-gray-100'}`}>
-          <FileText size={14} className="text-emerald-600"/> Gerador
-        </button>
-        <button onClick={() => setActiveTab('signatures')} className={`px-4 py-1.5 text-xs font-bold uppercase transition-all flex items-center gap-2 ${activeTab === 'signatures' ? 'win95-sunken bg-white' : 'win95-raised hover:bg-gray-100'}`}>
-          <PenTool size={14} className="text-purple-600"/> Assinaturas
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-hidden">
-        {activeTab === 'manager' && <PersonalFileManager files={personalFiles} onChange={onFilesChange} />}
-        {activeTab === 'generator' && <DocumentGenerator />}
-        {activeTab === 'signatures' && <SignatureManager />}
-      </div>
-    </div>
-  );
-};
