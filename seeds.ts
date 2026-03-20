@@ -28,6 +28,15 @@ export const SEED_DATA = {
     employees: [
       { id: generateUUID(), name: 'João Silva', role: 'Almoxarife', department: 'Logística', active: true },
       { id: generateUUID(), name: 'Maria Santos', role: 'Técnica de Segurança', department: 'SESMT', active: true }
+    ],
+    categories: [
+      { id: generateUUID(), name: 'Geral', color: '#94a3b8' },
+      { id: generateUUID(), name: 'EPI', color: '#10b981' },
+      { id: generateUUID(), name: 'Ferramenta', color: '#f59e0b' },
+      { id: generateUUID(), name: 'Escritório', color: '#3b82f6' },
+      { id: generateUUID(), name: 'Limpeza', color: '#ec4899' },
+      { id: generateUUID(), name: 'Equipamento', color: '#8b5cf6' },
+      { id: generateUUID(), name: 'Manutenção', color: '#ef4444' }
     ]
   },
   logistics: {

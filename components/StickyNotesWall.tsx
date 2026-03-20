@@ -1,7 +1,7 @@
 
 import { generateUUID } from '../uuid';
 import React, { useState } from 'react';
-import { Plus, Trash2, Palette, Calendar, StickyNote, Download, Clock, X, FileText, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, Palette, Calendar, StickyNote, Download, Clock, X, FileText, ArrowRight, Maximize2 } from 'lucide-react';
 import { PostIt } from '../types';
 import { Button } from './ui/Button';
 
@@ -11,11 +11,11 @@ interface StickyNotesWallProps {
 }
 
 const COLORS = [
-  { name: 'sand', bg: 'bg-[#FEF9E1]', border: 'border-[#E6D5B8]', bar: 'bg-[#B4B4B8]', text: 'text-palette-darkest' },
-  { name: 'blue', bg: 'bg-[#E3F2FD]', border: 'border-[#BBDEFB]', bar: 'bg-[#B4B4B8]', text: 'text-palette-darkest' },
-  { name: 'mint', bg: 'bg-[#E8F5E9]', border: 'border-[#C8E6C9]', bar: 'bg-[#B4B4B8]', text: 'text-palette-darkest' },
-  { name: 'pink', bg: 'bg-[#FCE4EC]', border: 'border-[#F8BBD0]', bar: 'bg-[#B4B4B8]', text: 'text-palette-darkest' },
-  { name: 'white', bg: 'bg-palette-lightest', border: 'border-palette-mediumDark', bar: 'bg-palette-mediumDark', text: 'text-palette-darkest' },
+  { name: 'sand', bg: 'bg-[#FFFDE7]', border: 'border-[#FFF59D]', bar: 'bg-[#FDD835]', text: 'text-zinc-900' },
+  { name: 'blue', bg: 'bg-[#E3F2FD]', border: 'border-[#BBDEFB]', bar: 'bg-[#42A5F5]', text: 'text-zinc-900' },
+  { name: 'mint', bg: 'bg-[#E8F5E9]', border: 'border-[#C8E6C9]', bar: 'bg-[#66BB6A]', text: 'text-zinc-900' },
+  { name: 'pink', bg: 'bg-[#FCE4EC]', border: 'border-[#F8BBD0]', bar: 'bg-[#EC407A]', text: 'text-zinc-900' },
+  { name: 'white', bg: 'bg-white', border: 'border-zinc-200', bar: 'bg-zinc-400', text: 'text-zinc-900' },
 ];
 
 export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChange }) => {
@@ -35,6 +35,7 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
       text: '',
       color: 'sand',
       rotation: 0,
+      size: 'sm',
       createdAt: new Date().toISOString()
     };
     onChange([newNote, ...notes]);
@@ -50,6 +51,18 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
         const currentIndex = COLORS.findIndex(c => c.name === n.color);
         const nextIndex = (currentIndex + 1) % COLORS.length;
         return { ...n, color: COLORS[nextIndex].name };
+      }
+      return n;
+    }));
+  };
+
+  const changeSize = (id: string) => {
+    const sizes: ('sm' | 'md' | 'lg')[] = ['sm', 'md', 'lg'];
+    onChange(notes.map(n => {
+      if (n.id === id) {
+        const currentSize = n.size || 'sm';
+        const nextIndex = (sizes.indexOf(currentSize) + 1) % sizes.length;
+        return { ...n, size: sizes[nextIndex] };
       }
       return n;
     }));
@@ -119,7 +132,7 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
   };
 
   return (
-    <div className="h-full flex flex-col bg-palette-mediumLight/10 font-sans">
+    <div className="h-full flex flex-col bg-zinc-50 font-sans">
       <div className="mb-4 flex justify-between items-center bg-palette-lightest win95-raised p-2 shrink-0 gap-2">
         <div className="flex items-center gap-2 px-2 flex-1">
           <StickyNote size={18} className="text-palette-darkest" />
@@ -156,10 +169,16 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
                 ? new Date(note.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
                 : '';
 
+              const sizeClasses = {
+                sm: 'col-span-1 aspect-square',
+                md: 'col-span-1 md:col-span-2 aspect-video md:aspect-auto',
+                lg: 'col-span-2 row-span-2 aspect-square'
+              };
+
               return (
                 <div
                   key={note.id}
-                  className={`${colorInfo.bg} ${colorInfo.border} border-t border-l shadow-[4px_4px_0px_rgba(0,0,0,0.15)] aspect-square flex flex-col transition-all group overflow-hidden hover:-translate-y-1 hover:shadow-[6px_6px_0px_rgba(0,0,0,0.1)] relative`}
+                  className={`${colorInfo.bg} ${colorInfo.border} ${sizeClasses[note.size || 'sm']} border-t border-l shadow-[4px_4px_0px_rgba(0,0,0,0.15)] flex flex-col transition-all group overflow-hidden hover:-translate-y-1 hover:shadow-[6px_6px_0px_rgba(0,0,0,0.1)] relative`}
                 >
                   {/* Barra superior do Post-it */}
                   <div className={`h-1.5 w-full ${colorInfo.bar} opacity-40`} />
@@ -186,13 +205,22 @@ export const StickyNotesWall: React.FC<StickyNotesWallProps> = ({ notes, onChang
                     />
 
                     <div className="mt-2 flex justify-between items-center pt-2 border-t border-palette-mediumDark/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => changeColor(note.id)}
-                        className="p-1 hover:bg-black/5 rounded text-black/60 transition-colors"
-                        title="Mudar Cor"
-                      >
-                        <Palette size={14} />
-                      </button>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => changeColor(note.id)}
+                          className="p-1 hover:bg-black/5 rounded text-black/60 transition-colors"
+                          title="Mudar Cor"
+                        >
+                          <Palette size={14} />
+                        </button>
+                        <button
+                          onClick={() => changeSize(note.id)}
+                          className="p-1 hover:bg-black/5 rounded text-black/60 transition-colors"
+                          title="Mudar Tamanho"
+                        >
+                          <Maximize2 size={14} className={note.size === 'lg' ? 'rotate-45' : ''} />
+                        </button>
+                      </div>
                       <button
                         onClick={() => deleteNote(note.id)}
                         className="p-1 hover:bg-red-50 text-red-700 rounded transition-colors"

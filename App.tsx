@@ -109,6 +109,7 @@ const App: React.FC = () => {
   const [warehouseInventory, setWarehouseInventory] = useState<any[]>([]);
   const [warehouseEmployees, setWarehouseEmployees] = useState<any[]>([]);
   const [warehouseLogs, setWarehouseLogs] = useState<any[]>([]);
+  const [warehouseCategories, setWarehouseCategories] = useState<any[]>([]);
   const [whatsappTemplates, setWhatsappTemplates] = useState<any[]>([]);
   const [whatsappHistory, setWhatsappHistory] = useState<any[]>([]);
   const [kanbanData, setKanbanData] = useState<KanbanState>(initialKanban);
@@ -206,6 +207,24 @@ const App: React.FC = () => {
       }
     }) as any;
 
+    const handleLinkGoogle = async () => {
+      try {
+        const { data, error } = await supabase.auth.linkIdentity({
+          provider: 'google',
+          options: {
+            queryParams: { access_type: 'offline', prompt: 'consent' },
+            scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/contacts.readonly',
+            redirectTo: window.location.origin
+          }
+        });
+        if (error) throw error;
+        if (data?.url) window.location.href = data.url;
+      } catch (err: any) {
+        console.error('Erro ao vincular conta Google:', err);
+        alert('Erro ao vincular conta Google: ' + (err.message || JSON.stringify(err)));
+      }
+    };
+
     window.addEventListener('link-google', handleLinkGoogle);
     return () => {
       subscription.unsubscribe();
@@ -240,6 +259,10 @@ const App: React.FC = () => {
             if (parsed.hiddenTabs) setHiddenTabs(parsed.hiddenTabs || []);
             if (parsed.kanban) setKanbanData(parsed.kanban || initialKanban);
             if (parsed.financialTransactions) setFinancialTransactions(parsed.financialTransactions || []);
+            if (parsed.warehouseInventory) setWarehouseInventory(parsed.warehouseInventory || []);
+            if (parsed.warehouseEmployees) setWarehouseEmployees(parsed.warehouseEmployees || []);
+            if (parsed.warehouseLogs) setWarehouseLogs(parsed.warehouseLogs || []);
+            if (parsed.warehouseCategories) setWarehouseCategories(parsed.warehouseCategories || SEED_DATA.warehouse.categories);
           }
         } else {
           // Helper to fetch and log individual table status
@@ -258,7 +281,7 @@ const App: React.FC = () => {
           };
 
           const [
-            kbCols, kbCards, evts, notes, pts, trans, freight, settings, emailsRes, linksRes, exts, sigs, files, flow, logData, whInv, whEmps, whLogs, waTemp, waHist
+            kbCols, kbCards, evts, notes, pts, trans, freight, settings, emailsRes, linksRes, exts, sigs, files, flow, logData, whInv, whEmps, whLogs, whCats, waTemp, waHist
           ] = await Promise.all([
             safeFetch(supabase.from('kanban_columns').select('*').eq('user_id', user.id).order('order'), 'kanban_columns'),
             safeFetch(supabase.from('kanban_cards').select('*').eq('user_id', user.id).order('order'), 'kanban_cards'),
@@ -278,6 +301,7 @@ const App: React.FC = () => {
             safeFetch(supabase.from('warehouse_inventory').select('*').eq('user_id', user.id), 'warehouse_inventory'),
             safeFetch(supabase.from('warehouse_employees').select('*').eq('user_id', user.id), 'warehouse_employees'),
             safeFetch(supabase.from('warehouse_logs').select('*').eq('user_id', user.id), 'warehouse_logs'),
+            safeFetch(supabase.from('warehouse_categories').select('*').eq('user_id', user.id), 'warehouse_categories'),
             safeFetch(supabase.from('whatsapp_templates').select('*').eq('user_id', user.id), 'whatsapp_templates'),
             safeFetch(supabase.from('whatsapp_history').select('*').eq('user_id', user.id).limit(50).order('timestamp', { ascending: false }), 'whatsapp_history')
           ]);
@@ -339,6 +363,17 @@ const App: React.FC = () => {
               employeeId: l.employee_id || '', employeeName: l.employee_name,
               note: l.note, date: l.date, itemCode: l.item_code || '', itemName: l.item_name || ''
             })));
+          }
+
+          if (whCats.data) {
+            initializedTables.current.add('warehouse_categories');
+            if (whCats.data.length > 0) {
+              setWarehouseCategories(whCats.data);
+            } else {
+              setWarehouseCategories(SEED_DATA.warehouse.categories);
+            }
+          } else {
+            setWarehouseCategories(SEED_DATA.warehouse.categories);
           }
 
           // --- Logistics ---
@@ -533,6 +568,7 @@ const App: React.FC = () => {
           syncTableData('warehouse_inventory', warehouseInventory.map(i => ({ id: i.id, user_id: user.id, code: i.code, name: i.name, category: i.category, quantity: i.quantity, min_stock: i.minStock, unit: i.unit, consumable: i.consumable, items_per_container: i.itemsPerContainer || 1, last_updated: i.lastUpdated }))),
           syncTableData('warehouse_employees', warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active, cpf: e.cpf }))),
           syncTableData('warehouse_logs', warehouseLogs.map(l => ({ id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: l.employeeId || null, employee_name: l.employeeName, note: l.note, date: l.date }))),
+          syncTableData('warehouse_categories', warehouseCategories.map(c => ({ id: c.id, user_id: user.id, name: c.name, color: c.color }))),
           syncTableData('whatsapp_templates', whatsappTemplates.map(t => ({ id: t.id, user_id: user.id, title: t.title, content: t.content }))),
           syncTableData('whatsapp_history', whatsappHistory.map(h => ({ id: h.id, user_id: user.id, name: h.name, phone: h.phone, message: h.message, method: h.method, timestamp: h.timestamp }))),
           syncTableData('logistics_freight_tables', logisticsFreightToSave, 'logistics'),
@@ -551,7 +587,7 @@ const App: React.FC = () => {
 
     const timeout = setTimeout(saveData, 1000);
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, whatsappTemplates, whatsappHistory, kanbanData]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories, whatsappTemplates, whatsappHistory, kanbanData]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -560,35 +596,8 @@ const App: React.FC = () => {
     setIsDataLoaded(false);
   };
 
-  const handleLinkGoogle = async () => {
-    try {
-      console.log('🔴 Iniciando vinculação com o Google...');
-      // alert('Iniciando vinculação com conta Google...'); // Opcional, ajudaria a debugar
-
-      const { data, error } = await supabase.auth.linkIdentity({
-        provider: 'google',
-        options: {
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/contacts.readonly',
-          redirectTo: window.location.origin
-        }
-      });
-
-      console.log('🔴 Resultado da vinculação:', data, error);
-
-      if (error) throw error;
-
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (err: any) {
-      console.error('Erro ao vincular conta Google:', err);
-      const msg = err.message || JSON.stringify(err);
-      alert('Erro ao vincular conta Google [v2]: ' + msg);
-    }
+  const handleLinkGoogleEvent = () => {
+    window.dispatchEvent(new CustomEvent('link-google'));
   };
 
   if (viewMessage) return <MessageLinker mode="view" encodedMessage={viewMessage} />;
@@ -641,7 +650,7 @@ const App: React.FC = () => {
               <p className="text-[10px] text-gray-500 truncate">{isSyncing ? 'Sincronizando...' : 'Online'}</p>
             </div>
             <button
-              onClick={handleLogout}
+                onClick={handleLogout}
               className="ml-auto hidden lg:flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
               title="Sair"
             >
@@ -680,7 +689,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-1">
             {user.id !== 'demo_user_id' && !user.googleAccessToken && (
               <button
-                onClick={handleLinkGoogle}
+                onClick={handleLinkGoogleEvent}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 transition-all"
               >
                 <Cloud size={13} />
@@ -768,11 +777,13 @@ const App: React.FC = () => {
             {activeTab === 'warehouse' && (
               <WarehouseModule
                 inventory={warehouseInventory}
-                onInventoryChange={setWarehouseInventory}
+                onInventoryChange={(data) => { setWarehouseInventory(data); setHasUnsavedChanges(true); }}
                 employees={warehouseEmployees}
-                onEmployeesChange={setWarehouseEmployees}
+                onEmployeesChange={(data) => { setWarehouseEmployees(data); setHasUnsavedChanges(true); }}
                 logs={warehouseLogs}
-                onLogsChange={setWarehouseLogs}
+                onLogsChange={(data) => { setWarehouseLogs(data); setHasUnsavedChanges(true); }}
+                categories={warehouseCategories}
+                onCategoriesChange={(data) => { setWarehouseCategories(data); setHasUnsavedChanges(true); }}
               />
             )}
             {activeTab === 'modules' && (

@@ -9,6 +9,13 @@ import * as XLSX from 'xlsx';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export interface WarehouseCategory {
+  id: string;
+  name: string;
+  color: string;
+}
+
+
 interface InventoryItem {
   id: string;
   code: string;         // MAT-001
@@ -574,7 +581,10 @@ interface WarehouseModuleProps {
   onEmployeesChange: (data: Employee[]) => void;
   logs: StockLog[];
   onLogsChange: (data: StockLog[]) => void;
+  categories: WarehouseCategory[];
+  onCategoriesChange: (data: WarehouseCategory[]) => void;
 }
+
 
 export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
   inventory,
@@ -582,8 +592,11 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
   employees,
   onEmployeesChange,
   logs,
-  onLogsChange
+  onLogsChange,
+  categories,
+  onCategoriesChange
 }) => {
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('inventory');
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -601,9 +614,20 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
   const [movementTarget, setMovementTarget] = useState<{ item: InventoryItem; type: 'entry' | 'exit' } | null>(null);
   const [quantityTarget, setQuantityTarget] = useState<InventoryItem | null>(null);
   const [importPreview, setImportPreview] = useState<Partial<InventoryItem>[] | null>(null);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const emptyItem: Partial<InventoryItem> = { code: '', name: '', category: 'EPI', consumable: false, quantity: 0, minStock: 0, unit: 'Unid.', itemsPerContainer: 1 };
+  const emptyItem: Partial<InventoryItem> = { 
+    code: '', 
+    name: '', 
+    category: categories.length > 0 ? categories[0].name : 'Geral', 
+    consumable: false, 
+    quantity: 0, 
+    minStock: 0, 
+    unit: 'Unid.', 
+    itemsPerContainer: 1 
+  };
+
   const [newItem, setNewItem] = useState<Partial<InventoryItem>>(emptyItem);
 
   const [showAddEmp, setShowAddEmp] = useState(false);
@@ -827,7 +851,8 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
     setImportPreview(null);
   };
 
-  const categories = Array.from(new Set(inventory.map(i => i.category))).sort();
+  const availableItemCategories = Array.from(new Set(inventory.map(i => i.category))).sort();
+
   const filtered = inventory.filter(item =>
     (!filterCategory || item.category === filterCategory) &&
     (!searchTerm || item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.code.toLowerCase().includes(searchTerm.toLowerCase()) || item.category.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -875,10 +900,15 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
               <Upload size={13}/><span className="hidden sm:inline">Importar</span>
             </button>
             <input ref={fileRef} type="file" accept=".csv,.txt,.xlsx,.xls" onChange={handleFileUpload} className="hidden"/>
+            <button onClick={() => setShowCategoryManager(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors border border-blue-200 dark:border-blue-800">
+              <ChevronDown size={13}/> <span className="hidden sm:inline">Categorias</span>
+            </button>
             <button onClick={() => { setNewItem({ ...emptyItem, code: nextCode(inventory) }); setShowAddModal(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-100 transition-all shadow-sm">
               <Plus size={13}/> Novo Item
             </button>
+
             <button onClick={() => setShowCart(true)} className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors border border-amber-200 dark:border-amber-800">
               <ShoppingCart size={13}/>
               {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">{cart.length}</span>}
@@ -912,11 +942,17 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                   Todos
                 </button>
                 {categories.map(cat => (
-                  <button key={cat} onClick={() => setFilterCategory(cat === filterCategory ? '' : cat)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${filterCategory === cat ? 'bg-blue-500 text-white' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                    {cat}
+                  <button key={cat.id} onClick={() => setFilterCategory(cat.name === filterCategory ? '' : cat.name)}
+                    style={{ 
+                      backgroundColor: filterCategory === cat.name ? cat.color : 'transparent',
+                      color: filterCategory === cat.name ? '#fff' : undefined,
+                      borderColor: filterCategory === cat.name ? cat.color : undefined
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all border ${filterCategory === cat.name ? '' : 'text-gray-400 border-gray-100 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                    {cat.name}
                   </button>
                 ))}
+
               </div>
               <span className="text-xs text-gray-400 shrink-0">{filtered.length} de {inventory.length}</span>
             </div>
@@ -1131,14 +1167,14 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                 <input type="text" value={newItem.code||''} onChange={e => setNewItem({...newItem,code:e.target.value})} placeholder="MAT-001"
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
               </div>
-              {/* Categoria */}
               <div>
                 <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Categoria</label>
-                <select value={newItem.category||'EPI'} onChange={e => setNewItem({...newItem,category:e.target.value})}
+                <select value={newItem.category||'Geral'} onChange={e => setNewItem({...newItem,category:e.target.value})}
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </div>
+
               {/* Descrição */}
               <div className="col-span-2">
                 <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Descrição *</label>
@@ -1305,6 +1341,112 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
           </div>
         </div>
       )}
+
+      {/* ── Category Manager Modal ── */}
+      {showCategoryManager && (
+        <CategoryManagerModal 
+          categories={categories} 
+          onCategoriesChange={onCategoriesChange} 
+          onClose={() => setShowCategoryManager(false)} 
+        />
+      )}
+    </div>
+
+  );
+};
+
+// ── Category Manager Modal ────────────────────────────────────────────────────
+
+interface CategoryManagerModalProps {
+  categories: WarehouseCategory[];
+  onCategoriesChange: (data: WarehouseCategory[]) => void;
+  onClose: () => void;
+}
+
+const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({ categories, onCategoriesChange, onClose }) => {
+  const [newCat, setNewCat] = useState({ name: '', color: '#3b82f6' });
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleAdd = () => {
+    if (!newCat.name.trim()) return;
+    if (editingId) {
+      onCategoriesChange(categories.map(c => c.id === editingId ? { ...c, ...newCat } : c));
+      setEditingId(null);
+    } else {
+      onCategoriesChange([...categories, { id: generateUUID(), ...newCat }]);
+    }
+    setNewCat({ name: '', color: '#3b82f6' });
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Excluir esta categoria? Itens nesta categoria não serão excluídos.')) {
+      onCategoriesChange(categories.filter(c => c.id !== id));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <span className="font-bold text-sm text-gray-800 dark:text-white">Gerenciar Categorias</span>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15}/></button>
+        </div>
+        
+        <div className="p-5 space-y-4">
+          <div className="flex gap-2">
+            <div className="flex-1 min-w-0">
+              <label className="text-[10px] font-semibold uppercase text-gray-400 block mb-1">Nome da Categoria</label>
+              <input 
+                type="text" 
+                value={newCat.name} 
+                onChange={e => setNewCat({ ...newCat, name: e.target.value })}
+                placeholder="Ex: Elétrica"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/30 outline-none"
+              />
+            </div>
+            <div className="w-12">
+              <label className="text-[10px] font-semibold uppercase text-gray-400 block mb-1">Cor</label>
+              <input 
+                type="color" 
+                value={newCat.color} 
+                onChange={e => setNewCat({ ...newCat, color: e.target.value })}
+                className="w-full h-9 p-0 border-0 bg-transparent cursor-pointer rounded-xl"
+              />
+            </div>
+            <button 
+              onClick={handleAdd}
+              className="mt-5 w-9 h-9 flex items-center justify-center bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors"
+            >
+              {editingId ? <Check size={16}/> : <Plus size={16}/>}
+            </button>
+          </div>
+
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {categories.map(cat => (
+              <div key={cat.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                  <span className="text-xs font-medium dark:text-gray-200 truncate">{cat.name}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => { setEditingId(cat.id); setNewCat({ name: cat.name, color: cat.color }); }}
+                    className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  >
+                    <Edit size={12}/>
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(cat.id)}
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={12}/>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -135,7 +135,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({ config, onChange }) 
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
   return (
-    <div className="flex h-full bg-[#f4f7f9] overflow-hidden">
+    <div className="flex h-full bg-zinc-50 overflow-hidden">
       {/* Configuration Sidebar */}
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col shadow-xl z-10 transition-all duration-300">
         <div className="p-6 border-b border-gray-100 bg-gradient-to-br from-blue-700 to-indigo-800 text-white">

@@ -152,6 +152,7 @@ export interface PostIt {
   text: string;
   color: string;
   rotation: number;
+  size?: 'sm' | 'md' | 'lg';
   createdAt?: string;
 }
 
