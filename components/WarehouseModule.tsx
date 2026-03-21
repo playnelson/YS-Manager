@@ -100,16 +100,29 @@ function downloadTemplate() {
   document.body.removeChild(link);
 }
 
-function exportInventory(inventory: InventoryItem[]) {
-  const data = inventory.map(item => ({
-    'Código': item.code,
-    'Descrição': item.name,
-    'Categoria': item.category,
-    'Consumível?': item.consumable ? 'Sim' : 'Não',
-    'Qtd. Atual': item.quantity,
-    'Qtd. Mínima': item.minStock,
-    'Unidade': item.unit
-  }));
+function exportInventory(inventory: InventoryItem[], logs: StockLog[]) {
+  const possessionMap: Record<string, number> = {};
+  logs.forEach(l => {
+    if (!l.employeeId || l.employeeId === 'system') return;
+    if (!possessionMap[l.itemId]) possessionMap[l.itemId] = 0;
+    if (l.type === 'exit') possessionMap[l.itemId] += l.quantity;
+    else if (l.type === 'entry') possessionMap[l.itemId] -= l.quantity;
+  });
+
+  const data = inventory.map(item => {
+    const inPossession = item.consumable ? 0 : (possessionMap[item.id] || 0);
+    return {
+      'Código': item.code,
+      'Descrição': item.name,
+      'Categoria': item.category,
+      'Consumível?': item.consumable ? 'Sim' : 'Não',
+      'Qtd. em Estoque': item.quantity,
+      'Qtd. em Posse': inPossession,
+      'Qtd. Total': item.quantity + inPossession,
+      'Qtd. Mínima': item.minStock,
+      'Unidade': item.unit
+    };
+  });
 
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
@@ -121,13 +134,113 @@ function exportInventory(inventory: InventoryItem[]) {
     { wch: 40 }, // Descrição
     { wch: 15 }, // Categoria
     { wch: 12 }, // Consumível
-    { wch: 10 }, // Qtd Atual
+    { wch: 15 }, // Qtd em Estoque
+    { wch: 15 }, // Qtd em Posse
+    { wch: 15 }, // Qtd Total
     { wch: 10 }, // Qtd Minima
     { wch: 10 }  // Unidade
   ];
   worksheet['!cols'] = wscols;
 
   XLSX.writeFile(workbook, `almoxarifado_atual_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+function generateDailyReport(logs: StockLog[]) {
+  const today = new Date().toISOString().split('T')[0];
+  const dailyLogs = logs.filter(l => l.date && l.date.split('T')[0] === today);
+  
+  if (dailyLogs.length === 0) {
+    alert('Nenhuma movimentação registrada hoje.');
+    return;
+  }
+
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  const logsHtml = dailyLogs.map(log => `
+    <tr>
+      <td style="border: 1px solid #eee; padding: 10px; font-weight: bold; color: ${log.type === 'entry' ? '#10b981' : '#ef4444'}">${log.type === 'entry' ? 'ENTRADA' : 'SAÍDA'}</td>
+      <td style="border: 1px solid #eee; padding: 10px; font-family: monospace;">${log.itemCode}</td>
+      <td style="border: 1px solid #eee; padding: 10px;">${log.itemName}</td>
+      <td style="border: 1px solid #eee; padding: 10px; text-align: center;">${log.quantity}</td>
+      <td style="border: 1px solid #eee; padding: 10px;">${log.employeeName}</td>
+      <td style="border: 1px solid #eee; padding: 10px; font-size: 10px;">${new Date(log.date).toLocaleTimeString('pt-BR')}</td>
+    </tr>
+  `).join('');
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Relatório Diário - ${today}</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; line-height: 1.4; }
+          .header { border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+          h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
+          .date { font-weight: bold; color: #666; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { background: #f8f9fa; border: 1px solid #eee; padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #666; }
+          .summary { margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px; display: flex; gap: 40px; }
+          .stat-box { display: flex; flex-direction: column; }
+          .stat-label { font-size: 10px; font-weight: bold; color: #999; text-transform: uppercase; }
+          .stat-value { font-size: 18px; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1>Relatório Diário de Movimentação</h1>
+            <p style="margin: 5px 0 0; color: #888;">Controle de Almoxarifado - YS Manager</p>
+          </div>
+          <div class="date">${new Date().toLocaleDateString('pt-BR')}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Código</th>
+              <th>Item</th>
+              <th>Qtd</th>
+              <th>Colaborador</th>
+              <th>Hora</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${logsHtml}
+          </tbody>
+        </table>
+
+        <div class="summary">
+          <div class="stat-box">
+            <span class="stat-label">Total Movimentações</span>
+            <span class="stat-value">${dailyLogs.length}</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Entradas</span>
+            <span class="stat-value">${dailyLogs.filter(l => l.type === 'entry').length}</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Saídas</span>
+            <span class="stat-value">${dailyLogs.filter(l => l.type === 'exit').length}</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 80px; text-align: center; border-top: 1px solid #eee; pt: 20px; font-size: 10px; color: #aaa;">
+          Documento gerado automaticamente pelo Sistema YS-Manager em ${new Date().toLocaleString('pt-BR')}
+        </div>
+
+        <script>
+          window.onload = function() { 
+            setTimeout(() => {
+              window.print(); 
+              window.close();
+            }, 500);
+          };
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
 function parseCSV(text: string): Partial<InventoryItem>[] {
@@ -890,7 +1003,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
 
         <div className="flex items-center gap-2 flex-wrap">
           {activeTab === 'inventory' && <>
-            <button onClick={() => exportInventory(inventory)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800">
+            <button onClick={() => exportInventory(inventory, logs)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800">
               <Download size={13}/><span className="hidden sm:inline">Exportar Planilha</span>
             </button>
             <button onClick={downloadTemplate} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-700">
@@ -1112,8 +1225,19 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
 
         {/* === HISTORY TAB === */}
         {activeTab === 'history' && (
-          <div className="h-full overflow-y-auto">
-            {logs.length === 0 ? (
+          <div className="h-full flex flex-col">
+            <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-gray-900">
+               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Histórico de Fluxo</span>
+                 <button 
+                   onClick={() => generateDailyReport(logs)}
+                   className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg text-[10px] font-bold uppercase hover:bg-gray-800 transition-colors"
+                 >
+                 <Printer size={14}/> Relatório Diário
+               </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+              {logs.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-3">
                 <History size={40} className="opacity-30"/>
                 <p className="text-sm">Nenhuma movimentação registrada ainda</p>
@@ -1148,9 +1272,9 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                 })}
               </div>
             )}
+            </div>
           </div>
         )}
-      </div>
 
       {/* ── Add Item Modal ── */}
       {showAddModal && (
@@ -1347,11 +1471,11 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
         <CategoryManagerModal 
           categories={categories} 
           onCategoriesChange={onCategoriesChange} 
-          onClose={() => setShowCategoryManager(false)} 
+          onClose={() => setShowCategoryManager(false)}
         />
       )}
+      </div>
     </div>
-
   );
 };
 

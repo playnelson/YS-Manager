@@ -27,9 +27,10 @@ import {
   Search,
   Home,
   Package,
-  Store
+  Store,
+  ClipboardList
 } from 'lucide-react';
-import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState, KanbanState, KanbanPriority, NotePriority } from './types';
+import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState, KanbanState, KanbanPriority, NotePriority, OrderAnnotation } from './types';
 import { Auth } from './components/Auth';
 import { MessageLinker } from './components/MessageLinker';
 import { DigitalClock } from './components/DigitalClock';
@@ -48,6 +49,9 @@ const SharedDocumentsModule = lazy(() => import('./components/SharedDocumentsMod
 const ModuleStore = lazy(() => import('./components/ModuleStore').then(m => ({ default: m.ModuleStore })));
 const FinancialModule = lazy(() => import('./components/FinancialModule').then(m => ({ default: m.FinancialModule })));
 const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m => ({ default: m.WarehouseModule })));
+const DashboardModule = lazy(() => import('./components/DashboardModule').then(m => ({ default: m.DashboardModule })));
+const OrdersModule = lazy(() => import('./components/OrdersModule').then(m => ({ default: m.OrdersModule })));
+const StaffBoardModule = lazy(() => import('./components/StaffBoardModule').then(m => ({ default: m.StaffBoardModule })));
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 const initialLogistics: LogisticsState = { freightTables: [], checklists: [] };
@@ -61,6 +65,7 @@ const initialKanban: KanbanState = {
 };
 
 const DEFAULT_TABS = [
+  { id: 'dashboard', label: 'Resumo', icon: <LayoutDashboard size={18} /> },
   { id: 'office', label: 'Escritório', icon: <Home size={18} /> },
   { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={18} /> },
   { id: 'flow', label: 'Fluxo', icon: <GitMerge size={18} /> },
@@ -69,6 +74,8 @@ const DEFAULT_TABS = [
   { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={18} /> },
   { id: 'shared_docs', label: 'Docs', icon: <Cloud size={18} /> },
   { id: 'financial', label: 'Financeiro', icon: <DollarSign size={18} /> },
+  { id: 'orders', label: 'Anotações', icon: <ClipboardList size={18} /> },
+  { id: 'staff_board', label: 'Quadro Fun.', icon: <Users size={18} /> },
   { id: 'warehouse', label: 'Almoxarifado', icon: <Package size={18} /> },
   { id: 'modules', label: 'Loja', icon: <Store size={18} /> },
 ];
@@ -83,9 +90,10 @@ const App: React.FC = () => {
   }, []);
 
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState('office');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [tabs, setTabs] = useState(DEFAULT_TABS);
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(['financial', 'warehouse']);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Dark mode via Tailwind dark class
   const [isDark, setIsDark] = useState(() => localStorage.getItem('ysoffice_dark') === 'true');
@@ -113,6 +121,7 @@ const App: React.FC = () => {
   const [whatsappTemplates, setWhatsappTemplates] = useState<any[]>([]);
   const [whatsappHistory, setWhatsappHistory] = useState<any[]>([]);
   const [kanbanData, setKanbanData] = useState<KanbanState>(initialKanban);
+  const [orderAnnotations, setOrderAnnotations] = useState<OrderAnnotation[]>([]);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -281,7 +290,7 @@ const App: React.FC = () => {
           };
 
           const [
-            kbCols, kbCards, evts, notes, pts, trans, freight, settings, emailsRes, linksRes, exts, sigs, files, flow, logData, whInv, whEmps, whLogs, whCats, waTemp, waHist
+            kbCols, kbCards, evts, notes, pts, trans, freight, settings, emailsRes, linksRes, exts, sigs, files, flow, logData, whInv, whEmps, whLogs, whCats, waTemp, waHist, orderAnnRes
           ] = await Promise.all([
             safeFetch(supabase.from('kanban_columns').select('*').eq('user_id', user.id).order('order'), 'kanban_columns'),
             safeFetch(supabase.from('kanban_cards').select('*').eq('user_id', user.id).order('order'), 'kanban_cards'),
@@ -303,7 +312,8 @@ const App: React.FC = () => {
             safeFetch(supabase.from('warehouse_logs').select('*').eq('user_id', user.id), 'warehouse_logs'),
             safeFetch(supabase.from('warehouse_categories').select('*').eq('user_id', user.id), 'warehouse_categories'),
             safeFetch(supabase.from('whatsapp_templates').select('*').eq('user_id', user.id), 'whatsapp_templates'),
-            safeFetch(supabase.from('whatsapp_history').select('*').eq('user_id', user.id).limit(50).order('timestamp', { ascending: false }), 'whatsapp_history')
+            safeFetch(supabase.from('whatsapp_history').select('*').eq('user_id', user.id).limit(50).order('timestamp', { ascending: false }), 'whatsapp_history'),
+            safeFetch(supabase.from('order_annotations').select('*').eq('user_id', user.id).order('date', { ascending: false }), 'order_annotations')
           ]);
           const isFirstTimeUser = !settings.data;
 
@@ -446,8 +456,14 @@ const App: React.FC = () => {
             setCalendarConfig(settings.data.calendar_config || { uf: 'SP', city: 'São Paulo' });
             setHiddenTabs(settings.data.hidden_tabs || []);
             setShiftConfig(settings.data.shift_config);
+            setIsSidebarCollapsed(!!settings.data.sidebar_collapsed);
           } else {
             initializedTables.current.add('user_settings');
+          }
+
+          if (orderAnnRes && orderAnnRes.data) {
+            initializedTables.current.add('order_annotations');
+            setOrderAnnotations(orderAnnRes.data);
           }
 
           // --- Rest ---
@@ -573,9 +589,10 @@ const App: React.FC = () => {
           syncTableData('whatsapp_history', whatsappHistory.map(h => ({ id: h.id, user_id: user.id, name: h.name, phone: h.phone, message: h.message, method: h.method, timestamp: h.timestamp }))),
           syncTableData('logistics_freight_tables', logisticsFreightToSave, 'logistics'),
           
-          initializedTables.current.has('user_settings') && safeSave(supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, updated_at: new Date().toISOString() }), 'user_settings'),
+          initializedTables.current.has('user_settings') && safeSave(supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, sidebar_collapsed: isSidebarCollapsed, updated_at: new Date().toISOString() }), 'user_settings'),
           initializedTables.current.has('flow_builder_states') && safeSave(supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData }), 'flow_builder_states'),
-          initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes }), 'logistics_data')
+          initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes }), 'logistics_data'),
+          initializedTables.current.has('order_annotations') && safeSave(supabase.from('order_annotations').upsert(orderAnnotations.map(o => ({ ...o, user_id: user.id }))), 'order_annotations')
         ].filter(Boolean));
       } catch (err) {
         console.error('Erro ao salvar dados:', err);
@@ -587,7 +604,7 @@ const App: React.FC = () => {
 
     const timeout = setTimeout(saveData, 1000);
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories, whatsappTemplates, whatsappHistory, kanbanData]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories, whatsappTemplates, whatsappHistory, kanbanData, isSidebarCollapsed]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -609,13 +626,24 @@ const App: React.FC = () => {
     <div className="flex h-screen overflow-hidden bg-palette-lightest dark:bg-[#111111] text-gray-900 dark:text-gray-100 transition-colors duration-300 font-sans">
 
       {/* ── Sidebar ── */}
-      <aside className="w-16 lg:w-64 flex-shrink-0 bg-palette-lightest dark:bg-gray-900 border-r border-palette-mediumDark dark:border-gray-800 flex flex-col">
-        {/* Logo */}
-        <div className="p-5 flex items-center gap-3">
-          <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-gray-900 flex-shrink-0">
-            <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24" }}>deployed_code</span>
+      <aside className={`${isSidebarCollapsed ? 'w-16' : 'w-16 lg:w-64'} flex-shrink-0 bg-palette-lightest dark:bg-gray-900 border-r border-palette-mediumDark dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out`}>
+        {/* Logo & Toggle */}
+        <div className="p-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-gray-900 flex-shrink-0">
+              <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24" }}>deployed_code</span>
+            </div>
+            {!isSidebarCollapsed && (
+              <span className="font-bold text-lg tracking-tight hidden lg:block whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300">BRAIN OFFICE</span>
+            )}
           </div>
-          <span className="font-bold text-lg tracking-tight hidden lg:block whitespace-nowrap">BRAIN OFFICE</span>
+          <button 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="p-1.5 rounded-lg hover:bg-gray-200/60 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors hidden lg:flex items-center justify-center"
+            title={isSidebarCollapsed ? 'Expandir Menu' : 'Recolher Menu'}
+          >
+            {isSidebarCollapsed ? <Menu size={16}/> : <X size={16}/>}
+          </button>
         </div>
 
         {/* Nav links */}
@@ -631,7 +659,9 @@ const App: React.FC = () => {
                 }`}
             >
               {tab.icon}
-              <span className="hidden lg:block truncate">{tab.label}</span>
+              {!isSidebarCollapsed && (
+                <span className="hidden lg:block truncate animate-in fade-in slide-in-from-left-1 duration-200">{tab.label}</span>
+              )}
             </button>
           ))}
         </nav>
@@ -645,13 +675,15 @@ const App: React.FC = () => {
                 : <span className="material-symbols-outlined text-gray-500" style={{ fontSize: '18px' }}>person</span>
               }
             </div>
-            <div className="hidden lg:block overflow-hidden flex-1">
-              <p className="text-xs font-semibold truncate">{user.nick}</p>
-              <p className="text-[10px] text-gray-500 truncate">{isSyncing ? 'Sincronizando...' : 'Online'}</p>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="hidden lg:block overflow-hidden flex-1 animate-in fade-in slide-in-from-left-1 duration-200">
+                <p className="text-xs font-semibold truncate">{user.nick}</p>
+                <p className="text-[10px] text-gray-500 truncate">{isSyncing ? 'Sincronizando...' : 'Online'}</p>
+              </div>
+            )}
             <button
-                onClick={handleLogout}
-              className="ml-auto hidden lg:flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
+              onClick={handleLogout}
+              className={`ml-auto ${isSidebarCollapsed ? 'hidden' : 'hidden lg:flex'} items-center justify-center text-gray-400 hover:text-red-500 transition-colors`}
               title="Sair"
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>logout</span>
@@ -727,6 +759,18 @@ const App: React.FC = () => {
         {/* ── Content Area (fills remaining height) ── */}
         <div className="flex-1 overflow-hidden bg-palette-mediumLight dark:bg-black/30">
           <Suspense fallback={<LoadingPlaceholder />}>
+            {activeTab === 'dashboard' && (
+              <DashboardModule
+                financialTransactions={financialTransactions}
+                warehouseInventory={warehouseInventory}
+                kanbanData={kanbanData}
+                calendarEvents={calendarEvents}
+                importantNotes={importantNotes}
+                logisticsData={logisticsData}
+                whatsappHistory={whatsappHistory}
+                setActiveTab={setActiveTab}
+              />
+            )}
             {activeTab === 'office' && (
               <OfficeModule
                 emails={emails} onEmailChange={setEmails}
@@ -772,6 +816,20 @@ const App: React.FC = () => {
               <FinancialModule
                 transactions={financialTransactions}
                 onChange={setFinancialTransactions}
+              />
+            )}
+            {activeTab === 'orders' && (
+              <OrdersModule
+                orders={orderAnnotations}
+                onOrdersChange={(data) => { setOrderAnnotations(data); setHasUnsavedChanges(true); }}
+                inventory={warehouseInventory}
+              />
+            )}
+            {activeTab === 'staff_board' && (
+              <StaffBoardModule
+                employees={warehouseEmployees}
+                inventory={warehouseInventory}
+                logs={warehouseLogs}
               />
             )}
             {activeTab === 'warehouse' && (

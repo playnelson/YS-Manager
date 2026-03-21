@@ -116,6 +116,25 @@ export interface EmailTemplate {
   savedAt: string;
 }
 
+// Order Annotation Types
+export interface OrderItem {
+  itemId: string;
+  code: string;
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
+export interface OrderAnnotation {
+  id: string;
+  customerName: string;
+  date: string;
+  items: OrderItem[];
+  notes?: string;
+  status: 'pending' | 'completed' | 'cancelled';
+  totalValue?: number;
+}
+
 // Professional Links Types
 export interface ProfessionalLink {
   id: string;
@@ -341,7 +360,10 @@ export interface AppData {
   personalFiles?: StoredFile[];
   financialTransactions?: FinancialTransaction[];
   warehouseInventory?: any[];
+  warehouseEmployees?: any[];
   warehouseLogs?: any[];
+  warehouseCategories?: any[];
+  orderAnnotations?: OrderAnnotation[];
   logistics?: LogisticsState;
   hiddenTabs?: string[];
 }
