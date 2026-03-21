@@ -173,7 +173,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
         inputs: [{
           content: finalContent,
           header: 'SISTEMA BRAIN PROFESSIONAL - DOCUMENTO OFICIAL',
-          footer: `Gerado digitalmente em ${new Date().toLocaleString()} | Ref: ${selectedTmpl.id.toUpperCase()} | Autenticidade Garantida`
+          footer: `Gerado digitalmente em ${new Date().toLocaleString()} | Ref: ${selectedTmpl?.id.toUpperCase()} | Autenticidade Garantida`
         }],
         plugins: { text, line }
       });
@@ -183,7 +183,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
         const blob = new Blob([pdf.buffer], { type: 'application/pdf' });
         reader.onload = (e) => {
             onSaveFile({
-                name: `${selectedTmpl.name}_${Date.now()}.pdf`,
+                name: `${selectedTmpl?.name}_${Date.now()}.pdf`,
                 type: 'application/pdf',
                 size: blob.size,
                 data: e.target?.result as string,
@@ -196,7 +196,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
         const blob = new Blob([pdf.buffer], { type: 'application/pdf' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `${selectedTmpl.name}_${Date.now()}.pdf`;
+        link.download = `${selectedTmpl?.name}_${Date.now()}.pdf`;
         link.click();
       }
     } finally {
@@ -295,7 +295,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
              </div>
              <div className="flex-1">
                 <h3 className="text-xs font-black uppercase text-win95-blue dark:text-blue-400">Template Customizado</h3>
-                <p className="text-[10px] text-gray-600 dark:text-gray-400">Carregue um arquivo .txt com placeholders {{nome}} para gerar documentos dinâmicos.</p>
+                <p className="text-[10px] text-gray-600 dark:text-gray-400">Carregue um arquivo .txt com placeholders {"{{nome}}"} para gerar documentos dinâmicos.</p>
              </div>
              <input type="file" accept=".txt" ref={templateInputRef} className="hidden" onChange={handleTemplateUpload} />
              <Button onClick={() => templateInputRef.current?.click()} icon={<FileSignature size={14}/>}>UPAR TEMPLATE (.TXT)</Button>
@@ -494,7 +494,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[9px] font-black text-blue-800 uppercase tracking-tighter">Documento ID: {selectedTmpl.id.split('_')[1]}</div>
+                    <div className="text-[9px] font-black text-blue-800 uppercase tracking-tighter">Documento ID: {selectedTmpl?.id.split('_')[1]}</div>
                     <div className="text-[8px] font-bold text-gray-400">Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
                   </div>
                 </div>
@@ -516,9 +516,9 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
                       }}
                     />
                   ) : (
-                    selectedTmpl.contentPattern.split('\n').map((line, idx) => {
+                    selectedTmpl?.contentPattern.split('\n').map((line, idx) => {
                       let processed = line;
-                      selectedTmpl.fields.forEach(f => {
+                      selectedTmpl?.fields.forEach(f => {
                         const val = formValues[f] ? formValues[f].toUpperCase() : `<${f.toUpperCase()}>`;
                         processed = processed.split(`{{${f}}}`).join(val);
                       });
@@ -528,8 +528,6 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
                       return <div key={idx} className={isTitle ? "font-sans font-black text-center mb-10 text-blue-900 border-b border-gray-100 pb-2" : "mb-1"}>{processed || '\n'}</div>;
                     })
                   )}
-                </div>;
-                  })}
                 </div>
 
                 {/* Marca d'água Profissional */}
@@ -541,7 +539,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
                 <div className="absolute bottom-10 left-[25mm] right-[25mm] border-t-2 border-gray-100 pt-6 flex justify-between items-end opacity-60">
                   <div className="text-[8px] font-bold text-gray-500 space-y-1 uppercase tracking-tight">
                     <div>Este documento é para uso exclusivo institucional</div>
-                    <div>Processado por: {selectedTmpl.category} | Criptografia Local Ativa</div>
+                    <div>Processado por: {selectedTmpl?.category} | Criptografia Local Ativa</div>
                   </div>
                   <div className="text-[9px] font-black text-blue-900">PAGINA 01 DE 01</div>
                 </div>

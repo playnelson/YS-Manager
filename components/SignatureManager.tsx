@@ -1,7 +1,7 @@
 
 import { generateUUID } from '../uuid';
 import React, { useState, useRef, useEffect } from 'react';
-import { PenTool, Upload, Eraser, Save, FileCheck, Trash2, Download, MousePointer2, Move, ZoomIn, ZoomOut, Loader2, Sliders, Calendar, Type, Stamp } from 'lucide-react';
+import { PenTool, Upload, Eraser, Save, FileCheck, Trash2, Download, MousePointer2, Move, ZoomIn, ZoomOut, Loader2, Sliders, Calendar, Type, Stamp, Globe, Shield } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Signature, UserEvent } from '../types';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -14,10 +14,12 @@ interface SignatureManagerProps {
   signatures: Signature[];
   onChange: (signatures: Signature[]) => void;
   onAddEvent: (event: UserEvent) => void;
+  initialFile?: any;
+  onFileSigned?: () => void;
 }
 
 export const SignatureManager: React.FC<SignatureManagerProps> = ({ signatures = [], onChange, onAddEvent, initialFile, onFileSigned }) => {
-  const [activeTab, setActiveTab] = useState<'manage' | 'sign'>(initialFile ? 'sign' : 'manage');| 'sign'>('manage');
+  const [activeTab, setActiveTab] = useState<'manage' | 'sign'>(initialFile ? 'sign' : 'manage');
 
   return (
     <div className="h-full flex flex-col gap-2 bg-win95-bg">
@@ -234,7 +236,7 @@ const SignatureCreator: React.FC<SignatureManagerProps> = ({ signatures, onChang
 };
 
 // --- SUB-COMPONENTE: ASSINADOR DE PDF ---
-const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: UserEvent) => void, initialFile?: StoredFile | null, onFileSigned?: () => void }> = ({ signatures, onAddEvent, initialFile, onFileSigned }) => {
+const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: UserEvent) => void, initialFile?: any | null, onFileSigned?: () => void }> = ({ signatures, onAddEvent, initialFile, onFileSigned }) => {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null); // PDFJS Document Proxy
   const [currentPage, setCurrentPage] = useState(1);
@@ -374,6 +376,8 @@ const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: Us
       });
 
       alert("Documento assinado e carimbado com sucesso!");
+
+      if (onFileSigned) onFileSigned();
 
     } catch (e) {
       console.error(e);
