@@ -47,8 +47,6 @@ const SUB_TABS: { id: SubTab; label: string }[] = [
   { id: 'handoff', label: 'Passagem' },
   { id: 'directory', label: 'Diretório' },
   { id: 'extensions', label: 'Ramais' },
-  { id: 'arquivos', label: 'Arquivos' },
-  { id: 'gerador', label: 'Gerador' },
   { id: 'assinador', label: 'Assinador' },
   { id: 'precificacao', label: 'Precificação' },
   { id: 'emails', label: 'E-mails' },
@@ -105,8 +103,6 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
         {activeSubTab === 'handoff' && <ShiftHandoffModule handoffs={handoffs} onChange={onHandoffChange} currentUser={currentUser} />}
         {activeSubTab === 'directory' && <ProfessionalLinks links={links} onChange={onLinkChange} />}
         {activeSubTab === 'extensions' && <ExtensionsDirectory extensions={extensions} onChange={onExtensionChange} />}
-        {activeSubTab === 'arquivos' && <PersonalFileManager files={personalFiles} onChange={onFilesChange} />}
-        {activeSubTab === 'gerador' && <DocumentGenerator />}
         {activeSubTab === 'assinador' && <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />}
         {activeSubTab === 'precificacao' && <PricingCalculator />}
         {activeSubTab === 'emails' && <EmailManager emails={emails} onChange={onEmailChange} />}

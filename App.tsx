@@ -46,6 +46,7 @@ const ConsultationModule = lazy(() => import('./components/ConsultationModule').
 const WhatsAppTool = lazy(() => import('./components/WhatsAppTool').then(m => ({ default: m.WhatsAppTool })));
 const LogisticsModule = lazy(() => import('./components/LogisticsModule').then(m => ({ default: m.LogisticsModule })));
 const SharedDocumentsModule = lazy(() => import('./components/SharedDocumentsModule').then(m => ({ default: m.SharedDocumentsModule })));
+const DocumentsModule = lazy(() => import('./components/DocumentsModule').then(m => ({ default: m.DocumentsModule })));
 const ModuleStore = lazy(() => import('./components/ModuleStore').then(m => ({ default: m.ModuleStore })));
 const FinancialModule = lazy(() => import('./components/FinancialModule').then(m => ({ default: m.FinancialModule })));
 const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m => ({ default: m.WarehouseModule })));
@@ -70,7 +71,7 @@ const DEFAULT_TABS = [
   { id: 'logistics', label: 'Logística', icon: <Truck size={18} /> },
   { id: 'consultas', label: 'Consultas', icon: <Search size={18} /> },
   { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={18} /> },
-  { id: 'shared_docs', label: 'Docs', icon: <Cloud size={18} /> },
+  { id: 'shared_docs', label: 'Documentos', icon: <FolderOpen size={18} /> },
   { id: 'financial', label: 'Financeiro', icon: <DollarSign size={18} /> },
   { id: 'orders', label: 'Anotações', icon: <ClipboardList size={18} /> },
   { id: 'staff_board', label: 'Quadro Fun.', icon: <Users size={18} /> },
@@ -792,7 +793,9 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'shared_docs' && (
-              <SharedDocumentsModule
+              <DocumentsModule
+                personalFiles={personalFiles}
+                onFilesChange={setPersonalFiles}
                 driveFiles={driveFiles}
                 onDriveFilesChange={setDriveFiles}
                 currentUser={user}

@@ -57,7 +57,11 @@ const TEMPLATE_LIBRARY: DocTemplate[] = [
   }
 ];
 
-export const DocumentGenerator: React.FC = () => {
+interface DocumentGeneratorProps {
+  onSaveFile?: (file: { name: string; type: string; size: number; data: string; category: string }) => void;
+}
+
+export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile }) => {
   const [view, setView] = useState<'library' | 'editor'>('library');
   const [selectedTmpl, setSelectedTmpl] = useState<DocTemplate | null>(null);
   const [search, setSearch] = useState('');
@@ -105,7 +109,7 @@ export const DocumentGenerator: React.FC = () => {
     setView('editor');
   };
 
-  const downloadPdf = async () => {
+  const downloadPdf = async (saveToFiles = false) => {
     if (!selectedTmpl) return;
     setIsGenerating(true);
     try {
@@ -122,18 +126,14 @@ export const DocumentGenerator: React.FC = () => {
       const template: any = {
         basePdf,
         schemas: [[
-          // Linha de Cabeçalho Decorativa
           { name: 'line', type: 'line', position: { x: 20, y: 20 }, width: 170, height: 1, color: '#000080' },
-          // Título do Escritório
           { name: 'header', type: 'text', position: { x: 20, y: 12 }, width: 100, height: 10, fontSize: 8, fontName: 'Courier', fontColor: '#666' },
-          // Conteúdo Principal
           {
             name: 'content', type: 'text',
             position: { x: 25, y: 40 }, width: 160, height: 230,
             fontSize: 11, lineHeight: 1.6, fontName: 'Courier',
             alignment: 'justify'
           },
-          // Rodapé
           { name: 'footer', type: 'text', position: { x: 20, y: 280 }, width: 170, height: 10, fontSize: 7, fontName: 'Courier', alignment: 'center', fontColor: '#999' }
         ]]
       };
@@ -148,11 +148,27 @@ export const DocumentGenerator: React.FC = () => {
         plugins: { text, line }
       });
 
-      const blob = new Blob([pdf.buffer], { type: 'application/pdf' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `${selectedTmpl.name}_${Date.now()}.pdf`;
-      link.click();
+      if (saveToFiles && onSaveFile) {
+        const reader = new FileReader();
+        const blob = new Blob([pdf.buffer], { type: 'application/pdf' });
+        reader.onload = (e) => {
+            onSaveFile({
+                name: `${selectedTmpl.name}_${Date.now()}.pdf`,
+                type: 'application/pdf',
+                size: blob.size,
+                data: e.target?.result as string,
+                category: 'Gerados'
+            });
+            alert("Documento salvo em 'Meus Arquivos' na pasta 'Gerados'!");
+        };
+        reader.readAsDataURL(blob);
+      } else {
+        const blob = new Blob([pdf.buffer], { type: 'application/pdf' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${selectedTmpl.name}_${Date.now()}.pdf`;
+        link.click();
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -204,9 +220,10 @@ export const DocumentGenerator: React.FC = () => {
         {view === 'editor' && (
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={() => window.print()} icon={<Printer size={14} />}>Imprimir</Button>
-            <Button onClick={downloadPdf} disabled={isGenerating} className="bg-win95-blue text-white min-w-[150px] hover:shadow-lg transition-all">
+            <Button variant="secondary" size="sm" onClick={() => downloadPdf(true)} disabled={isGenerating} icon={<Cloud size={14} />}>Salvar nos Arquivos</Button>
+            <Button onClick={() => downloadPdf(false)} disabled={isGenerating} className="bg-win95-blue text-white min-w-[150px] hover:shadow-lg transition-all">
               {isGenerating ? <Loader2 className="animate-spin" size={14} /> : <FileDown size={14} />}
-              {isGenerating ? 'DESENHANDO...' : 'GERAR DOCUMENTO'}
+              {isGenerating ? 'DESENHANDO...' : 'BAIXAR PDF'}
             </Button>
           </div>
         )}

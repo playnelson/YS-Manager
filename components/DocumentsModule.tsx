@@ -1,12 +1,22 @@
 import { generateUUID } from '../uuid';
 import React, { useState, useRef, useMemo } from 'react';
-import { FolderOpen, FileText, PenTool, Upload, Download, Trash2, File, AlertCircle, HardDrive, Folder, FolderPlus, ArrowRightLeft, Edit2, Check, X, CornerDownRight } from 'lucide-react';
+import { 
+  FolderOpen, FileText, PenTool, Upload, Download, Trash2, 
+  File, AlertCircle, HardDrive, Folder, FolderPlus, 
+  ArrowRightLeft, Edit2, Check, X, CornerDownRight,
+  Search, FileDown, Layers, Sparkles, Cloud
+} from 'lucide-react';
 import { Button } from './ui/Button';
-import { StoredFile, Signature, UserEvent } from '../types';
+import { StoredFile, Signature, UserEvent, User } from '../types';
 import { DocumentGenerator } from './DocumentGenerator';
-import { SignatureManager } from './SignatureManager';
+import { SharedDocumentsModule } from './SharedDocumentsModule';
 
-export const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (files: StoredFile[]) => void }> = ({ files, onChange }) => {
+// --- Sub-Component: PersonalFileManager ---
+export const PersonalFileManager: React.FC<{ 
+  files: StoredFile[], 
+  onChange: (files: StoredFile[]) => void,
+  isFullView?: boolean
+}> = ({ files, onChange, isFullView = true }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('Todos');
@@ -15,6 +25,7 @@ export const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (fil
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [fileToMove, setFileToMove] = useState<StoredFile | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   interface FolderNode {
     name: string;
@@ -65,14 +76,22 @@ export const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (fil
   }, [files, tempFolders]);
 
   const filteredFiles = useMemo(() => {
-    if (activeCategory === 'Todos') return files;
-    return files.filter(f => (f.category || 'Geral') === activeCategory);
-  }, [files, activeCategory]);
+    let result = files;
+    if (activeCategory !== 'Todos') {
+      result = files.filter(f => (f.category || 'Geral') === activeCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(f => f.name.toLowerCase().includes(q) || (f.category || '').toLowerCase().includes(q));
+    }
+    return result;
+  }, [files, activeCategory, searchQuery]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (!selectedFile || selectedFile.size > 500 * 1024) {
-      if (selectedFile) alert("Limite de 500KB excedido.");
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (!selectedFile || selectedFile.size > MAX_SIZE) {
+      if (selectedFile) alert("Limite de 10MB excedido.");
       return;
     }
     setIsUploading(true);
@@ -220,8 +239,17 @@ export const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (fil
       <div className="win95-raised p-2 bg-[#d0d0d0] flex items-center justify-between shrink-0">
          <div className="flex items-center gap-2">
             <Button size="sm" onClick={handleCreateFolder} icon={<FolderPlus size={14}/>}>NOVA PASTA</Button>
+            <div className="relative ml-2">
+                <Search size={12} className="absolute left-2 top-2 text-gray-500" />
+                <input 
+                    className="win95-sunken bg-white text-[10px] pl-6 pr-2 py-1 w-40 outline-none font-bold uppercase"
+                    placeholder="BUSCAR ARQUIVOS..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                />
+            </div>
             <div className="text-[10px] font-bold text-[#555] flex items-center gap-1 bg-white px-2 py-1 border border-gray-400">
-                <AlertCircle size={12} className="text-blue-600"/> Limite: 500KB
+                <AlertCircle size={12} className="text-blue-600"/> Limite: 10MB
             </div>
          </div>
          <div>
@@ -319,6 +347,91 @@ export const PersonalFileManager: React.FC<{ files: StoredFile[], onChange: (fil
             </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// --- Main Component: DocumentsModule (Unified) ---
+export interface DocumentsModuleProps {
+  personalFiles: StoredFile[];
+  onFilesChange: (files: StoredFile[]) => void;
+  driveFiles: any[];
+  onDriveFilesChange: (files: any[]) => void;
+  currentUser: User | null;
+}
+
+export const DocumentsModule: React.FC<DocumentsModuleProps> = ({
+  personalFiles,
+  onFilesChange,
+  driveFiles,
+  onDriveFilesChange,
+  currentUser
+}) => {
+  const [activeTab, setActiveTab] = useState<'files' | 'generator' | 'drive'>('files');
+
+  const TABS = [
+    { id: 'files', label: 'Arquivos Pessoais', icon: <FolderOpen size={16} /> },
+    { id: 'generator', label: 'Gerador de Documentos', icon: <PenTool size={16} /> },
+    { id: 'drive', label: 'Google Drive', icon: <Cloud size={16} /> },
+  ];
+
+  return (
+    <div className="flex flex-col h-full bg-palette-mediumLight dark:bg-[#111111]">
+      {/* ── Sub-tabs Navigation ── */}
+      <div className="px-6 py-4 flex items-center justify-between border-b border-palette-mediumDark dark:border-gray-800 bg-palette-lightest dark:bg-gray-900 flex-shrink-0">
+        <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-5 py-2 text-xs font-black rounded-lg uppercase tracking-tight transition-all border ${
+                activeTab === tab.id
+                  ? 'bg-palette-darkest dark:bg-white text-white dark:text-gray-900 shadow-md border-transparent'
+                  : 'text-palette-darkest/60 dark:text-gray-400 hover:bg-palette-mediumLight dark:hover:bg-gray-800 border-palette-mediumDark dark:border-gray-700'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="hidden lg:flex items-center gap-3">
+            <div className="bg-blue-600/10 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-full text-[10px] font-black uppercase flex items-center gap-2 border border-blue-600/20">
+                <Sparkles size={12} /> Módulo Documentos v3.0
+            </div>
+        </div>
+      </div>
+
+      {/* ── Content Area ── */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === 'files' && (
+          <PersonalFileManager files={personalFiles} onChange={onFilesChange} />
+        )}
+        {activeTab === 'generator' && (
+          <DocumentGenerator onSaveFile={(f) => onFilesChange([ { ...f, id: generateUUID(), uploadedAt: new Date().toISOString() }, ...personalFiles])} />
+        )}
+        {activeTab === 'drive' && (
+          <SharedDocumentsModule 
+            driveFiles={driveFiles} 
+            onDriveFilesChange={onDriveFilesChange} 
+            currentUser={currentUser} 
+          />
+        )}
+      </div>
+
+      {/* ── Footer Info ── */}
+      <div className="h-8 px-6 bg-palette-lightest dark:bg-gray-900 border-t border-palette-mediumDark dark:border-gray-800 flex items-center justify-between text-[9px] font-bold text-gray-500 uppercase">
+        <div className="flex gap-4">
+            <span>Sessão Atual: {TABS.find(t => t.id === activeTab)?.label}</span>
+            <span>|</span>
+            <span>Armazenamento: {(personalFiles.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB usados</span>
+        </div>
+        <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+            <span>Sync Ativo</span>
+        </div>
+      </div>
     </div>
   );
 };
