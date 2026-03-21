@@ -12,6 +12,8 @@ import { DocTemplate } from '../types';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { generate } from '@pdfme/generator';
 import { text, image, line } from '@pdfme/schemas';
+import PizZip from 'pizzip';
+import Docxtemplater from 'docxtemplater';
 
 // IDs dos Drives fornecidos
 const DRIVE_REPOSITORIES = [
@@ -70,6 +72,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [customTemplate, setCustomTemplate] = useState<string | null>(null);
+  const [customDocx, setCustomDocx] = useState<ArrayBuffer | null>(null);
   const [customFields, setCustomFields] = useState<string[]>([]);
   const templateInputRef = useRef<HTMLInputElement>(null);
 
@@ -114,27 +117,62 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
     setView('editor');
   };
 
-  const handleTemplateUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        const textStr = ev.target?.result as string;
-        setCustomTemplate(textStr);
-        const placeholders = Array.from(textStr.matchAll(/{{(.*?)}}/g)).map(m => m[1]);
-        setCustomFields(Array.from(new Set(placeholders)));
-        setFormValues({});
-        setSelectedTmpl({
-            id: 'custom_upload',
-            name: file.name.replace('.txt', ''),
-            category: 'Custom',
-            description: 'Template carregado via arquivo .txt',
-            fields: [],
-            contentPattern: textStr
-        });
-        setView('editor');
-    };
-    reader.readAsText(file);
+
+    if (file.name.endsWith('.docx')) {
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            const content = ev.target?.result as ArrayBuffer;
+            setCustomDocx(content);
+            setCustomTemplate(null);
+            
+            try {
+                const zip = new PizZip(content);
+                const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+                // @ts-ignore - Docxtemplater exposes internal data for tags
+                const textStr = doc.getZip().files['word/document.xml'].asText();
+                const placeholders = Array.from(textStr.matchAll(/{{(.*?)}}/g)).map(m => m[1].replace(/<[^>]+>/g, ''));
+                setCustomFields(Array.from(new Set(placeholders)));
+            } catch (err) {
+                console.error("Erro ao ler tags do Word:", err);
+                setCustomFields(['Nome', 'CPF', 'Data']); // Fallback
+            }
+
+            setFormValues({});
+            setSelectedTmpl({
+                id: 'custom_docx',
+                name: file.name.replace('.docx', ''),
+                category: 'Word',
+                description: 'Template nativo Microsoft Word carregado.',
+                fields: [],
+                contentPattern: ''
+            });
+            setView('editor');
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const textStr = ev.target?.result as string;
+            setCustomTemplate(textStr);
+            setCustomDocx(null);
+            const placeholders = Array.from(textStr.matchAll(/{{(.*?)}}/g)).map(m => m[1]);
+            setCustomFields(Array.from(new Set(placeholders)));
+            setFormValues({});
+            setSelectedTmpl({
+                id: 'custom_upload',
+                name: file.name.replace('.txt', ''),
+                category: 'Custom',
+                description: 'Template carregado via arquivo .txt',
+                fields: [],
+                contentPattern: textStr
+            });
+            setView('editor');
+        };
+        reader.readAsText(file);
+    }
   };
 
   const downloadPdf = async (saveToFiles = false) => {
@@ -204,6 +242,35 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
     }
   };
 
+  const downloadDocx = async () => {
+    if (!customDocx) return;
+    setIsGenerating(true);
+    try {
+        const zip = new PizZip(customDocx);
+        const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+
+        // Preencher placeholders e remover tags XML extras que o Docxtemplater pode deixar
+        const data = { ...formValues, Data: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) };
+        
+        doc.render(data);
+
+        const out = doc.getZip().generate({
+            type: "blob",
+            mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        });
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(out);
+        link.download = `${selectedTmpl?.name || 'documento'}_${Date.now()}.docx`;
+        link.click();
+    } catch (error) {
+        console.error("Erro ao gerar Word:", error);
+        alert("Erro ao gerar o arquivo Word.");
+    } finally {
+        setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-win95-bg overflow-hidden">
 
@@ -250,11 +317,20 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
         {view === 'editor' && (
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={() => window.print()} icon={<Printer size={14} />}>Imprimir</Button>
-            <Button variant="secondary" size="sm" onClick={() => downloadPdf(true)} disabled={isGenerating} icon={<Cloud size={14} />}>Salvar nos Arquivos</Button>
-            <Button onClick={() => downloadPdf(false)} disabled={isGenerating} className="bg-win95-blue text-white min-w-[150px] hover:shadow-lg transition-all">
-              {isGenerating ? <Loader2 className="animate-spin" size={14} /> : <FileDown size={14} />}
-              {isGenerating ? 'DESENHANDO...' : 'BAIXAR PDF'}
-            </Button>
+            {customDocx ? (
+                <Button onClick={downloadDocx} disabled={isGenerating} className="bg-emerald-600 text-white min-w-[150px] hover:shadow-lg transition-all">
+                    {isGenerating ? <Loader2 className="animate-spin" size={14} /> : <FileDown size={14} />}
+                    {isGenerating ? 'PROCESSANDO...' : 'BAIXAR WORD'}
+                </Button>
+            ) : (
+                <>
+                    <Button variant="secondary" size="sm" onClick={() => downloadPdf(true)} disabled={isGenerating} icon={<Cloud size={14} />}>Salvar nos Arquivos</Button>
+                    <Button onClick={() => downloadPdf(false)} disabled={isGenerating} className="bg-win95-blue text-white min-w-[150px] hover:shadow-lg transition-all">
+                        {isGenerating ? <Loader2 className="animate-spin" size={14} /> : <FileDown size={14} />}
+                        {isGenerating ? 'DESENHANDO...' : 'BAIXAR PDF'}
+                    </Button>
+                </>
+            )}
           </div>
         )}
       </div>
@@ -295,10 +371,10 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
              </div>
              <div className="flex-1">
                 <h3 className="text-xs font-black uppercase text-win95-blue dark:text-blue-400">Template Customizado</h3>
-                <p className="text-[10px] text-gray-600 dark:text-gray-400">Carregue um arquivo .txt com placeholders {"{{nome}}"} para gerar documentos dinâmicos.</p>
+                <p className="text-[10px] text-gray-600 dark:text-gray-400">Carregue arquivos .docx ou .txt com placeholders {"{{nome}}"} para geração dinâmica.</p>
              </div>
-             <input type="file" accept=".txt" ref={templateInputRef} className="hidden" onChange={handleTemplateUpload} />
-             <Button onClick={() => templateInputRef.current?.click()} icon={<FileSignature size={14}/>}>UPAR TEMPLATE (.TXT)</Button>
+             <input type="file" accept=".docx,.txt" ref={templateInputRef} className="hidden" onChange={handleTemplateUpload} />
+             <Button onClick={() => templateInputRef.current?.click()} icon={<FileSignature size={14}/>}>UPAR TEMPLATE (.DOCX / .TXT)</Button>
           </div>
         )}
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -502,10 +578,19 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
                 {/* Texto Dinâmico */}
                 <div
                   className="w-full h-full text-gray-900 font-serif text-[12.5pt] leading-[1.8] whitespace-pre-wrap text-justify outline-none relative z-10"
-                  contentEditable={!customTemplate}
+                  contentEditable={!customTemplate && !customDocx}
                   suppressContentEditableWarning
                 >
-                  {customTemplate ? (
+                  {customDocx ? (
+                    <div className="flex flex-col items-center justify-center border-4 border-dashed border-emerald-100 bg-emerald-50/30 p-20 rounded-[3rem] animate-pulse">
+                        <FileText size={80} className="text-emerald-400 mb-6" />
+                        <h3 className="text-2xl font-black uppercase text-emerald-800 italic">Template Word Ativo</h3>
+                        <p className="text-xs font-bold text-emerald-600/70 uppercase mt-2 tracking-widest text-center">
+                            A visualização direta de .docx está desativada para preservar a fidelidade do layout original.<br/>
+                            Use o formulário ao lado para preencher os dados e o botão "BAIXAR WORD" para exportar.
+                        </p>
+                    </div>
+                  ) : customTemplate ? (
                     <textarea 
                       className="w-full h-[600px] border-none outline-none resize-none font-serif text-[12.5pt] leading-[1.8] p-0 bg-transparent text-gray-800"
                       value={customTemplate}

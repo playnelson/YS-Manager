@@ -25,7 +25,9 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "xlsx": "^0.18.5",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "docxtemplater": "^3.56.0",
+    "pizzip": "^3.1.8"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.28.0",

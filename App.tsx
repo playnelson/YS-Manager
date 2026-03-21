@@ -28,7 +28,8 @@ import {
   Home,
   Package,
   Store,
-  ClipboardList
+  ClipboardList,
+  Globe
 } from 'lucide-react';
 import { AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt, CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig, Signature, ShiftHandoff, StoredFile, LogisticsState, KanbanState, KanbanPriority, NotePriority, OrderAnnotation } from './types';
 import { Auth } from './components/Auth';
@@ -52,6 +53,7 @@ const FinancialModule = lazy(() => import('./components/FinancialModule').then(m
 const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m => ({ default: m.WarehouseModule })));
 const OrdersModule = lazy(() => import('./components/OrdersModule').then(m => ({ default: m.OrdersModule })));
 const StaffBoardModule = lazy(() => import('./components/StaffBoardModule').then(m => ({ default: m.StaffBoardModule })));
+const BrasilApiModule = lazy(() => import('./components/BrasilApiModule').then(m => ({ default: m.BrasilApiModule })));
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 const initialLogistics: LogisticsState = { freightTables: [], checklists: [] };
@@ -76,6 +78,7 @@ const DEFAULT_TABS = [
   { id: 'orders', label: 'Anotações', icon: <ClipboardList size={18} /> },
   { id: 'staff_board', label: 'Quadro Fun.', icon: <Users size={18} /> },
   { id: 'warehouse', label: 'Almoxarifado', icon: <Package size={18} /> },
+  { id: 'brasil-hub', label: 'Brasil Hub', icon: <Globe size={18} /> },
   { id: 'modules', label: 'Loja', icon: <Store size={18} /> },
 ];
 
@@ -91,7 +94,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('office');
   const [tabs, setTabs] = useState(DEFAULT_TABS);
-  const [hiddenTabs, setHiddenTabs] = useState<string[]>(['financial', 'warehouse']);
+  const [hiddenTabs, setHiddenTabs] = useState<string[]>(['financial', 'warehouse', 'brasil-hub']);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Dark mode via Tailwind dark class
@@ -152,20 +155,19 @@ const App: React.FC = () => {
   const toggleTabVisibility = (tabId: string) => {
     setHiddenTabs(prev => {
       const isHidden = prev.includes(tabId);
+      let nextHidden;
       if (isHidden) {
-        // Se a aba estiver oculta, mostre-a (remova de hiddenTabs)
-        // E se for a aba ativa, não faça nada. Se não, mude a aba ativa para ela.
+        nextHidden = prev.filter(id => id !== tabId);
         if (activeTab !== tabId) setActiveTab(tabId);
-        return prev.filter(id => id !== tabId);
       } else {
-        // Se a aba estiver visível, oculte-a (adicione a hiddenTabs)
-        // Se for a aba ativa, mude para a primeira aba visível
         if (activeTab === tabId) {
-          const nextVisibleTab = tabs.find(t => !prev.includes(t.id) && t.id !== tabId);
-          if (nextVisibleTab) setActiveTab(nextVisibleTab.id);
+          const nextTab = tabs.find(t => !prev.includes(t.id) && t.id !== tabId);
+          if (nextTab) setActiveTab(nextTab.id);
         }
-        return [...prev, tabId];
+        nextHidden = [...prev, tabId];
       }
+      setHasUnsavedChanges(true);
+      return nextHidden;
     });
   };
 
@@ -601,7 +603,10 @@ const App: React.FC = () => {
       }
     };
 
-    const timeout = setTimeout(saveData, 1000);
+    const timeout = setTimeout(() => {
+        if (isSyncing || !isDataLoaded) return;
+        saveData();
+    }, 1500);
     return () => clearTimeout(timeout);
   }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories, whatsappTemplates, whatsappHistory, kanbanData, isSidebarCollapsed]);
 
@@ -840,6 +845,7 @@ const App: React.FC = () => {
                 onCategoriesChange={(data) => { setWarehouseCategories(data); setHasUnsavedChanges(true); }}
               />
             )}
+            {activeTab === 'brasil-hub' && <BrasilApiModule />}
             {activeTab === 'modules' && (
               <ModuleStore
                 hiddenTabs={hiddenTabs}
