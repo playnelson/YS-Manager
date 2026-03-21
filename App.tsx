@@ -49,7 +49,6 @@ const SharedDocumentsModule = lazy(() => import('./components/SharedDocumentsMod
 const ModuleStore = lazy(() => import('./components/ModuleStore').then(m => ({ default: m.ModuleStore })));
 const FinancialModule = lazy(() => import('./components/FinancialModule').then(m => ({ default: m.FinancialModule })));
 const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m => ({ default: m.WarehouseModule })));
-const DashboardModule = lazy(() => import('./components/DashboardModule').then(m => ({ default: m.DashboardModule })));
 const OrdersModule = lazy(() => import('./components/OrdersModule').then(m => ({ default: m.OrdersModule })));
 const StaffBoardModule = lazy(() => import('./components/StaffBoardModule').then(m => ({ default: m.StaffBoardModule })));
 
@@ -65,7 +64,6 @@ const initialKanban: KanbanState = {
 };
 
 const DEFAULT_TABS = [
-  { id: 'dashboard', label: 'Resumo', icon: <LayoutDashboard size={18} /> },
   { id: 'office', label: 'Escritório', icon: <Home size={18} /> },
   { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={18} /> },
   { id: 'flow', label: 'Fluxo', icon: <GitMerge size={18} /> },
@@ -90,7 +88,7 @@ const App: React.FC = () => {
   }, []);
 
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('office');
   const [tabs, setTabs] = useState(DEFAULT_TABS);
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(['financial', 'warehouse']);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -759,18 +757,6 @@ const App: React.FC = () => {
         {/* ── Content Area (fills remaining height) ── */}
         <div className="flex-1 overflow-hidden bg-palette-mediumLight dark:bg-black/30">
           <Suspense fallback={<LoadingPlaceholder />}>
-            {activeTab === 'dashboard' && (
-              <DashboardModule
-                financialTransactions={financialTransactions}
-                warehouseInventory={warehouseInventory}
-                kanbanData={kanbanData}
-                calendarEvents={calendarEvents}
-                importantNotes={importantNotes}
-                logisticsData={logisticsData}
-                whatsappHistory={whatsappHistory}
-                setActiveTab={setActiveTab}
-              />
-            )}
             {activeTab === 'office' && (
               <OfficeModule
                 emails={emails} onEmailChange={setEmails}
