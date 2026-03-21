@@ -778,6 +778,10 @@ const App: React.FC = () => {
                 calendarConfig={calendarConfig} onCalendarConfigChange={setCalendarConfig}
                 events={calendarEvents} onEventsChange={setCalendarEvents}
                 shiftConfig={shiftConfig} onShiftConfigChange={setShiftConfig}
+                financialTransactions={financialTransactions}
+                warehouseLogs={warehouseLogs}
+                warehouseInventory={warehouseInventory}
+                orderAnnotations={orderAnnotations}
               />
             )}
             {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
@@ -798,6 +802,9 @@ const App: React.FC = () => {
                 onFilesChange={setPersonalFiles}
                 driveFiles={driveFiles}
                 onDriveFilesChange={setDriveFiles}
+                signatures={signatures}
+                onSignatureChange={setSignatures}
+                onAddEvent={(ev) => setCalendarEvents(prev => [...prev, ev])}
                 currentUser={user}
               />
             )}

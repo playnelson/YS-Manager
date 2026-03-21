@@ -16,8 +16,8 @@ interface SignatureManagerProps {
   onAddEvent: (event: UserEvent) => void;
 }
 
-export const SignatureManager: React.FC<SignatureManagerProps> = ({ signatures = [], onChange, onAddEvent }) => {
-  const [activeTab, setActiveTab] = useState<'manage' | 'sign'>('manage');
+export const SignatureManager: React.FC<SignatureManagerProps> = ({ signatures = [], onChange, onAddEvent, initialFile, onFileSigned }) => {
+  const [activeTab, setActiveTab] = useState<'manage' | 'sign'>(initialFile ? 'sign' : 'manage');| 'sign'>('manage');
 
   return (
     <div className="h-full flex flex-col gap-2 bg-win95-bg">
@@ -40,7 +40,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({ signatures =
 
       <div className="flex-1 win95-raised p-2 bg-[#d0d0d0] overflow-hidden">
         {activeTab === 'manage' && <SignatureCreator signatures={signatures} onChange={onChange} onAddEvent={onAddEvent} />}
-        {activeTab === 'sign' && <DocumentSigner signatures={signatures} onAddEvent={onAddEvent} />}
+        {activeTab === 'sign' && <DocumentSigner signatures={signatures} onAddEvent={onAddEvent} initialFile={initialFile} onFileSigned={onFileSigned} />}
       </div>
     </div>
   );
@@ -234,7 +234,7 @@ const SignatureCreator: React.FC<SignatureManagerProps> = ({ signatures, onChang
 };
 
 // --- SUB-COMPONENTE: ASSINADOR DE PDF ---
-const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: UserEvent) => void }> = ({ signatures, onAddEvent }) => {
+const DocumentSigner: React.FC<{ signatures: Signature[], onAddEvent: (event: UserEvent) => void, initialFile?: StoredFile | null, onFileSigned?: () => void }> = ({ signatures, onAddEvent, initialFile, onFileSigned }) => {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null); // PDFJS Document Proxy
   const [currentPage, setCurrentPage] = useState(1);

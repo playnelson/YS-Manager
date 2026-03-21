@@ -4,19 +4,21 @@ import {
   FolderOpen, FileText, PenTool, Upload, Download, Trash2, 
   File, AlertCircle, HardDrive, Folder, FolderPlus, 
   ArrowRightLeft, Edit2, Check, X, CornerDownRight,
-  Search, FileDown, Layers, Sparkles, Cloud
+  Search, FileDown, Layers, Sparkles, Cloud, FileCheck
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { StoredFile, Signature, UserEvent, User } from '../types';
 import { DocumentGenerator } from './DocumentGenerator';
 import { SharedDocumentsModule } from './SharedDocumentsModule';
+import { SignatureManager } from './SignatureManager';
 
 // --- Sub-Component: PersonalFileManager ---
 export const PersonalFileManager: React.FC<{ 
   files: StoredFile[], 
   onChange: (files: StoredFile[]) => void,
+  onSignFile?: (file: StoredFile) => void,
   isFullView?: boolean
-}> = ({ files, onChange, isFullView = true }) => {
+}> = ({ files, onChange, onSignFile, isFullView = true }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('Todos');
@@ -307,8 +309,11 @@ export const PersonalFileManager: React.FC<{
                                 <td className="p-2 text-right">
                                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100">
                                         <button onClick={() => setFileToMove(file)} className="p-1 win95-raised bg-win95-bg"><ArrowRightLeft size={12} /></button>
-                                        <button onClick={() => { const l=document.createElement('a'); l.href=file.data; l.download=file.name; l.click(); }} className="p-1 win95-raised bg-win95-bg text-blue-700"><Download size={12} /></button>
-                                        <button onClick={() => confirm("Excluir?") && onChange(files.filter(f => f.id !== file.id))} className="p-1 win95-raised bg-win95-bg text-red-600"><Trash2 size={12} /></button>
+                                        <button onClick={() => { const l=document.createElement('a'); l.href=file.data; l.download=file.name; l.click(); }} className="p-1 win95-raised bg-win95-bg text-blue-700" title="Baixar"><Download size={12} /></button>
+                                         {file.type === 'application/pdf' && onSignFile && (
+                                            <button onClick={() => onSignFile(file)} className="p-1 win95-raised bg-win95-bg text-green-700" title="Assinar Digitalmente"><FileCheck size={12}/></button>
+                                         )}
+                                         <button onClick={() => confirm("Excluir?") && onChange(files.filter(f => f.id !== file.id))} className="p-1 win95-raised bg-win95-bg text-red-600" title="Excluir"><Trash2 size={12} /></button>
                                     </div>
                                 </td>
                             </tr>
@@ -357,6 +362,9 @@ export interface DocumentsModuleProps {
   onFilesChange: (files: StoredFile[]) => void;
   driveFiles: any[];
   onDriveFilesChange: (files: any[]) => void;
+  signatures: Signature[];
+  onSignatureChange: (signatures: Signature[]) => void;
+  onAddEvent: (event: UserEvent) => void;
   currentUser: User | null;
 }
 
@@ -365,13 +373,18 @@ export const DocumentsModule: React.FC<DocumentsModuleProps> = ({
   onFilesChange,
   driveFiles,
   onDriveFilesChange,
+  signatures,
+  onSignatureChange,
+  onAddEvent,
   currentUser
 }) => {
-  const [activeTab, setActiveTab] = useState<'files' | 'generator' | 'drive'>('files');
+  const [activeTab, setActiveTab] = useState<'files' | 'generator' | 'drive' | 'signer'>('files');
+  const [fileToSign, setFileToSign] = useState<StoredFile | null>(null);
 
   const TABS = [
     { id: 'files', label: 'Arquivos Pessoais', icon: <FolderOpen size={16} /> },
     { id: 'generator', label: 'Gerador de Documentos', icon: <PenTool size={16} /> },
+    { id: 'signer', label: 'Assinador Digital', icon: <FileCheck size={16} /> },
     { id: 'drive', label: 'Google Drive', icon: <Cloud size={16} /> },
   ];
 
@@ -406,10 +419,25 @@ export const DocumentsModule: React.FC<DocumentsModuleProps> = ({
       {/* ── Content Area ── */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'files' && (
-          <PersonalFileManager files={personalFiles} onChange={onFilesChange} />
+          <PersonalFileManager 
+            files={personalFiles} 
+            onChange={onFilesChange} 
+            onSignFile={(f) => { setFileToSign(f); setActiveTab('signer'); }}
+          />
         )}
         {activeTab === 'generator' && (
-          <DocumentGenerator onSaveFile={(f) => onFilesChange([ { ...f, id: generateUUID(), uploadedAt: new Date().toISOString() }, ...personalFiles])} />
+          <DocumentGenerator 
+            onSaveFile={(f) => onFilesChange([ { ...f, id: generateUUID(), uploadedAt: new Date().toISOString() }, ...personalFiles])} 
+          />
+        )}
+        {activeTab === 'signer' && (
+          <SignatureManager 
+            signatures={signatures} 
+            onChange={onSignatureChange} 
+            onAddEvent={onAddEvent}
+            initialFile={fileToSign}
+            onFileSigned={() => setFileToSign(null)}
+          />
         )}
         {activeTab === 'drive' && (
           <SharedDocumentsModule 

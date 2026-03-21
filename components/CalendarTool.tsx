@@ -19,11 +19,16 @@ import {
   IconClock,
   IconBrandGoogle,
   IconArrowRight,
-  IconSparkles
+  IconSparkles,
+  IconFileText,
+  IconFileDownload,
+  IconAlertTriangle,
+  IconTrendingUp,
+  IconTrendingDown
 } from '@tabler/icons-react';
-import { CalendarConfig, Holiday, UserEvent, ShiftConfig, MoonPhase } from '../types';
+import { CalendarConfig, Holiday, UserEvent, ShiftConfig, MoonPhase, FinancialTransaction, OrderAnnotation } from '../types';
 import { Button } from './ui/Button';
-import { Moon as LucideMoon, MoonStar as LucideMoonStar } from 'lucide-react';
+import { Moon as LucideMoon, MoonStar as LucideMoonStar, FileText as LucideFileText } from 'lucide-react';
 
 interface CalendarToolProps {
   config: CalendarConfig;
@@ -31,6 +36,10 @@ interface CalendarToolProps {
   shiftConfig?: ShiftConfig;
   onConfigChange: (config: CalendarConfig) => void;
   onEventsChange: (events: UserEvent[]) => void;
+  financialTransactions?: FinancialTransaction[];
+  warehouseLogs?: any[];
+  warehouseInventory?: any[];
+  orderAnnotations?: OrderAnnotation[];
 }
 
 const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
@@ -42,13 +51,26 @@ const STATE_HOLIDAYS_DB: Record<string, { day: number, month: number, name: stri
   'RS': [{ day: 20, month: 9, name: 'Revolução Farroupilha' }],
 };
 
-export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [], shiftConfig, onConfigChange, onEventsChange }) => {
+export const CalendarTool: React.FC<CalendarToolProps> = ({ 
+  config, 
+  events = [], 
+  shiftConfig, 
+  onConfigChange, 
+  onEventsChange,
+  financialTransactions = [],
+  warehouseLogs = [],
+  warehouseInventory = [],
+  orderAnnotations = []
+}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDayStr, setSelectedDayStr] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState<Partial<UserEvent>>({ title: '', type: 'reminder' });
+
+
   const [moonPhases, setMoonPhases] = useState<MoonPhase[]>([]);
   const [seasonalDates, setSeasonalDates] = useState<Holiday[]>([]);
   const [filters, setFilters] = useState({
@@ -372,6 +394,12 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
                 </div>
               )}
             </div>
+            <button
+              onClick={() => setIsReportModalOpen(true)}
+              className="mt-1 flex items-center gap-2 px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-black uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-md active:scale-95 active:shadow-none mr-2"
+            >
+              <IconFileText size={14} /> Relatórios
+            </button>
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="mt-1 flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white rounded-full text-xs font-black uppercase tracking-wider hover:bg-blue-700 transition-all shadow-md active:scale-95 active:shadow-none"
@@ -723,6 +751,243 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({ config, events = [],
           </div>
         </div>
       )}
+      {/* Modal de Relatório Integrado */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-palette-lightest dark:bg-gray-900 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-indigo-700 to-purple-800 text-white p-8">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-black uppercase tracking-[0.3em] opacity-60">Centro de Inteligência</span>
+                <button onClick={() => setIsReportModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors">×</button>
+              </div>
+              <h1 className="text-3xl font-black italic tracking-tighter">Relatório Estratégico</h1>
+              <p className="text-indigo-100 text-sm mt-1">Análise de Performance: {monthNames[month]} {year}</p>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Resumo Financeiro */}
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-2xl">
+                  <div className="flex items-center gap-2 mb-2 text-emerald-700 dark:text-emerald-400">
+                    <IconTrendingUp size={18} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Financeiro</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-lg font-black text-emerald-900 dark:text-emerald-200">
+                      {financialTransactions.filter(t => new Date(t.date).getMonth() === month && new Date(t.date).getFullYear() === year).length}
+                    </span>
+                    <span className="text-[9px] font-bold text-emerald-600/60 uppercase">Transações no período</span>
+                  </div>
+                </div>
+
+                {/* Resumo Operacional */}
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl">
+                  <div className="flex items-center gap-2 mb-2 text-blue-700 dark:text-blue-400">
+                    <IconFileText size={18} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Operações</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-lg font-black text-blue-900 dark:text-blue-200">
+                      {orderAnnotations.filter(o => new Date(o.date).getMonth() === month && new Date(o.date).getFullYear() === year).length}
+                    </span>
+                    <span className="text-[9px] font-bold text-blue-600/60 uppercase">Notas registradas</span>
+                  </div>
+                </div>
+
+                {/* Resumo de Logística/Estoque */}
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-2xl">
+                  <div className="flex items-center gap-2 mb-2 text-amber-700 dark:text-amber-400">
+                    <IconFileDownload size={18} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Almoxarifado</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-lg font-black text-amber-900 dark:text-amber-200">
+                      {warehouseLogs.filter(l => new Date(l.date).getMonth() === month && new Date(l.date).getFullYear() === year).length}
+                    </span>
+                    <span className="text-[9px] font-bold text-amber-600/60 uppercase">Movimentações</span>
+                  </div>
+                </div>
+
+                {/* Resumo de Equipe */}
+                <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-2xl">
+                  <div className="flex items-center gap-2 mb-2 text-purple-700 dark:text-purple-400">
+                    <IconUsers size={18} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Escala</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-lg font-black text-purple-900 dark:text-purple-200">
+                      {Array.from(projectedShifts.values()).filter(s => s.type === 'work').length}
+                    </span>
+                    <span className="text-[9px] font-bold text-purple-600/60 uppercase">Dias de plantão</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 pt-4 border-t border-palette-mediumLight dark:border-gray-800">
+                <button 
+                  onClick={() => setIsReportModalOpen(false)} 
+                  className="flex-1 px-4 py-4 bg-palette-mediumLight dark:bg-gray-800 text-palette-darkest/60 dark:text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-palette-mediumDark dark:hover:bg-gray-700 transition-colors"
+                >
+                  Fechar
+                </button>
+                <button 
+                  onClick={() => {
+                    generateIntegratedReport();
+                    setIsReportModalOpen(false);
+                  }} 
+                  className="flex-2 px-8 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <IconFileDownload size={16} /> Gerar Relatório PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  function generateIntegratedReport() {
+    const monthTransactions = financialTransactions.filter(t => new Date(t.date).getMonth() === month && new Date(t.date).getFullYear() === year);
+    const monthLogs = warehouseLogs.filter(l => new Date(l.date).getMonth() === month && new Date(l.date).getFullYear() === year);
+    const monthEvents = events.filter(e => new Date(e.date).getMonth() === month && new Date(e.date).getFullYear() === year);
+    const monthOrders = orderAnnotations.filter(o => new Date(o.date).getMonth() === month && new Date(o.date).getFullYear() === year);
+
+    const income = monthTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+    const expense = monthTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Relatório Integrado - ${monthNames[month]} ${year}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; color: #333; padding: 40px; line-height: 1.5; }
+            .header { border-bottom: 4px solid #4f46e5; padding-bottom: 20px; margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .header h1 { margin: 0; font-size: 32px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -1px; color: #4f46e5; }
+            .header p { margin: 0; font-weight: 700; color: #666; text-transform: uppercase; font-size: 12px; }
+            .grid { display: grid; grid-cols: 2; gap: 40px; margin-bottom: 40px; }
+            .card { border: 1px solid #e5e7eb; border-radius: 20px; padding: 24px; background: #f9fafb; }
+            .card h2 { margin-top: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #9ca3af; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 16px; }
+            .metric { font-size: 24px; font-weight: 900; color: #111827; margin-bottom: 4px; }
+            .label { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
+            th { text-align: left; padding: 8px; background: #f3f4f6; text-transform: uppercase; font-size: 9px; }
+            td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
+            .footer { margin-top: 80px; text-align: center; font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; }
+            .income { color: #059669; }
+            .expense { color: #dc2626; }
+            .total-row { background: #f9fafb; font-weight: 700; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <p>Relatório de Operações Mensais</p>
+              <h1>${monthNames[month]} ${year}</h1>
+            </div>
+            <div style="text-align: right">
+              <p>Emitido em: ${new Date().toLocaleDateString('pt-BR')}</p>
+              <p>Documento de Inteligência</p>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px;">
+            <div class="card">
+              <h2>Performance Financeira</h2>
+              <div class="metric income">R$ ${income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              <div class="label">Entradas Totais</div>
+              <div style="margin-top: 12px;"></div>
+              <div class="metric expense">R$ ${expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              <div class="label">Saídas Totais</div>
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ccc;"></div>
+              <div class="metric">R$ ${(income - expense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              <div class="label">Saldo do Período</div>
+            </div>
+
+            <div class="card">
+              <h2>Atividade Operacional</h2>
+              <div class="metric">${monthOrders.length}</div>
+              <div class="label">Notas e Pedidos Registrados</div>
+              <div style="margin-top: 12px;"></div>
+              <div class="metric">${monthLogs.length}</div>
+              <div class="label">Movimentações de Estoque</div>
+              <div style="margin-top: 12px;"></div>
+              <div class="metric">${monthEvents.length}</div>
+              <div class="label">Eventos e Compromissos</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom: 20px;">
+            <h2>Destaques Financeiros</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${monthTransactions.slice(0, 5).map(t => `
+                  <tr>
+                    <td>${new Date(t.date).toLocaleDateString('pt-BR')}</td>
+                    <td>${t.description}</td>
+                    <td>${t.category}</td>
+                    <td class="${t.type === 'income' ? 'income' : 'expense'}">${t.type === 'income' ? '+' : '-'} R$ ${t.amount.toLocaleString('pt-BR')}</td>
+                  </tr>
+                `).join('')}
+                ${monthTransactions.length > 5 ? `<tr><td colspan="4" style="text-align: center; color: #999;">... e mais ${monthTransactions.length - 5} transações</td></tr>` : ''}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h2>Agenda e Notas Críticas</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Título / Descrição</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${monthEvents.map(e => `
+                  <tr>
+                    <td>${new Date(e.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                    <td>EVENTO</td>
+                    <td>${e.title}</td>
+                  </tr>
+                `).join('')}
+                ${monthOrders.map(o => `
+                  <tr>
+                    <td>${new Date(o.date).toLocaleDateString('pt-BR')}</td>
+                    <td>PEDIDO</td>
+                    <td>${o.customerName} - ${o.items.length} itens</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="footer">
+            YS-Manager Strategic Intelligence System - Relatório Privado e Confidencial
+          </div>
+
+          <script>
+            window.onload = () => {
+              window.print();
+              // window.close();
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
 };

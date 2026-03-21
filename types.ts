@@ -206,7 +206,7 @@ export interface ShiftHandoff {
 export interface DocTemplate {
   id: string;
   name: string;
-  category: 'Financeiro' | 'Jurídico' | 'RH' | 'Pessoal' | 'Comercial' | 'Imobiliário';
+  category: 'Financeiro' | 'Jurídico' | 'RH' | 'Pessoal' | 'Comercial' | 'Imobiliário' | 'Custom';
   description: string;
   fields: string[];
   contentPattern: string;

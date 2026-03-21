@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { IconCalendar, IconSettings, IconRepeat, IconRefresh } from '@tabler/icons-react';
-import { CalendarConfig, UserEvent, ShiftConfig } from '../types';
+import { CalendarConfig, UserEvent, ShiftConfig, FinancialTransaction, OrderAnnotation } from '../types';
 import { CalendarTool } from './CalendarTool';
 import { ShiftManager } from './ShiftManager';
 import { Button } from './ui/Button';
@@ -15,6 +15,10 @@ interface CalendarModuleProps {
   shiftConfig?: ShiftConfig;
   onShiftConfigChange: (config: ShiftConfig) => void;
   googleAccessToken?: string;
+  financialTransactions?: FinancialTransaction[];
+  warehouseLogs?: any[];
+  warehouseInventory?: any[];
+  orderAnnotations?: OrderAnnotation[];
 }
 
 export const CalendarModule: React.FC<CalendarModuleProps> = ({
@@ -24,7 +28,11 @@ export const CalendarModule: React.FC<CalendarModuleProps> = ({
   onEventsChange,
   shiftConfig,
   onShiftConfigChange,
-  googleAccessToken
+  googleAccessToken,
+  financialTransactions,
+  warehouseLogs,
+  warehouseInventory,
+  orderAnnotations
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'view' | 'config'>('view');
   const [googleEvents, setGoogleEvents] = useState<UserEvent[]>([]);
@@ -92,6 +100,10 @@ export const CalendarModule: React.FC<CalendarModuleProps> = ({
                   shiftConfig={shiftConfig}
                   onConfigChange={onCalendarConfigChange} 
                   onEventsChange={onEventsChange} 
+                  financialTransactions={financialTransactions}
+                  warehouseLogs={warehouseLogs}
+                  warehouseInventory={warehouseInventory}
+                  orderAnnotations={orderAnnotations}
                 />
             ) : (
                 <ShiftManager 

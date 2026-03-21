@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   FileText, Download, Printer, Search, Star, Scale, User,
   Briefcase, Home, Shield, DollarSign, ChevronRight,
@@ -69,6 +69,9 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [customTemplate, setCustomTemplate] = useState<string | null>(null);
+  const [customFields, setCustomFields] = useState<string[]>([]);
+  const templateInputRef = useRef<HTMLInputElement>(null);
 
   const [favorites, setFavorites] = useState<string[]>(() => {
     const saved = localStorage.getItem('ysoffice_doc_favorites');
@@ -106,19 +109,46 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
   const handleSelect = (tmpl: DocTemplate) => {
     setSelectedTmpl(tmpl);
     setFormValues({});
+    setCustomTemplate(null);
+    setCustomFields([]);
     setView('editor');
   };
 
+  const handleTemplateUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const textStr = ev.target?.result as string;
+        setCustomTemplate(textStr);
+        const placeholders = Array.from(textStr.matchAll(/{{(.*?)}}/g)).map(m => m[1]);
+        setCustomFields(Array.from(new Set(placeholders)));
+        setFormValues({});
+        setSelectedTmpl({
+            id: 'custom_upload',
+            name: file.name.replace('.txt', ''),
+            category: 'Custom',
+            description: 'Template carregado via arquivo .txt',
+            fields: [],
+            contentPattern: textStr
+        });
+        setView('editor');
+    };
+    reader.readAsText(file);
+  };
+
   const downloadPdf = async (saveToFiles = false) => {
-    if (!selectedTmpl) return;
+    if (!selectedTmpl && !customTemplate) return;
     setIsGenerating(true);
     try {
       const doc = await PDFDocument.create();
       doc.addPage([595.28, 841.89]);
       const basePdf = await doc.saveAsBase64({ dataUri: true });
 
-      let finalContent = selectedTmpl.contentPattern;
-      selectedTmpl.fields.forEach(f => {
+      let finalContent = customTemplate || selectedTmpl?.contentPattern || '';
+      const fieldsToProcess = customTemplate ? customFields : (selectedTmpl?.fields || []);
+      
+      fieldsToProcess.forEach(f => {
         finalContent = finalContent.split(`{{${f}}}`).join(formValues[f] || `[${f.toUpperCase()}]`);
       });
       finalContent = finalContent.replace(/{{Data}}/g, new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }));
@@ -258,6 +288,19 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
               </div>
             )}
 
+            {activeCat === 'Todos' && (
+          <div className="mx-6 mt-6 flex items-center gap-2 bg-win95-blue/10 dark:bg-win95-blue/5 p-4 win95-raised">
+             <div className="bg-win95-blue p-2 text-white shrink-0">
+                <FileSignature size={24} />
+             </div>
+             <div className="flex-1">
+                <h3 className="text-xs font-black uppercase text-win95-blue dark:text-blue-400">Template Customizado</h3>
+                <p className="text-[10px] text-gray-600 dark:text-gray-400">Carregue um arquivo .txt com placeholders {{nome}} para gerar documentos dinâmicos.</p>
+             </div>
+             <input type="file" accept=".txt" ref={templateInputRef} className="hidden" onChange={handleTemplateUpload} />
+             <Button onClick={() => templateInputRef.current?.click()} icon={<FileSignature size={14}/>}>UPAR TEMPLATE (.TXT)</Button>
+          </div>
+        )}
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredLibrary.map(tmpl => {
                 const isFav = favorites.includes(tmpl.id);
@@ -411,7 +454,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
                   <p className="text-[8px] text-slate-400 mt-2 italic">* Mapeia automaticamente Razão Social, CNPJ e Endereço Completo.</p>
                 </div>
 
-                {selectedTmpl.fields.map(field => (
+                {(customTemplate ? customFields : selectedTmpl.fields).map(field => (
                   <div key={field} className="animate-in fade-in slide-in-from-left-2 duration-300">
                     <label className="text-[10px] font-black uppercase text-gray-600 block mb-1.5 tracking-tight">{field}:</label>
                     <input
@@ -459,20 +502,33 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
                 {/* Texto Dinâmico */}
                 <div
                   className="w-full h-full text-gray-900 font-serif text-[12.5pt] leading-[1.8] whitespace-pre-wrap text-justify outline-none relative z-10"
-                  contentEditable
+                  contentEditable={!customTemplate}
                   suppressContentEditableWarning
                 >
-                  {selectedTmpl.contentPattern.split('\n').map((line, idx) => {
-                    let processed = line;
-                    selectedTmpl.fields.forEach(f => {
-                      const val = formValues[f] ? formValues[f].toUpperCase() : `<${f.toUpperCase()}>`;
-                      processed = processed.split(`{{${f}}}`).join(val);
-                    });
-                    processed = processed.replace(/{{Data}}/g, new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }));
+                  {customTemplate ? (
+                    <textarea 
+                      className="w-full h-[600px] border-none outline-none resize-none font-serif text-[12.5pt] leading-[1.8] p-0 bg-transparent text-gray-800"
+                      value={customTemplate}
+                      onChange={(e) => {
+                          setCustomTemplate(e.target.value);
+                          const placeholders = Array.from(e.target.value.matchAll(/{{(.*?)}}/g)).map(m => m[1]);
+                          setCustomFields(Array.from(new Set(placeholders)));
+                      }}
+                    />
+                  ) : (
+                    selectedTmpl.contentPattern.split('\n').map((line, idx) => {
+                      let processed = line;
+                      selectedTmpl.fields.forEach(f => {
+                        const val = formValues[f] ? formValues[f].toUpperCase() : `<${f.toUpperCase()}>`;
+                        processed = processed.split(`{{${f}}}`).join(val);
+                      });
+                      processed = processed.replace(/{{Data}}/g, new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }));
 
-                    // Estilo especial para títulos
-                    const isTitle = idx === 0 || line === line.toUpperCase() && line.length > 5;
-                    return <div key={idx} className={isTitle ? "font-sans font-black text-center mb-10 text-blue-900 border-b border-gray-100 pb-2" : "mb-1"}>{processed || '\n'}</div>;
+                      const isTitle = idx === 0 || line === line.toUpperCase() && line.length > 5;
+                      return <div key={idx} className={isTitle ? "font-sans font-black text-center mb-10 text-blue-900 border-b border-gray-100 pb-2" : "mb-1"}>{processed || '\n'}</div>;
+                    })
+                  )}
+                </div>;
                   })}
                 </div>
 
