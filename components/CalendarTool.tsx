@@ -968,7 +968,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({
                   <tr>
                     <td>${new Date(o.date).toLocaleDateString('pt-BR')}</td>
                     <td>PEDIDO</td>
-                    <td>${o.customerName} - ${o.items.length} itens</td>
+                    <td>${o.supplier || o.requester} - ${o.items?.length || 0} itens</td>
                   </tr>
                 `).join('')}
               </tbody>

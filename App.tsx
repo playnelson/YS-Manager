@@ -807,6 +807,7 @@ const App: React.FC = () => {
                 orders={orderAnnotations}
                 onOrdersChange={(data) => { setOrderAnnotations(data); setHasUnsavedChanges(true); }}
                 inventory={warehouseInventory}
+                currentUser={user}
               />
             )}
             {activeTab === 'staff_board' && (

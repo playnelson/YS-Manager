@@ -117,22 +117,41 @@ export interface EmailTemplate {
 }
 
 // Order Annotation Types
+export type OrderType = 'purchase' | 'sale' | 'internal';
+export type OrderStatus = 'draft' | 'pending_approval' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
+export type OrderPriority = 'low' | 'normal' | 'high' | 'urgent';
+
 export interface OrderItem {
-  itemId: string;
-  code: string;
-  name: string;
-  quantity: number;
+  id: string;
+  description: string;        // nome livre do produto/serviço
+  code?: string;              // código opcional
   unit: string;
+  quantity: number;
+  unitPrice?: number;         // preço unitário (opcional)
+  warehouseItemId?: string;   // vínculo opcional ao estoque
+}
+
+export interface StatusHistoryEntry {
+  status: OrderStatus;
+  date: string;
+  by?: string;
 }
 
 export interface OrderAnnotation {
   id: string;
-  customerName: string;
+  orderNumber?: string;       // ex: PED-2026-001
+  type: OrderType;
+  requester: string;          // solicitante/comprador
+  supplier?: string;          // fornecedor/destinatário
   date: string;
+  expectedDelivery?: string;
   items: OrderItem[];
   notes?: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  paymentMethod?: string;
+  status: OrderStatus;
+  priority: OrderPriority;
   totalValue?: number;
+  statusHistory?: StatusHistoryEntry[];
 }
 
 // Professional Links Types
