@@ -720,6 +720,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
   const saveLogs     = (data: StockLog[])   => { onLogsChange(data); };
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchTermEmployees, setSearchTermEmployees] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -982,6 +983,50 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
 
   const availableItemCategories = Array.from(new Set(inventory.map(i => i.category))).sort();
 
+  const itemPossession = React.useMemo(() => {
+    const map: Record<string, { employeeName: string; employeeId: string; qty: number }[]> = {};
+    const empPossession: Record<string, Record<string, number>> = {}; 
+
+    logs.forEach(l => {
+      if (!l.employeeId || l.employeeId === 'system') return;
+      if (!empPossession[l.itemId]) empPossession[l.itemId] = {};
+      
+      const current = empPossession[l.itemId][l.employeeId] || 0;
+      if (l.type === 'exit') {
+        empPossession[l.itemId][l.employeeId] = current + l.quantity;
+      } else if (l.type === 'entry') {
+        empPossession[l.itemId][l.employeeId] = current - l.quantity;
+      }
+    });
+
+    Object.keys(empPossession).forEach(itemId => {
+      const emps = empPossession[itemId];
+      map[itemId] = [];
+      Object.keys(emps).forEach(empId => {
+        if (emps[empId] > 0) {
+          const emp = employees.find(e => e.id === empId);
+          map[itemId].push({
+            employeeId: empId,
+            employeeName: emp ? emp.name : 'Desconhecido',
+            qty: emps[empId]
+          });
+        }
+      });
+      map[itemId].sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+    });
+    return map;
+  }, [logs, employees]);
+
+  const uniqueItemNames = React.useMemo(() => {
+    return Array.from(new Set(inventory.map(i => i.name))).sort((a,b) => a.localeCompare(b));
+  }, [inventory]);
+
+  const filteredEmployees = React.useMemo(() => {
+    return employees
+      .filter(e => !searchTermEmployees || e.name.toLowerCase().includes(searchTermEmployees.toLowerCase()) || e.cpf.includes(searchTermEmployees) || e.role.toLowerCase().includes(searchTermEmployees.toLowerCase()))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [employees, searchTermEmployees]);
+
   const filtered = inventory.filter(item =>
     (!filterCategory || item.category === filterCategory) &&
     (!searchTerm || item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.code.toLowerCase().includes(searchTerm.toLowerCase()) || item.category.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -1096,6 +1141,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                     <th className="px-4 py-2.5 text-left w-32">Categoria</th>
                     <th className="px-4 py-2.5 text-center w-28">Consumível?</th>
                     <th className="px-4 py-2.5 text-center w-24">Qtd. Atual</th>
+                    <th className="px-4 py-2.5 text-left w-32">Posse</th>
                     <th className="px-4 py-2.5 text-center w-24">Qtd. Mínima</th>
                     <th className="px-4 py-2.5 text-center w-20">Unidade</th>
                     <th className="px-4 py-2.5 text-right w-24">Ações</th>
@@ -1125,6 +1171,21 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                           </span>
                         </td>
                         <td className={`px-4 py-2.5 text-center font-bold font-mono ${low ? 'text-rose-600 dark:text-rose-400' : 'text-gray-800 dark:text-white'}`}>{item.quantity}</td>
+                        <td className="px-4 py-2.5">
+                          {!item.consumable && itemPossession[item.id]?.length > 0 ? (
+                            <div className="flex flex-col gap-1">
+                              {itemPossession[item.id].map(p => (
+                                <span key={p.employeeId} className="inline-flex items-center gap-1 text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800 whitespace-nowrap">
+                                  <Users size={10}/>
+                                  <span className="truncate max-w-[80px]" title={p.employeeName}>{p.employeeName}</span>
+                                  <span className="font-bold opacity-70">({p.qty})</span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-gray-400 text-center block">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400">{item.minStock || '—'}</td>
                         <td className="px-4 py-2.5 text-center text-gray-500 dark:text-gray-400 text-xs">{item.unit}</td>
                         <td className="px-4 py-2.5 text-right">
@@ -1189,53 +1250,60 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
 
         {/* === EMPLOYEES TAB === */}
         {activeTab === 'employees' && (
-          <div className="h-full overflow-y-auto p-5">
-            {employees.length === 0 ? (
+          <div className="h-full flex flex-col overflow-hidden">
+            <div className="px-5 py-3 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2 flex-1 max-w-sm">
+                <Search size={14} className="text-gray-400 shrink-0"/>
+                <input type="text" placeholder="Buscar funcionário (nome, CPF, cargo)..." value={searchTermEmployees} onChange={e => setSearchTermEmployees(e.target.value)}
+                  className="flex-1 bg-transparent outline-none text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400"/>
+              </div>
+              <span className="text-xs text-gray-400">{filteredEmployees.length} de {employees.length}</span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+            {filteredEmployees.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-3">
                 <Users size={40} className="opacity-30"/>
-                <p className="text-sm">Nenhum funcionário cadastrado</p>
-                <button onClick={() => setShowAddEmp(true)} className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-sm font-semibold shadow-sm hover:bg-gray-700 transition-colors">
-                  <UserPlus size={14}/> Cadastrar primeiro funcionário
-                </button>
+                <p className="text-sm">Nenhum funcionário encontrado</p>
+                {employees.length === 0 && (
+                  <button onClick={() => setShowAddEmp(true)} className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-sm font-semibold shadow-sm hover:bg-gray-700 transition-colors">
+                    <UserPlus size={14}/> Cadastrar primeiro funcionário
+                  </button>
+                )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {employees.map(emp => (
-                  <div key={emp.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3">
+              <div className="flex flex-col gap-2">
+                {filteredEmployees.map(emp => (
+                  <div key={emp.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 flex flex-row items-center gap-4 hover:shadow-sm transition-shadow">
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-violet-500 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
                       {emp.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{emp.name}</p>
-                      <p className="text-[10px] text-gray-500 font-mono">{applyCPFMask(emp.cpf || '')}</p>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => setSelectedEmp(emp)}
-                          className="text-[11px] text-blue-500 hover:underline flex items-center gap-1"
-                        >
-                          Ver detalhes
-                        </button>
-                        <button 
-                          onClick={() => { setNewEmp(emp); setEditingEmp(emp); setShowAddEmp(true); }}
-                          className="text-[11px] text-gray-400 hover:text-blue-500 flex items-center gap-1"
-                        >
-                          • Editar
-                        </button>
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 dark:text-white truncate" title={emp.name}>{emp.name}</p>
+                        <p className="text-[10px] text-gray-500 font-mono">CPF: {applyCPFMask(emp.cpf || '')}</p>
+                      </div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 truncate" title={emp.role || 'Sem cargo'}>
+                        {emp.role || 'Sem cargo'}
+                      </div>
+                      <div className="flex items-center gap-3 md:justify-end">
+                        <button onClick={() => setSelectedEmp(emp)} className="text-xs text-blue-600 hover:text-blue-700 font-medium">Ver detalhes</button>
+                        <button onClick={() => { setNewEmp(emp); setEditingEmp(emp); setShowAddEmp(true); }} className="text-xs text-gray-500 hover:text-gray-700">Editar</button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 pl-4 border-l border-gray-100 dark:border-gray-800 shrink-0">
                       <button onClick={() => saveEmployees(employees.map(e => e.id === emp.id ? { ...e, active: !e.active } : e))}
                         className={`relative w-8 h-4 rounded-full transition-colors ${emp.active ? 'bg-emerald-400' : 'bg-gray-300 dark:bg-gray-600'}`} title={emp.active ? 'Ativo' : 'Inativo'}>
                         <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${emp.active ? 'translate-x-4' : 'translate-x-0.5'}`}/>
                       </button>
-                      <button onClick={() => { if (confirm('Remover funcionário?')) saveEmployees(employees.filter(e => e.id !== emp.id)); }} className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                        <Trash2 size={13}/>
+                      <button onClick={() => { if (confirm('Remover funcionário?')) saveEmployees(employees.filter(e => e.id !== emp.id)); }} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
+                        <Trash2 size={14}/>
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+            </div>
           </div>
         )}
 
@@ -1318,8 +1386,11 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
               {/* Descrição */}
               <div className="col-span-2">
                 <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Descrição *</label>
-                <input type="text" value={newItem.name||''} onChange={e => setNewItem({...newItem,name:e.target.value})} placeholder="Ex: Capacete de Segurança Azul"
+                <input type="text" list="inventory-item-names" value={newItem.name||''} onChange={e => setNewItem({...newItem,name:e.target.value})} placeholder="Ex: Capacete de Segurança Azul"
                   className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+                <datalist id="inventory-item-names">
+                  {uniqueItemNames.map(name => <option key={name} value={name} />)}
+                </datalist>
               </div>
               {/* Consumível */}
               <div className="col-span-2">
