@@ -768,6 +768,22 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
       setEditingItem(null);
     } else {
       saveInventory([...inventory, item]);
+      // Auto-log: registro de entrada para novo item aparecer no histórico
+      if (item.quantity > 0) {
+        const entryLog: StockLog = {
+          id: genId(),
+          itemId: item.id,
+          itemCode: item.code,
+          itemName: item.name,
+          type: 'entry',
+          quantity: item.quantity,
+          date: new Date().toISOString(),
+          employeeId: 'system',
+          employeeName: 'Sistema',
+          note: 'Cadastro inicial do item'
+        };
+        saveLogs([entryLog, ...logs].slice(0, 500));
+      }
     }
     
     setShowAddModal(false);

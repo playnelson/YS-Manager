@@ -6,12 +6,10 @@ import {
   X,
   RefreshCw,
   Box,
-  Truck,
   Users,
   Settings,
   Link, // renamed below
   StickyNote,
-  DollarSign,
   Cloud,
   Puzzle,
   FileSignature,
@@ -21,10 +19,8 @@ import {
   Network,
   MessageCircle,
   Check,
-  GitMerge,
   MessageSquare,
   Calendar as CalendarIcon,
-  Search,
   Home,
   Package,
   Store,
@@ -42,14 +38,10 @@ import { SEED_DATA } from './seeds';
 // Lazy Loading de Módulos Pesados para rapidez inicial
 const OfficeModule = lazy(() => import('./components/OfficeModule').then(m => ({ default: m.OfficeModule })));
 const CalendarModule = lazy(() => import('./components/CalendarModule').then(m => ({ default: m.CalendarModule })));
-const FlowBuilder = lazy(() => import('./components/FlowBuilder').then(m => ({ default: m.FlowBuilder })));
-const ConsultationModule = lazy(() => import('./components/ConsultationModule').then(m => ({ default: m.ConsultationModule })));
 const WhatsAppTool = lazy(() => import('./components/WhatsAppTool').then(m => ({ default: m.WhatsAppTool })));
-const LogisticsModule = lazy(() => import('./components/LogisticsModule').then(m => ({ default: m.LogisticsModule })));
 const SharedDocumentsModule = lazy(() => import('./components/SharedDocumentsModule').then(m => ({ default: m.SharedDocumentsModule })));
 const DocumentsModule = lazy(() => import('./components/DocumentsModule').then(m => ({ default: m.DocumentsModule })));
 const ModuleStore = lazy(() => import('./components/ModuleStore').then(m => ({ default: m.ModuleStore })));
-const FinancialModule = lazy(() => import('./components/FinancialModule').then(m => ({ default: m.FinancialModule })));
 const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m => ({ default: m.WarehouseModule })));
 const OrdersModule = lazy(() => import('./components/OrdersModule').then(m => ({ default: m.OrdersModule })));
 const StaffBoardModule = lazy(() => import('./components/StaffBoardModule').then(m => ({ default: m.StaffBoardModule })));
@@ -69,12 +61,8 @@ const initialKanban: KanbanState = {
 const DEFAULT_TABS = [
   { id: 'office', label: 'Escritório', icon: <Home size={18} /> },
   { id: 'calendar', label: 'Calendário', icon: <CalendarIcon size={18} /> },
-  { id: 'flow', label: 'Fluxo', icon: <GitMerge size={18} /> },
-  { id: 'logistics', label: 'Logística', icon: <Truck size={18} /> },
-  { id: 'consultas', label: 'Consultas', icon: <Search size={18} /> },
   { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={18} /> },
   { id: 'shared_docs', label: 'Documentos', icon: <FolderOpen size={18} /> },
-  { id: 'financial', label: 'Financeiro', icon: <DollarSign size={18} /> },
   { id: 'orders', label: 'Anotações', icon: <ClipboardList size={18} /> },
   { id: 'staff_board', label: 'Quadro Fun.', icon: <Users size={18} /> },
   { id: 'warehouse', label: 'Almoxarifado', icon: <Package size={18} /> },
@@ -94,7 +82,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('office');
   const [tabs, setTabs] = useState(DEFAULT_TABS);
-  const [hiddenTabs, setHiddenTabs] = useState<string[]>(['financial', 'warehouse', 'brasil-hub']);
+  const [hiddenTabs, setHiddenTabs] = useState<string[]>(['warehouse', 'brasil-hub']);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Dark mode via Tailwind dark class
@@ -127,6 +115,7 @@ const App: React.FC = () => {
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const initializedTables = useRef<Set<string>>(new Set());
 
@@ -506,8 +495,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!user || !isDataLoaded) return;
-    setIsSyncing(true);
-    setHasUnsavedChanges(true);
     const saveData = async () => {
       if (user.id === 'demo_user_id') {
         const payload: AppData = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs, financialTransactions, warehouseInventory, warehouseLogs };
@@ -600,15 +587,18 @@ const App: React.FC = () => {
       } finally { 
         setIsSyncing(false); 
         setHasUnsavedChanges(false);
+        setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
       }
     };
 
     const timeout = setTimeout(() => {
-        if (isSyncing || !isDataLoaded) return;
+        if (!isDataLoaded) return;
+        setIsSyncing(true);
+        setHasUnsavedChanges(true);
         saveData();
-    }, 1500);
+    }, 2000);
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories, whatsappTemplates, whatsappHistory, kanbanData, isSidebarCollapsed]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories, whatsappTemplates, whatsappHistory, kanbanData, isSidebarCollapsed, orderAnnotations]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -717,7 +707,9 @@ const App: React.FC = () => {
               ) : (
                 <>
                   <Check size={14} className="text-emerald-500" />
-                  <span className="text-emerald-600 dark:text-emerald-400">Sincronizado</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    {lastSavedAt ? `Salvo às ${lastSavedAt}` : 'Sincronizado'}
+                  </span>
                 </>
               )}
             </div>
@@ -789,9 +781,7 @@ const App: React.FC = () => {
                 orderAnnotations={orderAnnotations}
               />
             )}
-            {activeTab === 'flow' && <FlowBuilder data={flowData} onChange={setFlowData} />}
-            {activeTab === 'logistics' && <LogisticsModule data={logisticsData} onChange={setLogisticsData} />}
-            {activeTab === 'consultas' && <ConsultationModule />}
+
             {activeTab === 'whatsapp' && (
               <WhatsAppTool
                 googleAccessToken={user.googleAccessToken}
@@ -813,12 +803,7 @@ const App: React.FC = () => {
                 currentUser={user}
               />
             )}
-            {activeTab === 'financial' && (
-              <FinancialModule
-                transactions={financialTransactions}
-                onChange={setFinancialTransactions}
-              />
-            )}
+
             {activeTab === 'orders' && (
               <OrdersModule
                 orders={orderAnnotations}
