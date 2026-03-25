@@ -23,7 +23,6 @@ import {
   Calendar as CalendarIcon,
   Home,
   Package,
-  Store,
   ClipboardList,
   Globe
 } from 'lucide-react';
@@ -41,7 +40,7 @@ const CalendarModule = lazy(() => import('./components/CalendarModule').then(m =
 const WhatsAppTool = lazy(() => import('./components/WhatsAppTool').then(m => ({ default: m.WhatsAppTool })));
 const SharedDocumentsModule = lazy(() => import('./components/SharedDocumentsModule').then(m => ({ default: m.SharedDocumentsModule })));
 const DocumentsModule = lazy(() => import('./components/DocumentsModule').then(m => ({ default: m.DocumentsModule })));
-const ModuleStore = lazy(() => import('./components/ModuleStore').then(m => ({ default: m.ModuleStore })));
+
 const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m => ({ default: m.WarehouseModule })));
 const OrdersModule = lazy(() => import('./components/OrdersModule').then(m => ({ default: m.OrdersModule })));
 const StaffBoardModule = lazy(() => import('./components/StaffBoardModule').then(m => ({ default: m.StaffBoardModule })));
@@ -67,7 +66,6 @@ const DEFAULT_TABS = [
   { id: 'staff_board', label: 'Quadro Fun.', icon: <Users size={18} /> },
   { id: 'warehouse', label: 'Almoxarifado', icon: <Package size={18} /> },
   { id: 'brasil-hub', label: 'Brasil Hub', icon: <Globe size={18} /> },
-  { id: 'modules', label: 'Loja', icon: <Store size={18} /> },
 ];
 
 const App: React.FC = () => {
@@ -831,12 +829,7 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'brasil-hub' && <BrasilApiModule />}
-            {activeTab === 'modules' && (
-              <ModuleStore
-                hiddenTabs={hiddenTabs}
-                onToggleTab={toggleTabVisibility}
-              />
-            )}
+
           </Suspense>
         </div>
       </main>
