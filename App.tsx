@@ -45,6 +45,7 @@ const WarehouseModule = lazy(() => import('./components/WarehouseModule').then(m
 const OrdersModule = lazy(() => import('./components/OrdersModule').then(m => ({ default: m.OrdersModule })));
 const StaffBoardModule = lazy(() => import('./components/StaffBoardModule').then(m => ({ default: m.StaffBoardModule })));
 const BrasilApiModule = lazy(() => import('./components/BrasilApiModule').then(m => ({ default: m.BrasilApiModule })));
+const SettingsModuleComp = lazy(() => import('./components/SettingsModule').then(m => ({ default: m.SettingsModule })));
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
 const initialLogistics: LogisticsState = { freightTables: [], checklists: [] };
@@ -85,6 +86,19 @@ const App: React.FC = () => {
 
   // Dark mode via Tailwind dark class
   const [isDark, setIsDark] = useState(() => localStorage.getItem('ysoffice_dark') === 'true');
+
+  // Company branding settings (used in printed documents)
+  const [companySettings, setCompanySettings] = useState<{ name: string; logoUrl: string }>(() => {
+    try {
+      const saved = localStorage.getItem('ysoffice_company');
+      return saved ? JSON.parse(saved) : { name: '', logoUrl: '' };
+    } catch { return { name: '', logoUrl: '' }; }
+  });
+
+  const saveCompanySettings = (data: { name: string; logoUrl: string }) => {
+    setCompanySettings(data);
+    localStorage.setItem('ysoffice_company', JSON.stringify(data));
+  };
 
   // Estados de Dados
   const [flowData, setFlowData] = useState<FlowState>(initialFlow);
@@ -816,6 +830,7 @@ const App: React.FC = () => {
                 onEmployeesChange={(data) => { setWarehouseEmployees(data); setHasUnsavedChanges(true); }}
                 inventory={warehouseInventory}
                 logs={warehouseLogs}
+                companySettings={companySettings}
               />
             )}
             {activeTab === 'warehouse' && (
@@ -831,6 +846,15 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'brasil-hub' && <BrasilApiModule />}
+            {activeTab === 'modules' && user && (
+              <SettingsModuleComp
+                user={user}
+                onUpdateUser={setUser}
+                onLogout={handleLogout}
+                companySettings={companySettings}
+                onCompanySettingsChange={saveCompanySettings}
+              />
+            )}
 
           </Suspense>
         </div>

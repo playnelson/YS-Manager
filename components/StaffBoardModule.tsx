@@ -25,13 +25,15 @@ interface StaffBoardModuleProps {
   onEmployeesChange: (data: any[]) => void;
   inventory: any[];
   logs: any[];
+  companySettings?: { name: string; logoUrl: string };
 }
 
 export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
   employees,
   onEmployeesChange,
   inventory,
-  logs
+  logs,
+  companySettings
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmp, setSelectedEmp] = useState<any | null>(null);
@@ -136,6 +138,12 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    const companyName = companySettings?.name || 'Empresa';
+    const logoUrl = companySettings?.logoUrl || '';
+    const logoHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="Logo" style="max-height: 70px; max-width: 200px; object-fit: contain;"/>`
+      : `<div style="width:70px; height:70px; background:#e2e8f0; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:11px; font-weight:bold;">LOGO</div>`;
+
     const itemsHtml = items.map(item => `
       <tr>
         <td style="border: 1px solid #ddd; padding: 12px; font-family: monospace;">${item.code}</td>
@@ -151,22 +159,26 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
         <head>
           <title>${title} - ${employee.name}</title>
           <style>
-            body { font-family: 'Inter', sans-serif; padding: 50px; color: #1a1a1a; line-height: 1.6; }
-            .header { text-align: center; border-bottom: 3px solid #1a1a1a; padding-bottom: 25px; margin-bottom: 40px; }
-            .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
-            .info { margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px; background: #f8f9fa; padding: 20px; border-radius: 8px; }
+            body { font-family: Arial, sans-serif; padding: 50px; color: #1a1a1a; line-height: 1.6; }
+            .header { display: flex; align-items: center; gap: 24px; border-bottom: 3px solid #1a1a1a; padding-bottom: 20px; margin-bottom: 36px; }
+            .header-text h1 { margin: 0 0 4px; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+            .header-text p { margin: 0; font-size: 12px; color: #555; font-weight: 600; }
+            .info { margin-bottom: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px; background: #f8f9fa; padding: 16px; border-radius: 6px; border: 1px solid #e2e8f0; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-            th { background: #1a1a1a; color: white; border: 1px solid #1a1a1a; padding: 14px; text-align: left; font-size: 11px; text-transform: uppercase; }
+            th { background: #1a1a1a; color: white; border: 1px solid #1a1a1a; padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
             .signature-area { margin-top: 80px; display: flex; flex-direction: column; align-items: center; }
             .line { width: 350px; border-top: 2px solid #1a1a1a; margin-bottom: 8px; }
-            .footer { margin-top: 60px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+            .footer { margin-top: 60px; font-size: 10px; color: #aaa; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
             .legal { font-size: 11px; text-align: justify; margin-top: 30px; font-style: italic; color: #444; }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>${title}</h1>
-            <p style="margin:8px 0 0; font-weight: 600; color: #666;">Documento de Controle de Ativos - YS Manager</p>
+            ${logoHtml}
+            <div class="header-text">
+              <h1>${companyName}</h1>
+              <p>${title}</p>
+            </div>
           </div>
           
           <div class="info">
@@ -207,7 +219,7 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
           </div>
 
           <div class="footer">
-            Sistema de Gestão YS-Manager | Gerado em ${new Date().toLocaleString('pt-BR')}
+            ${companyName} | Gerado em ${new Date().toLocaleString('pt-BR')}
           </div>
           
           <script>

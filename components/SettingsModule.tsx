@@ -18,15 +18,22 @@ interface SettingsModuleProps {
   user: User;
   onUpdateUser: (user: User) => void;
   onLogout: () => void;
+  companySettings: { name: string; logoUrl: string };
+  onCompanySettingsChange: (data: { name: string; logoUrl: string }) => void;
 }
 
-export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUser, onLogout }) => {
+export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUser, onLogout, companySettings, onCompanySettingsChange }) => {
   const [nick, setNick] = useState(user.nick);
   const [photoUrl, setPhotoUrl] = useState(user.photoUrl || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [companyName, setCompanyName] = useState(companySettings.name);
+  const [companyLogoUrl, setCompanyLogoUrl] = useState(companySettings.logoUrl);
+  const [companySaved, setCompanySaved] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleSaveProfile = async () => {
     setLoading(true);
@@ -61,6 +68,23 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCompanyLogoUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveCompany = () => {
+    onCompanySettingsChange({ name: companyName, logoUrl: companyLogoUrl });
+    setCompanySaved(true);
+    setTimeout(() => setCompanySaved(false), 2000);
   };
 
   const handleGoogleLink = async () => {
@@ -211,6 +235,67 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
               <IconLink size={14} /> VINCULAR CONTA
             </Button>
           )}
+        </div>
+      </div>
+
+      {/* Company Settings */}
+      <div className="win95-raised p-4 bg-win95-bg">
+        <h2 className="text-lg font-black uppercase mb-4 border-b-2 border-win95-shadow pb-1 flex items-center gap-2">
+          <span className="text-lg">🏢</span> Dados da Empresa
+        </h2>
+        <p className="text-xs text-gray-500 mb-4">Estas informações aparecem no cabeçalho das fichas impressas (EPI, Materiais, etc.).</p>
+
+        <div className="space-y-4">
+          {/* Logo */}
+          <div className="flex items-center gap-4">
+            <div
+              className="w-24 h-24 win95-sunken bg-white overflow-hidden flex items-center justify-center border-2 border-win95-shadow cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => logoInputRef.current?.click()}
+              title="Clique para trocar o logo"
+            >
+              {companyLogoUrl ? (
+                <img src={companyLogoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
+              ) : (
+                <span className="text-xs text-gray-400 text-center font-bold uppercase px-2">Clique para adicionar logo</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <input
+                type="file"
+                ref={logoInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleLogoUpload}
+              />
+              <Button onClick={() => logoInputRef.current?.click()} className="text-xs flex items-center gap-2">
+                <IconCamera size={14} /> Trocar Logo
+              </Button>
+              {companyLogoUrl && (
+                <Button variant="secondary" onClick={() => setCompanyLogoUrl('')} className="text-xs">
+                  Remover Logo
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Company Name */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase text-win95-shadow">Nome da Empresa:</label>
+            <input
+              type="text"
+              className="w-full px-2 py-1 win95-sunken bg-white text-sm outline-none focus:bg-yellow-50"
+              value={companyName}
+              placeholder="Ex: Construtora Silva Ltda"
+              onChange={e => setCompanyName(e.target.value)}
+            />
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button onClick={handleSaveCompany} className="flex items-center gap-2">
+              <IconDeviceFloppy size={14} />
+              {companySaved ? 'SALVO ✓' : 'SALVAR DADOS DA EMPRESA'}
+            </Button>
+          </div>
         </div>
       </div>
 
