@@ -675,7 +675,7 @@ const MovementModal: React.FC<MovementModalProps> = ({ item, type, employees, on
 
 // ── Main Module ───────────────────────────────────────────────────────────────
 
-type ActiveTab = 'inventory' | 'employees' | 'history';
+type ActiveTab = 'inventory' | 'history';
 function genId() { 
   try {
     return generateUUID();
@@ -1035,7 +1035,6 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
 
   const TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
     { id: 'inventory', label: 'Almoxarifado', icon: <Package size={14}/> },
-    { id: 'employees', label: 'Funcionários', icon: <Users size={14}/> },
     { id: 'history',   label: 'Histórico',    icon: <History size={14}/> },
   ];
 
@@ -1089,11 +1088,6 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
               <span className="hidden sm:inline">Carrinho</span>
             </button>
           </>}
-          {activeTab === 'employees' && (
-            <button onClick={() => setShowAddEmp(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-100 transition-all shadow-sm">
-              <UserPlus size={13}/> Novo Funcionário
-            </button>
-          )}
         </div>
       </div>
 
@@ -1206,35 +1200,37 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                                 <ChevronDown size={10}/>
                               </button>
                               
-                              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-20 py-2 hidden group-hover/menu:block">
-                                <button onClick={() => setMovementTarget({ item, type: 'entry' })} 
-                                  className="w-full px-3 py-1.5 text-left text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2">
-                                  <ArrowDownLeft size={14}/> Entrada Manual
-                                </button>
-                                <button onClick={() => handleMovement(item.itemsPerContainer || 1, 'system', 'Recebimento de Caixa')} 
-                                  className="w-full px-3 py-1.5 text-left text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center gap-2">
-                                  <PackagePlus size={14}/> Adicionar Caixa (+{item.itemsPerContainer || 1})
-                                </button>
-                                <div className="h-px bg-gray-100 dark:bg-gray-700 my-1"></div>
-                                <button onClick={() => setMovementTarget({ item, type: 'exit' })} 
-                                  className="w-full px-3 py-1.5 text-left text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2">
-                                  <ArrowUpRight size={14}/> Saída Manual
-                                </button>
-                                <button onClick={() => handleMovement(1, 'system', 'Remoção de 1 Unidade')} 
-                                  className="w-full px-3 py-1.5 text-left text-xs text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 flex items-center gap-2">
-                                  <Minus size={14}/> Remover 1 Unidade
-                                </button>
-                                {item.itemsPerContainer && item.itemsPerContainer > 1 && item.quantity >= 1 && (
-                                  <button onClick={() => handleUnpack(item)} 
-                                    className="w-full px-3 py-1.5 text-left text-xs text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-2">
-                                    <Box size={14}/> Desmembrar Caixa
+                              <div className="absolute right-0 top-full pt-1 w-48 z-20 hidden group-hover/menu:block">
+                                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2">
+                                  <button onClick={() => setMovementTarget({ item, type: 'entry' })} 
+                                    className="w-full px-3 py-1.5 text-left text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2">
+                                    <ArrowDownLeft size={14}/> Entrada Manual
                                   </button>
-                                )}
-                                <div className="h-px bg-gray-100 dark:bg-gray-700 my-1"></div>
-                                <button onClick={() => { if (confirm('Remover item?')) saveInventory(inventory.filter(i => i.id !== item.id)); }} 
-                                  className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
-                                  <Trash2 size={13}/> Excluir Item
-                                </button>
+                                  <button onClick={() => handleMovement(item.itemsPerContainer || 1, 'system', 'Recebimento de Caixa')} 
+                                    className="w-full px-3 py-1.5 text-left text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center gap-2">
+                                    <PackagePlus size={14}/> Adicionar Caixa (+{item.itemsPerContainer || 1})
+                                  </button>
+                                  <div className="h-px bg-gray-100 dark:bg-gray-700 my-1"></div>
+                                  <button onClick={() => setMovementTarget({ item, type: 'exit' })} 
+                                    className="w-full px-3 py-1.5 text-left text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2">
+                                    <ArrowUpRight size={14}/> Saída Manual
+                                  </button>
+                                  <button onClick={() => handleMovement(1, 'system', 'Remoção de 1 Unidade')} 
+                                    className="w-full px-3 py-1.5 text-left text-xs text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 flex items-center gap-2">
+                                    <Minus size={14}/> Remover 1 Unidade
+                                  </button>
+                                  {item.itemsPerContainer && item.itemsPerContainer > 1 && item.quantity >= 1 && (
+                                    <button onClick={() => handleUnpack(item)} 
+                                      className="w-full px-3 py-1.5 text-left text-xs text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-2">
+                                      <Box size={14}/> Desmembrar Caixa
+                                    </button>
+                                  )}
+                                  <div className="h-px bg-gray-100 dark:bg-gray-700 my-1"></div>
+                                  <button onClick={() => { if (confirm('Remover item?')) saveInventory(inventory.filter(i => i.id !== item.id)); }} 
+                                    className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                                    <Trash2 size={13}/> Excluir Item
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1248,64 +1244,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
           </div>
         )}
 
-        {/* === EMPLOYEES TAB === */}
-        {activeTab === 'employees' && (
-          <div className="h-full flex flex-col overflow-hidden">
-            <div className="px-5 py-3 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 shrink-0">
-              <div className="flex items-center gap-2 flex-1 max-w-sm">
-                <Search size={14} className="text-gray-400 shrink-0"/>
-                <input type="text" placeholder="Buscar funcionário (nome, CPF, cargo)..." value={searchTermEmployees} onChange={e => setSearchTermEmployees(e.target.value)}
-                  className="flex-1 bg-transparent outline-none text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400"/>
-              </div>
-              <span className="text-xs text-gray-400">{filteredEmployees.length} de {employees.length}</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-5">
-            {filteredEmployees.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-3">
-                <Users size={40} className="opacity-30"/>
-                <p className="text-sm">Nenhum funcionário encontrado</p>
-                {employees.length === 0 && (
-                  <button onClick={() => setShowAddEmp(true)} className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-sm font-semibold shadow-sm hover:bg-gray-700 transition-colors">
-                    <UserPlus size={14}/> Cadastrar primeiro funcionário
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {filteredEmployees.map(emp => (
-                  <div key={emp.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 flex flex-row items-center gap-4 hover:shadow-sm transition-shadow">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-violet-500 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
-                      {emp.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 dark:text-white truncate" title={emp.name}>{emp.name}</p>
-                        <p className="text-[10px] text-gray-500 font-mono">CPF: {applyCPFMask(emp.cpf || '')}</p>
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 truncate" title={emp.role || 'Sem cargo'}>
-                        {emp.role || 'Sem cargo'}
-                      </div>
-                      <div className="flex items-center gap-3 md:justify-end">
-                        <button onClick={() => setSelectedEmp(emp)} className="text-xs text-blue-600 hover:text-blue-700 font-medium">Ver detalhes</button>
-                        <button onClick={() => { setNewEmp(emp); setEditingEmp(emp); setShowAddEmp(true); }} className="text-xs text-gray-500 hover:text-gray-700">Editar</button>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 pl-4 border-l border-gray-100 dark:border-gray-800 shrink-0">
-                      <button onClick={() => saveEmployees(employees.map(e => e.id === emp.id ? { ...e, active: !e.active } : e))}
-                        className={`relative w-8 h-4 rounded-full transition-colors ${emp.active ? 'bg-emerald-400' : 'bg-gray-300 dark:bg-gray-600'}`} title={emp.active ? 'Ativo' : 'Inativo'}>
-                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${emp.active ? 'translate-x-4' : 'translate-x-0.5'}`}/>
-                      </button>
-                      <button onClick={() => { if (confirm('Remover funcionário?')) saveEmployees(employees.filter(e => e.id !== emp.id)); }} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
-                        <Trash2 size={14}/>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            </div>
-          </div>
-        )}
+
 
         {/* === HISTORY TAB === */}
         {activeTab === 'history' && (

@@ -3,17 +3,33 @@ import React, { useState, useMemo } from 'react';
 import { 
   Users, Search, UserCircle2, ArrowRight, Printer, 
   Package, LayoutGrid, List, ChevronRight, UserPlus,
-  ArrowUpRight, ArrowDownLeft, ShieldCheck, HardHat, Info
+  ArrowUpRight, ArrowDownLeft, ShieldCheck, HardHat, Info, Check, X, Edit, Trash2
 } from 'lucide-react';
+
+function genId() { 
+  try { return crypto.randomUUID(); } 
+  catch (e) { return Math.random().toString(36).substring(2, 15); }
+}
+
+const applyCPFMask = (value: string) => {
+  const nums = value.replace(/\D/g, '').slice(0, 11);
+  return nums
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+    .replace(/(-\d{2})\d+?$/, '$1');
+};
 
 interface StaffBoardModuleProps {
   employees: any[];
+  onEmployeesChange: (data: any[]) => void;
   inventory: any[];
   logs: any[];
 }
 
 export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
   employees,
+  onEmployeesChange,
   inventory,
   logs
 }) => {
@@ -21,40 +37,73 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
   const [selectedEmp, setSelectedEmp] = useState<any | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  const [showAddEmp, setShowAddEmp] = useState(false);
+  const [editingEmp, setEditingEmp] = useState<any | null>(null);
+  const [newEmp, setNewEmp] = useState({ name: '', role: '', cpf: '', department: '' });
+
+  const handleAddEmployee = () => {
+    if (!newEmp.name?.trim()) return;
+    const employee = {
+      id: editingEmp?.id || genId(),
+      name: newEmp.name,
+      role: newEmp.role || '',
+      department: newEmp.department || '',
+      cpf: newEmp.cpf || '',
+      active: true
+    };
+
+    if (editingEmp) {
+      onEmployeesChange(employees.map(e => e.id === editingEmp.id ? { ...e, ...employee } : e));
+      setSelectedEmp(employee);
+    } else {
+      onEmployeesChange([...employees, employee]);
+    }
+    
+    setShowAddEmp(false); 
+    setEditingEmp(null);
+    setNewEmp({ name: '', role: '', cpf: '', department: '' });
+  };
+
+  const handleDeleteEmployee = (id: string) => {
+    if (confirm('Deseja realmente remover este funcionário?')) {
+      onEmployeesChange(employees.filter(e => e.id !== id));
+      if (selectedEmp?.id === id) setSelectedEmp(null);
+    }
+  };
+
   const possessionData = useMemo(() => {
     const map: Record<string, any[]> = {};
-    
-    // Initialize for all employees
     employees.forEach(e => map[e.id] = []);
 
-    // Calculate possession from logs
-    // Groups by employeeId and then by itemId
-    const tempMap: Record<string, Record<string, number>> = {};
+    const tempMap: Record<string, Record<string, { qty: number, lastExitDate: string | null }>> = {};
     
-    logs.forEach(log => {
+    // Sort logs chronologically to correctly track the latest exit date
+    const sortedLogs = [...logs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    sortedLogs.forEach(log => {
       if (!log.employeeId || log.employeeId === 'system') return;
       if (!tempMap[log.employeeId]) tempMap[log.employeeId] = {};
       
-      const current = tempMap[log.employeeId][log.itemId] || 0;
+      const current = tempMap[log.employeeId][log.itemId] || { qty: 0, lastExitDate: null };
       if (log.type === 'exit') {
-        tempMap[log.employeeId][log.itemId] = current + log.quantity;
+        tempMap[log.employeeId][log.itemId] = { qty: current.qty + log.quantity, lastExitDate: log.date };
       } else {
-        tempMap[log.employeeId][log.itemId] = Math.max(0, current - log.quantity);
+        tempMap[log.employeeId][log.itemId] = { qty: Math.max(0, current.qty - log.quantity), lastExitDate: current.lastExitDate };
       }
     });
 
-    // Convert tempMap to list of items with details
     Object.keys(tempMap).forEach(empId => {
       const items = tempMap[empId];
       Object.keys(items).forEach(itemId => {
-        const qty = items[itemId];
-        if (qty > 0) {
+        const data = items[itemId];
+        if (data.qty > 0) {
           const invItem = inventory.find(i => i.id === itemId);
-          if (invItem && !invItem.consumable) { // Only non-consumables
+          if (invItem && !invItem.consumable) {
             if (!map[empId]) map[empId] = [];
             map[empId].push({
               ...invItem,
-              possessedQty: qty
+              possessedQty: data.qty,
+              dateTaken: data.lastExitDate
             });
           }
         }
@@ -83,39 +132,40 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
     return { totalItems, employeesWithItems };
   }, [possessionData]);
 
-  const printPPEForm = (employee: any, items: any[]) => {
+  const printSheet = (employee: any, items: any[], title: string) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const date = new Date().toLocaleDateString('pt-BR');
     const itemsHtml = items.map(item => `
       <tr>
         <td style="border: 1px solid #ddd; padding: 12px; font-family: monospace;">${item.code}</td>
         <td style="border: 1px solid #ddd; padding: 12px;">${item.name}</td>
         <td style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">${item.possessedQty} ${item.unit}</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${item.dateTaken ? new Date(item.dateTaken).toLocaleDateString('pt-BR') : '___/___/_____'}</td>
+        <td style="border: 1px solid #ddd; padding: 12px;"></td>
       </tr>
     `).join('');
 
     printWindow.document.write(`
       <html>
         <head>
-          <title>Ficha de EPI - ${employee.name}</title>
+          <title>${title} - ${employee.name}</title>
           <style>
             body { font-family: 'Inter', sans-serif; padding: 50px; color: #1a1a1a; line-height: 1.6; }
             .header { text-align: center; border-bottom: 3px solid #1a1a1a; padding-bottom: 25px; margin-bottom: 40px; }
-            .header h1 { margin: 0; font-size: 28px; text-transform: uppercase; letter-spacing: 2px; }
+            .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
             .info { margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px; background: #f8f9fa; padding: 20px; border-radius: 8px; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
             th { background: #1a1a1a; color: white; border: 1px solid #1a1a1a; padding: 14px; text-align: left; font-size: 11px; text-transform: uppercase; }
             .signature-area { margin-top: 80px; display: flex; flex-direction: column; align-items: center; }
             .line { width: 350px; border-top: 2px solid #1a1a1a; margin-bottom: 8px; }
-            .footer { margin-top: 60px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid #eee; pt: 20px; }
+            .footer { margin-top: 60px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
             .legal { font-size: 11px; text-align: justify; margin-top: 30px; font-style: italic; color: #444; }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>Ficha de Entrega de Equipamentos (EPI & Ferramental)</h1>
+            <h1>${title}</h1>
             <p style="margin:8px 0 0; font-weight: 600; color: #666;">Documento de Controle de Ativos - YS Manager</p>
           </div>
           
@@ -123,15 +173,17 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
             <div><strong>Colaborador:</strong> ${employee.name}</div>
             <div><strong>Cargo:</strong> ${employee.role}</div>
             <div><strong>CPF:</strong> ${employee.cpf || '---'}</div>
-            <div><strong>Data de Emissão:</strong> ${date}</div>
+            <div><strong>Data de Emissão:</strong> ${new Date().toLocaleDateString('pt-BR')}</div>
           </div>
 
           <table>
             <thead>
               <tr>
-                <th style="width: 120px;">Código</th>
+                <th style="width: 100px;">Código</th>
                 <th>Descrição do Equipamento</th>
-                <th style="width: 100px; text-align: center;">Quantidade</th>
+                <th style="width: 80px; text-align: center;">Qtd</th>
+                <th style="width: 100px; text-align: center;">Data Entrega</th>
+                <th style="width: 250px; text-align: center;">Assinatura do Colaborador</th>
               </tr>
             </thead>
             <tbody>
@@ -140,20 +192,18 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
           </table>
 
           <div class="legal">
-            Declaro ter recebido os equipamentos acima discriminados em perfeitas condições de uso e funcionamento, 
-            comprometendo-me a utilizá-los estritamente no exercício de minhas funções profissionais. Estou ciente de minha 
-            responsabilidade pela guarda e conservação dos mesmos, bem como do dever de devolvê-los ao término do vínculo 
-            empregatício ou quando solicitado. O uso negligente ou extravio poderá acarretar nas sanções previstas em lei e 
-            regulamento interno.
+            Declaro ter recebido os equipamentos acima discriminados em perfeitas condições de uso e funcionamento. 
+            Estou ciente de minha responsabilidade pela guarda, conservação e uso adequado, e comprometo-me a devolvê-los 
+            ao término do vínculo empregatício ou quando solicitado.
           </div>
 
           <div class="signature-area">
             <div class="line" style="margin-top: 50px;"></div>
             <div style="font-weight: bold; font-size: 14px;">${employee.name.toUpperCase()}</div>
-            <div style="font-size: 10px; margin-top: 4px; color: #666;">Assinatura do Colaborador</div>
+            <div style="font-size: 10px; margin-top: 4px; color: #666;">Assinatura Geral do Colaborador</div>
             
             <div class="line" style="margin-top: 70px;"></div>
-            <div style="font-size: 10px; margin-top: 4px; color: #666;">Visto do Almoxarifado / Responsável</div>
+            <div style="font-size: 10px; margin-top: 4px; color: #666;">Visto do Setor Responsável (Almoxarifado / Segurança)</div>
           </div>
 
           <div class="footer">
@@ -172,6 +222,13 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
       </html>
     `);
     printWindow.document.close();
+  };
+
+  const categorizedItems = (items: any[]) => {
+    return {
+      epi: items.filter(i => i.category?.toUpperCase() === 'EPI'),
+      materiais: items.filter(i => i.category?.toUpperCase() !== 'EPI')
+    };
   };
 
   return (
@@ -213,15 +270,23 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
           />
         </div>
         
-        <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+        <div className="flex items-center gap-3">
           <button 
-            onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-          ><LayoutGrid size={18} /></button>
-          <button 
-            onClick={() => setViewMode('list')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-          ><List size={18} /></button>
+            onClick={() => { setEditingEmp(null); setNewEmp({ name: '', role: '', cpf: '', department: '' }); setShowAddEmp(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-sm font-semibold hover:bg-gray-700 dark:hover:bg-gray-100 transition-all shadow-sm"
+          >
+            <UserPlus size={16} /> Novo Trabalhador
+          </button>
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+            <button 
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+            ><LayoutGrid size={18} /></button>
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+            ><List size={18} /></button>
+          </div>
         </div>
       </div>
 
@@ -321,7 +386,15 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
                   </div>
                   <div>
                     <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{selectedEmp.name}</h3>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">{selectedEmp.role} — {selectedEmp.department}</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">{selectedEmp.role} {selectedEmp.department ? `— ${selectedEmp.department}` : ''}</p>
+                    <div className="flex items-center gap-3 mt-3">
+                      <button onClick={() => { setEditingEmp(selectedEmp); setNewEmp({ name: selectedEmp.name, role: selectedEmp.role || '', department: selectedEmp.department || '', cpf: selectedEmp.cpf || '' }); setShowAddEmp(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[10px] font-bold uppercase transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <Edit size={12} /> Editar
+                      </button>
+                      <button onClick={() => handleDeleteEmployee(selectedEmp.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-bold uppercase transition-colors hover:bg-red-100 dark:hover:bg-red-900/40">
+                        <Trash2 size={12} /> Remover
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <button 
@@ -353,82 +426,204 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
                     </div>
                     <h4 className="text-sm font-black uppercase text-gray-900 dark:text-white">Ativos em uso (Não Consumíveis)</h4>
                   </div>
-                  <button 
-                    disabled={(possessionData[selectedEmp.id] || []).length === 0}
-                    onClick={() => printPPEForm(selectedEmp, possessionData[selectedEmp.id] || [])}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-[10px] font-black uppercase hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-30 disabled:scale-100"
-                  >
-                    <Printer size={14} /> Gerar Ficha de EPI
-                  </button>
                 </div>
 
-                {(possessionData[selectedEmp.id] || []).length === 0 ? (
-                  <div className="bg-gray-50 dark:bg-gray-800/40 rounded-3xl p-12 text-center border-2 border-dashed border-gray-100 dark:border-gray-800">
-                    <Package className="mx-auto mb-4 text-gray-200" size={48} />
-                    <p className="text-sm font-bold text-gray-400 italic">Nenhum equipamento de longa duração <br/>vinculado a este colaborador.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {possessionData[selectedEmp.id].map(item => (
-                      <div key={item.id} className="p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl flex items-center justify-between shadow-sm group">
-                        <div className="flex items-center gap-4">
-                           <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-400 group-hover:text-blue-500 transition-colors">
-                              <ShieldCheck size={20} />
-                           </div>
-                           <div>
-                             <p className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">{item.name}</p>
-                             <p className="text-[10pt] font-mono text-gray-400">{item.code}</p>
-                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-black text-blue-600">{item.possessedQty} <span className="text-[10px] uppercase font-bold text-gray-400">{item.unit}</span></p>
-                        </div>
+                {(() => {
+                  const empItems = possessionData[selectedEmp.id] || [];
+                  const { epi, materiais } = categorizedItems(empItems);
+                  
+                  if (empItems.length === 0) {
+                    return (
+                      <div className="bg-gray-50 dark:bg-gray-800/40 rounded-3xl p-12 text-center border-2 border-dashed border-gray-100 dark:border-gray-800">
+                        <Package className="mx-auto mb-4 text-gray-200" size={48} />
+                        <p className="text-sm font-bold text-gray-400 italic">Nenhum equipamento de longa duração <br/>vinculado a este colaborador.</p>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-6">
+                      {epi.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Equipamentos de Proteção (EPI)</h5>
+                            <button 
+                              onClick={() => printSheet(selectedEmp, epi, 'Ficha de Entrega de EPI')}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg text-[10px] font-black uppercase hover:scale-105 active:scale-95 transition-all shadow-sm"
+                            >
+                              <Printer size={12} /> Imprimir EPIs
+                            </button>
+                          </div>
+                          {epi.map(item => (
+                            <div key={item.id} className="p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl flex items-center justify-between shadow-sm group">
+                              <div className="flex items-center gap-4">
+                                 <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-500 group-hover:bg-orange-100 transition-colors">
+                                    <ShieldCheck size={20} />
+                                 </div>
+                                 <div>
+                                   <p className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">{item.name}</p>
+                                   <p className="text-[10pt] font-mono text-gray-400">{item.code} {item.dateTaken && `• Em: ${new Date(item.dateTaken).toLocaleDateString('pt-BR')}`}</p>
+                                 </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-black text-blue-600">{item.possessedQty} <span className="text-[10px] uppercase font-bold text-gray-400">{item.unit}</span></p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {materiais.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between mt-4">
+                            <h5 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Materiais e Ferramentas</h5>
+                            <button 
+                              onClick={() => printSheet(selectedEmp, materiais, 'Ficha de Materiais em Posse')}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg text-[10px] font-black uppercase hover:scale-105 active:scale-95 transition-all shadow-sm"
+                            >
+                              <Printer size={12} /> Imprimir Materiais
+                            </button>
+                          </div>
+                          {materiais.map(item => (
+                            <div key={item.id} className="p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl flex items-center justify-between shadow-sm group">
+                              <div className="flex items-center gap-4">
+                                 <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-500 group-hover:text-blue-500 transition-colors">
+                                    <Package size={20} />
+                                 </div>
+                                 <div>
+                                   <p className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">{item.name}</p>
+                                   <p className="text-[10pt] font-mono text-gray-400">{item.code} {item.dateTaken && `• Em: ${new Date(item.dateTaken).toLocaleDateString('pt-BR')}`}</p>
+                                 </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-black text-blue-600">{item.possessedQty} <span className="text-[10px] uppercase font-bold text-gray-400">{item.unit}</span></p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </section>
 
-              {/* Recent activity for this specific user */}
+              {/* Enhanced timeline for this specific user */}
               <section>
                 <div className="flex items-center gap-2 mb-6">
                     <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500">
                        <Info size={18} />
                     </div>
-                    <h4 className="text-sm font-black uppercase text-gray-900 dark:text-white">Últimas Movimentações</h4>
+                    <h4 className="text-sm font-black uppercase text-gray-900 dark:text-white">Linha do Tempo de Movimentações</h4>
                 </div>
-                <div className="space-y-0.5 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden">
-                   {logs
-                    .filter(l => l.employeeId === selectedEmp.id)
-                    .slice(0, 5)
-                    .map((log, idx) => (
-                      <div key={log.id} className={`flex items-center justify-between px-6 py-4 text-xs font-semibold ${idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-black/10'}`}>
-                        <div className="flex items-center gap-3">
-                          {log.type === 'entry' ? (
-                            <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-lg"><ArrowDownLeft size={16}/></div>
-                          ) : (
-                            <div className="p-1.5 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-lg"><ArrowUpRight size={16}/></div>
-                          )}
-                          <div>
-                            <p className="text-gray-900 dark:text-white line-clamp-1">{log.itemName}</p>
-                            <p className="text-[9px] text-gray-400 uppercase tracking-widest">{new Date(log.date).toLocaleDateString('pt-BR')} às {new Date(log.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
-                          </div>
-                        </div>
-                        <p className={`font-black ${log.type === 'entry' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                          {log.type === 'entry' ? '+' : '-'}{log.quantity}
-                        </p>
-                      </div>
-                    ))
-                   }
-                   {logs.filter(l => l.employeeId === selectedEmp.id).length === 0 && (
-                     <p className="p-6 text-center text-xs text-gray-400 font-medium bg-white dark:bg-gray-900">Nenhum registro de movimentação encontrado.</p>
-                   )}
+                
+                <div className="space-y-4">
+                   {(() => {
+                     const userLogs = logs
+                       .filter(l => l.employeeId === selectedEmp.id)
+                       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                       
+                     if (userLogs.length === 0) {
+                       return <p className="p-6 border border-gray-100 dark:border-gray-800 rounded-2xl text-center text-xs text-gray-400 font-medium bg-white dark:bg-gray-900">Nenhum registro de movimentação encontrado.</p>;
+                     }
+
+                     return (
+                       <div className="relative border-l-2 border-gray-100 dark:border-gray-800 ml-3 pl-5 space-y-6">
+                         {userLogs.map((log) => {
+                           const isExit = log.type === 'exit'; // Exit from warehouse = Taken by employee
+                           return (
+                             <div key={log.id} className="relative">
+                               <div className={`absolute -left-[29px] w-6 h-6 rounded-full border-4 border-white dark:border-gray-900 flex items-center justify-center ${isExit ? 'bg-rose-500' : 'bg-emerald-500'}`}>
+                                 {isExit ? <ArrowUpRight size={10} className="text-white"/> : <ArrowDownLeft size={10} className="text-white"/>}
+                               </div>
+                               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                                 <div className="flex justify-between items-start mb-2">
+                                   <div className="flex items-center gap-2">
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${isExit ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'}`}>
+                                        {isExit ? 'Retirou' : 'Devolveu / Recebeu'}
+                                      </span>
+                                      <span className="text-xs text-gray-400 font-medium font-mono border-l border-gray-200 dark:border-gray-700 pl-2">{log.itemCode}</span>
+                                   </div>
+                                   <div className="text-right">
+                                     <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(log.date).toLocaleDateString('pt-BR')} às {new Date(log.date).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' })}</p>
+                                   </div>
+                                 </div>
+                                 <div className="flex justify-between items-end">
+                                    <div>
+                                      <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{log.itemName}</p>
+                                      {log.note && <p className="text-xs text-gray-500 mt-1 italic">Obs: {log.note}</p>}
+                                    </div>
+                                    <p className={`text-lg font-black ${isExit ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                      {isExit ? '-' : '+'}{log.quantity}
+                                    </p>
+                                 </div>
+                               </div>
+                             </div>
+                           );
+                         })}
+                       </div>
+                     );
+                   })()}
                 </div>
               </section>
             </div>
             
             <div className="p-8 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-black/20">
               <p className="text-[9px] font-black text-gray-400 text-center uppercase tracking-widest">Acesso Restrito ao Gestor de Ativos • YS-Manager Cloud</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Employee Modal */}
+      {showAddEmp && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <span className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider">{editingEmp ? 'Editar Trabalhador' : 'Cadastrar Trabalhador'}</span>
+              <button 
+                onClick={() => { setShowAddEmp(false); setEditingEmp(null); setNewEmp({ name: '', role: '', cpf: '', department: '' }); }} 
+                className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X size={18} className="text-gray-500"/>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-1.5">Nome Completo *</label>
+                <input type="text" placeholder="Ex: João da Silva" value={newEmp.name} onChange={e => setNewEmp({...newEmp, name: e.target.value})}
+                  className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-shadow"/>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-1.5">Cargo</label>
+                  <input type="text" placeholder="Ex: Almoxarife" value={newEmp.role} onChange={e => setNewEmp({...newEmp, role: e.target.value})}
+                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-shadow"/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-1.5">Departamento</label>
+                  <input type="text" placeholder="Ex: Operações" value={newEmp.department} onChange={e => setNewEmp({...newEmp, department: e.target.value})}
+                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-shadow"/>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-1.5">CPF</label>
+                <input type="text" placeholder="000.000.000-00" maxLength={14} value={newEmp.cpf} onChange={e => setNewEmp({...newEmp, cpf: applyCPFMask(e.target.value)})}
+                  className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-shadow"/>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-black/10 flex justify-end gap-3">
+              <button 
+                onClick={() => { setShowAddEmp(false); setEditingEmp(null); setNewEmp({ name: '', role: '', cpf: '', department: '' }); }} 
+                className="px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleAddEmployee} 
+                className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 hover:-translate-y-0.5 transition-all"
+              >
+                {editingEmp ? 'Atualizar' : 'Cadastrar'}
+              </button>
             </div>
           </div>
         </div>

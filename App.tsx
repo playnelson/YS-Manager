@@ -813,6 +813,7 @@ const App: React.FC = () => {
             {activeTab === 'staff_board' && (
               <StaffBoardModule
                 employees={warehouseEmployees}
+                onEmployeesChange={(data) => { setWarehouseEmployees(data); setHasUnsavedChanges(true); }}
                 inventory={warehouseInventory}
                 logs={warehouseLogs}
               />
