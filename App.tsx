@@ -465,7 +465,24 @@ const App: React.FC = () => {
 
           if (orderAnnRes && orderAnnRes.data) {
             initializedTables.current.add('order_annotations');
-            setOrderAnnotations(orderAnnRes.data);
+            setOrderAnnotations(orderAnnRes.data.map((o: any) => ({
+              id: o.id,
+              orderNumber: o.order_number,
+              type: o.type || 'purchase',
+              requester: o.requester || o.customer_name || '',
+              supplier: o.supplier || '',
+              date: o.date,
+              expectedDelivery: o.expected_delivery,
+              items: o.items || [],
+              notes: o.notes || '',
+              paymentMethod: o.payment_method || '',
+              status: o.status || 'draft',
+              priority: o.priority || 'normal',
+              totalValue: o.total_value || 0,
+              statusHistory: o.status_history || []
+            })));
+          } else {
+            initializedTables.current.add('order_annotations');
           }
 
           // --- Rest ---
@@ -592,7 +609,26 @@ const App: React.FC = () => {
           initializedTables.current.has('user_settings') && safeSave(supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, sidebar_collapsed: isSidebarCollapsed, updated_at: new Date().toISOString() }), 'user_settings'),
           initializedTables.current.has('flow_builder_states') && safeSave(supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData }), 'flow_builder_states'),
           initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes }), 'logistics_data'),
-          initializedTables.current.has('order_annotations') && safeSave(supabase.from('order_annotations').upsert(orderAnnotations.map(o => ({ ...o, user_id: user.id }))), 'order_annotations')
+          initializedTables.current.has('order_annotations') && safeSave(supabase.from('order_annotations').upsert(
+            orderAnnotations.map(o => ({
+              id: o.id,
+              user_id: user.id,
+              order_number: o.orderNumber,
+              type: o.type,
+              requester: o.requester,
+              customer_name: o.requester,
+              supplier: o.supplier,
+              date: o.date,
+              expected_delivery: o.expectedDelivery || null,
+              items: o.items,
+              notes: o.notes || null,
+              payment_method: o.paymentMethod || null,
+              status: o.status,
+              priority: o.priority,
+              total_value: o.totalValue || 0,
+              status_history: o.statusHistory || []
+            }))
+          ), 'order_annotations')
         ].filter(Boolean));
       } catch (err) {
         console.error('Erro ao salvar dados:', err);
