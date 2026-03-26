@@ -98,6 +98,9 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
       const items = tempMap[empId];
       let maxDate: number = 0;
       let lastDateStr: string | null = null;
+      
+      // Safety: Only process if the employee exists in the current collection
+      if (!map[empId]) return;
 
       Object.keys(items).forEach(itemId => {
         const data = items[itemId];
@@ -138,8 +141,8 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
     return (
       e.name.toLowerCase().includes(term) ||
       e.role.toLowerCase().includes(term) ||
-      e.cpf.includes(term) ||
-      e.department?.toLowerCase().includes(term)
+      (e.cpf || '').includes(term) ||
+      (e.department || '').toLowerCase().includes(term)
     );
   });
 
@@ -148,7 +151,7 @@ const stats = useMemo(() => {
     let employeesWithItems = 0;
     
     Object.values(possessionData).forEach(data => {
-      if (data.items.length > 0) {
+      if (data && data.items && data.items.length > 0) {
         employeesWithItems++;
         data.items.forEach(i => totalItems += i.possessedQty);
       }
@@ -333,7 +336,7 @@ const stats = useMemo(() => {
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                 {filteredEmployees.map(emp => {
-                  const data = possessionData[emp.id];
+                  const data = possessionData[emp.id] || { items: [], epiCount: 0, matCount: 0, lastUpdate: null };
                   const hasEpi = data.epiCount > 0;
                   const hasMat = data.matCount > 0;
                   
