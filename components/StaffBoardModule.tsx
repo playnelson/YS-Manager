@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   Users, Search, UserCircle2, ArrowRight, Printer, 
   Package, LayoutGrid, List, ChevronRight, UserPlus,
-  ArrowUpRight, ArrowDownLeft, ShieldCheck, HardHat, Info, Check, X, Edit, Trash2
+  ArrowUpRight, ArrowDownLeft, ShieldCheck, HardHat, Info, Check, X, Edit, Trash2, Clock
 } from 'lucide-react';
 
 function genId() { 
@@ -37,7 +37,7 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmp, setSelectedEmp] = useState<any | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // View mode is now fixed to list/table as per user request
 
   const [showAddEmp, setShowAddEmp] = useState(false);
   const [editingEmp, setEditingEmp] = useState<any | null>(null);
@@ -74,60 +74,83 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
   };
 
   const possessionData = useMemo(() => {
-    const map: Record<string, any[]> = {};
-    employees.forEach(e => map[e.id] = []);
+    const map: Record<string, { items: any[], epiCount: number, matCount: number, lastUpdate: string | null }> = {};
+    employees.forEach(e => map[e.id] = { items: [], epiCount: 0, matCount: 0, lastUpdate: null });
 
-    const tempMap: Record<string, Record<string, { qty: number, lastExitDate: string | null }>> = {};
+    const tempMap: Record<string, Record<string, { qty: number, lastDate: string | null, type: string }>> = {};
     
-    // Sort logs chronologically to correctly track the latest exit date
+    // Sort logs chronologically to correctly track the latest movement date
     const sortedLogs = [...logs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     sortedLogs.forEach(log => {
       if (!log.employeeId || log.employeeId === 'system') return;
       if (!tempMap[log.employeeId]) tempMap[log.employeeId] = {};
       
-      const current = tempMap[log.employeeId][log.itemId] || { qty: 0, lastExitDate: null };
+      const current = tempMap[log.employeeId][log.itemId] || { qty: 0, lastDate: null, type: '' };
       if (log.type === 'exit') {
-        tempMap[log.employeeId][log.itemId] = { qty: current.qty + log.quantity, lastExitDate: log.date };
+        tempMap[log.employeeId][log.itemId] = { qty: current.qty + log.quantity, lastDate: log.date, type: 'exit' };
       } else {
-        tempMap[log.employeeId][log.itemId] = { qty: Math.max(0, current.qty - log.quantity), lastExitDate: current.lastExitDate };
+        tempMap[log.employeeId][log.itemId] = { qty: Math.max(0, current.qty - log.quantity), lastDate: log.date, type: 'entry' };
       }
     });
 
     Object.keys(tempMap).forEach(empId => {
       const items = tempMap[empId];
+      let maxDate: number = 0;
+      let lastDateStr: string | null = null;
+
       Object.keys(items).forEach(itemId => {
         const data = items[itemId];
+        
+        // Track overall latest update for this employee
+        if (data.lastDate) {
+          const d = new Date(data.lastDate).getTime();
+          if (d > maxDate) {
+            maxDate = d;
+            lastDateStr = data.lastDate;
+          }
+        }
+
         if (data.qty > 0) {
           const invItem = inventory.find(i => i.id === itemId);
           if (invItem && !invItem.consumable) {
-            if (!map[empId]) map[empId] = [];
-            map[empId].push({
+            map[empId].items.push({
               ...invItem,
               possessedQty: data.qty,
-              dateTaken: data.lastExitDate
+              dateTaken: data.lastDate
             });
+            if (invItem.category?.toUpperCase() === 'EPI') {
+              map[empId].epiCount += data.qty;
+            } else {
+              map[empId].matCount += data.qty;
+            }
           }
         }
       });
+      map[empId].lastUpdate = lastDateStr;
     });
 
     return map;
   }, [employees, inventory, logs]);
 
-  const filteredEmployees = employees.filter(e => 
-    e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees.filter(e => {
+    const term = searchTerm.toLowerCase();
+    return (
+      e.name.toLowerCase().includes(term) ||
+      e.role.toLowerCase().includes(term) ||
+      e.cpf.includes(term) ||
+      e.department?.toLowerCase().includes(term)
+    );
+  });
 
-  const stats = useMemo(() => {
+const stats = useMemo(() => {
     let totalItems = 0;
     let employeesWithItems = 0;
     
-    Object.values(possessionData).forEach(items => {
-      if (items.length > 0) {
+    Object.values(possessionData).forEach(data => {
+      if (data.items.length > 0) {
         employeesWithItems++;
-        items.forEach(i => totalItems += i.possessedQty);
+        data.items.forEach(i => totalItems += i.possessedQty);
       }
     });
 
@@ -289,99 +312,88 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
           >
             <UserPlus size={16} /> Novo Trabalhador
           </button>
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-            <button 
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-            ><LayoutGrid size={18} /></button>
-            <button 
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-            ><List size={18} /></button>
-          </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-8">
-        {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredEmployees.map(emp => {
-              const items = possessionData[emp.id] || [];
-              return (
-                <div 
-                  key={emp.id} 
-                  onClick={() => setSelectedEmp(emp)}
-                  className="group bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer relative overflow-hidden"
-                >
-                  <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full blur-2xl opacity-10 transition-colors ${items.length > 0 ? 'bg-blue-600' : 'bg-gray-400'}`}></div>
+      <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl md:rounded-3xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-black/20 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-800">
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5">Nome / CPF</th>
+                  <th className="px-5 py-3.5">Função / Setor</th>
+                  <th className="px-5 py-3.5 text-center">EPIs</th>
+                  <th className="px-5 py-3.5 text-center">Ferramentas</th>
+                  <th className="px-5 py-3.5">Última Movimentação</th>
+                  <th className="px-5 py-3.5 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                {filteredEmployees.map(emp => {
+                  const data = possessionData[emp.id];
+                  const hasEpi = data.epiCount > 0;
+                  const hasMat = data.matCount > 0;
                   
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                      <UserCircle2 size={28} />
-                    </div>
-                    {items.length > 0 && (
-                      <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-black px-2 py-1 rounded-lg">
-                        {items.length} ITENS
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors uppercase tracking-tight">{emp.name}</h3>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{emp.role}</p>
-
-                  <div className="mt-6 pt-4 border-t border-gray-50 dark:border-gray-800 flex items-center justify-between text-[10px] font-black uppercase text-gray-400">
-                    <span>Posse de Ativos</span>
-                    <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
-              );
-            })}
+                  return (
+                    <tr 
+                      key={emp.id} 
+                      className="hover:bg-blue-50/30 dark:hover:bg-blue-900/5 transition-colors group cursor-pointer"
+                      onClick={() => setSelectedEmp(emp)}
+                    >
+                      <td className="px-5 py-3 text-sm">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase ${emp.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${emp.active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          {emp.active ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div>
+                          <p className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors uppercase tracking-tight">{emp.name}</p>
+                          <p className="text-[10px] font-mono font-medium text-gray-400 mt-0.5">{applyCPFMask(emp.cpf || '')}</p>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{emp.role}</p>
+                        <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">{emp.department || 'Geral'}</p>
+                      </td>
+                      <td className="px-5 py-3 text-center">
+                        <span className={`inline-block min-w-[28px] px-2 py-1 rounded-md text-xs font-black ${hasEpi ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-800'}`}>
+                          {data.epiCount}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-center">
+                         <span className={`inline-block min-w-[28px] px-2 py-1 rounded-md text-xs font-black ${hasMat ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-800'}`}>
+                          {data.matCount}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        {data.lastUpdate ? (
+                          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                            <Clock size={12} className="opacity-50" />
+                            <div>
+                              <p className="text-[10px] font-bold">{new Date(data.lastUpdate).toLocaleDateString('pt-BR')}</p>
+                              <p className="text-[9px] opacity-70">{new Date(data.lastUpdate).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' })}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-300 dark:text-gray-700 font-bold italic">Sem registros</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <button className="p-2 text-gray-300 group-hover:text-blue-500 transition-all transform group-hover:scale-110">
+                          <ChevronRight size={20} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        ) : (
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl overflow-hidden shadow-sm">
-             <table className="w-full text-left border-collapse">
-               <thead>
-                 <tr className="bg-gray-50 dark:bg-black/20 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-800">
-                   <th className="px-6 py-4">Funcionário</th>
-                   <th className="px-6 py-4">Cargo / Departamento</th>
-                   <th className="px-6 py-4">Ativos em Posse</th>
-                   <th className="px-6 py-4 text-right">Ações</th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                 {filteredEmployees.map(emp => {
-                   const items = possessionData[emp.id] || [];
-                   return (
-                     <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => setSelectedEmp(emp)}>
-                       <td className="px-6 py-4">
-                         <div className="flex items-center gap-3">
-                           <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold text-xs">
-                             {emp.name.charAt(0)}
-                           </div>
-                           <span className="font-bold text-sm">{emp.name}</span>
-                         </div>
-                       </td>
-                       <td className="px-6 py-4">
-                         <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{emp.role}</p>
-                         <p className="text-[10px] text-gray-400 uppercase">{emp.department || '---'}</p>
-                       </td>
-                       <td className="px-6 py-4">
-                         <div className="flex items-center gap-1.5">
-                           <span className={`w-2 h-2 rounded-full ${items.length > 0 ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`}></span>
-                           <span className="text-xs font-bold">{items.length} {items.length === 1 ? 'item' : 'itens'}</span>
-                         </div>
-                       </td>
-                       <td className="px-6 py-4 text-right">
-                         <button className="text-gray-300 group-hover:text-blue-600 transition-colors"><ChevronRight size={18} /></button>
-                       </td>
-                     </tr>
-                   );
-                 })}
-               </tbody>
-             </table>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Employee Detail Slide-over */}
@@ -422,7 +434,9 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
                  </div>
                  <div>
                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status Contratual</p>
-                   <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[9px] font-black rounded uppercase">Ativo</span>
+                   <span className={`px-2 py-0.5 text-[9px] font-black rounded uppercase ${selectedEmp.active ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                     {selectedEmp.active ? 'Ativo' : 'Inativo'}
+                   </span>
                  </div>
               </div>
             </div>
@@ -441,7 +455,8 @@ export const StaffBoardModule: React.FC<StaffBoardModuleProps> = ({
                 </div>
 
                 {(() => {
-                  const empItems = possessionData[selectedEmp.id] || [];
+                  const empData = possessionData[selectedEmp.id];
+                  const empItems = empData ? empData.items : [];
                   const { epi, materiais } = categorizedItems(empItems);
                   
                   if (empItems.length === 0) {
