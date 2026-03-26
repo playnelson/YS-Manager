@@ -3,10 +3,11 @@ import {
   ClipboardList, Plus, Search, Trash2, Clock, XCircle, 
   User, Package, FileText, ChevronDown, Check, Filter,
   Building2, Calendar, DollarSign, AlertCircle, Copy, Printer,
-  MoreVertical, CheckCircle2, Factory, ExternalLink, RefreshCw
+  MoreVertical, CheckCircle2, Factory, ExternalLink, RefreshCw, Download
 } from 'lucide-react';
 import { OrderAnnotation, OrderItem, OrderType, OrderStatus, OrderPriority } from '../types';
 import { generateUUID } from '../uuid';
+import * as XLSX from 'xlsx';
 
 interface OrdersModuleProps {
   orders: OrderAnnotation[];
@@ -24,6 +25,12 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<OrderType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<OrderStatus | 'all'>('all');
+
+  // Export state
+  const [showExport, setShowExport] = useState(false);
+  const [exportDateFrom, setExportDateFrom] = useState('');
+  const [exportDateTo, setExportDateTo] = useState('');
+  const [exportGroupBy, setExportGroupBy] = useState<'type' | 'requester'>('type');
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showItemSearch, setShowItemSearch] = useState(false);
@@ -327,6 +334,100 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
     return `R$ ${val.toFixed(2).replace('.', ',')}`;
   };
 
+  const exportToXLSX = () => {
+    const from = exportDateFrom ? new Date(exportDateFrom + 'T00:00:00') : null;
+    const to = exportDateTo ? new Date(exportDateTo + 'T23:59:59') : null;
+
+    const filtered = orders.filter(o => {
+      const d = new Date(o.date);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      alert('Nenhum pedido encontrado no intervalo selecionado.');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    const buildRows = (orderList: OrderAnnotation[]) => {
+      const rows: any[] = [];
+      orderList.forEach(o => {
+        if (o.items.length === 0) {
+          rows.push({
+            'Número': o.orderNumber || o.id.substring(0, 8),
+            'Data': new Date(o.date).toLocaleDateString('pt-BR'),
+            'Tipo': getTypeLabel(o.type),
+            'Status': getStatusLabel(o.status),
+            'Solicitante': o.requester,
+            'Fornecedor/Destino': o.supplier || '-',
+            'Entrega Prevista': o.expectedDelivery ? new Date(o.expectedDelivery).toLocaleDateString('pt-BR') : '-',
+            'Código Item': '-',
+            'Descrição': '-',
+            'Qtd': '',
+            'Unidade': '',
+            'Preço Un. (R$)': '',
+            'Total Item (R$)': '',
+            'Total Pedido (R$)': o.totalValue ? o.totalValue.toFixed(2) : '0,00',
+            'Observações': o.notes || ''
+          });
+        } else {
+          o.items.forEach((item, idx) => {
+            rows.push({
+              'Número': idx === 0 ? (o.orderNumber || o.id.substring(0, 8)) : '',
+              'Data': idx === 0 ? new Date(o.date).toLocaleDateString('pt-BR') : '',
+              'Tipo': idx === 0 ? getTypeLabel(o.type) : '',
+              'Status': idx === 0 ? getStatusLabel(o.status) : '',
+              'Solicitante': idx === 0 ? o.requester : '',
+              'Fornecedor/Destino': idx === 0 ? (o.supplier || '-') : '',
+              'Entrega Prevista': idx === 0 && o.expectedDelivery ? new Date(o.expectedDelivery).toLocaleDateString('pt-BR') : (idx === 0 ? '-' : ''),
+              'Código Item': item.code || '-',
+              'Descrição': item.description,
+              'Qtd': item.quantity,
+              'Unidade': item.unit,
+              'Preço Un. (R$)': item.unitPrice ? item.unitPrice.toFixed(2) : '0,00',
+              'Total Item (R$)': item.unitPrice ? (item.unitPrice * item.quantity).toFixed(2) : '0,00',
+              'Total Pedido (R$)': idx === 0 && o.totalValue ? o.totalValue.toFixed(2) : '',
+              'Observações': idx === 0 ? (o.notes || '') : ''
+            });
+          });
+        }
+      });
+      return rows;
+    };
+
+    if (exportGroupBy === 'type') {
+      const types: Record<string, OrderAnnotation[]> = {};
+      filtered.forEach(o => {
+        const key = getTypeLabel(o.type);
+        if (!types[key]) types[key] = [];
+        types[key].push(o);
+      });
+      Object.entries(types).forEach(([label, list]) => {
+        const ws = XLSX.utils.json_to_sheet(buildRows(list));
+        XLSX.utils.book_append_sheet(wb, ws, label.substring(0, 31));
+      });
+    } else {
+      const requesters: Record<string, OrderAnnotation[]> = {};
+      filtered.forEach(o => {
+        const key = o.requester || 'Sem Solicitante';
+        if (!requesters[key]) requesters[key] = [];
+        requesters[key].push(o);
+      });
+      Object.entries(requesters).forEach(([name, list]) => {
+        const ws = XLSX.utils.json_to_sheet(buildRows(list));
+        XLSX.utils.book_append_sheet(wb, ws, name.substring(0, 31));
+      });
+    }
+
+    const fromStr = exportDateFrom || 'inicio';
+    const toStr = exportDateTo || 'hoje';
+    XLSX.writeFile(wb, `pedidos_${fromStr}_ate_${toStr}.xlsx`);
+    setShowExport(false);
+  };
+
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-black/20 p-4 md:p-6 space-y-6">
       {/* Header */}
@@ -338,12 +439,20 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
           </h2>
           <p className="text-sm text-gray-500">Controle completo de compras, vendas e solicitações internas</p>
         </div>
-        <button 
-          onClick={() => openForm()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-500/30 w-full md:w-auto justify-center"
-        >
-          <Plus size={18} /> Novo Pedido
-        </button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <button
+            onClick={() => setShowExport(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm"
+          >
+            <Download size={16} /> Exportar Planilha
+          </button>
+          <button 
+            onClick={() => openForm()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-500/30 w-full md:w-auto justify-center"
+          >
+            <Plus size={18} /> Novo Pedido
+          </button>
+        </div>
       </div>
 
       {/* Stats Bar */}
@@ -720,6 +829,80 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
                     <CheckCircle2 size={18} /> Finalizar Pedido
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExport && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-800 animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
+                  <Download className="text-blue-600" size={20} />
+                  Exportar Pedidos
+                </h3>
+                <button onClick={() => setShowExport(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
+                  <XCircle size={20} className="text-gray-400" />
+                </button>
+              </div>
+
+              <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Data Inicial</label>
+                    <input 
+                      type="date" 
+                      className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/30 text-sm font-medium"
+                      value={exportDateFrom}
+                      onChange={e => setExportDateFrom(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Data Final</label>
+                    <input 
+                      type="date" 
+                      className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/30 text-sm font-medium"
+                      value={exportDateTo}
+                      onChange={e => setExportDateTo(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Agrupar por</label>
+                  <div className="grid grid-cols-2 gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                    <button
+                      onClick={() => setExportGroupBy('type')}
+                      className={`py-2 text-xs font-bold rounded-lg transition-all ${exportGroupBy === 'type' ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      Tipo de Pedido
+                    </button>
+                    <button
+                      onClick={() => setExportGroupBy('requester')}
+                      className={`py-2 text-xs font-bold rounded-lg transition-all ${exportGroupBy === 'requester' ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      Solicitante
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2 px-1 italic">
+                    {exportGroupBy === 'type' 
+                      ? '* Gera uma aba separada para Compras, Vendas e Uso Interno.' 
+                      : '* Gera uma aba separada para cada pessoa que fez o pedido.'}
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    onClick={exportToXLSX}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98]"
+                  >
+                    <FileText size={18} /> Gerar Planilha XLSX
+                  </button>
+                </div>
               </div>
             </div>
           </div>
