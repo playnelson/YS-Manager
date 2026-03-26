@@ -408,6 +408,7 @@ const EmployeeDetailModal: React.FC<{
   onReturn: (itemId: string, qty: number) => void;
   onClose: () => void;
 }> = ({ employee, logs, inventory, onReturn, onClose }) => {
+  const [returnTarget, setReturnTarget] = useState<{ itemId: string; name: string; maxQty: number; unit: string } | null>(null);
   const empLogs = logs.filter(l => l.employeeId === employee.id);
   const possession: Record<string, { itemId: string; code: string; name: string; qty: number; unit: string }> = {};
 
@@ -460,7 +461,7 @@ const EmployeeDetailModal: React.FC<{
                       <p className="text-[10px] text-gray-500">Em posse: <span className="font-bold text-blue-600 dark:text-blue-400">{p.qty}</span></p>
                     </div>
                     <button 
-                      onClick={() => onReturn(p.itemId, p.qty)}
+                      onClick={() => setReturnTarget({ itemId: p.itemId, name: p.name, maxQty: p.qty, unit: p.unit })}
                       className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 text-[10px] font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors shadow-sm"
                     >
                       <ArrowDownLeft size={12}/> Devolver
@@ -468,6 +469,16 @@ const EmployeeDetailModal: React.FC<{
                   </div>
                 ))}
               </div>
+            )}
+
+            {returnTarget && (
+              <ReturnModal 
+                itemName={returnTarget.name}
+                maxQty={returnTarget.maxQty}
+                unit={returnTarget.unit}
+                onConfirm={(qty) => { onReturn(returnTarget.itemId, qty); setReturnTarget(null); }}
+                onClose={() => setReturnTarget(null)}
+              />
             )}
           </section>
 
@@ -500,6 +511,69 @@ const EmployeeDetailModal: React.FC<{
               </div>
             )}
           </section>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Return Modal ─────────────────────────────────────────────────────────────
+
+const ReturnModal: React.FC<{
+  itemName: string;
+  maxQty: number;
+  unit: string;
+  onConfirm: (qty: number) => void;
+  onClose: () => void;
+}> = ({ itemName, maxQty, unit, onConfirm, onClose }) => {
+  const [qty, setQty] = useState(maxQty);
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xs border border-gray-200 dark:border-gray-700 overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="px-5 py-4 bg-blue-600 text-white flex items-center justify-between">
+          <span className="font-bold text-sm">Devolução de Material</span>
+          <button onClick={onClose}><X size={18}/></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">Item</p>
+            <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{itemName}</p>
+          </div>
+          
+          <div>
+            <label className="text-[10px] font-bold uppercase text-gray-400 block mb-2">Quantidade a Devolver</label>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setQty(Math.max(1, qty - 1))}
+                className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Minus size={16}/>
+              </button>
+              <input 
+                type="number" 
+                value={qty} 
+                min={1} 
+                max={maxQty}
+                onChange={e => setQty(Math.min(maxQty, Math.max(1, Number(e.target.value))))}
+                className="flex-1 bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-blue-500 rounded-xl py-2 text-center font-black text-lg outline-none transition-all"
+              />
+              <button 
+                onClick={() => setQty(Math.min(maxQty, qty + 1))}
+                className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Plus size={16}/>
+              </button>
+            </div>
+            <p className="text-[10px] text-center text-gray-400 mt-2 font-medium">Máximo disponível: <span className="font-bold text-blue-600">{maxQty} {unit}</span></p>
+          </div>
+
+          <button 
+            onClick={() => onConfirm(qty)}
+            className="w-full py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            <Check size={18}/> Confirmar Devolução
+          </button>
         </div>
       </div>
     </div>
