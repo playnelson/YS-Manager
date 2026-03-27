@@ -42,3 +42,6 @@ node-portable.zip
 !.env.example
 .next 
 .next/  
+
+# OpenNext
+.open-next
