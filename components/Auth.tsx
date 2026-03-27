@@ -129,7 +129,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             <div className="w-14 h-14 bg-[var(--apple-button)] rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-black/5">
               <span className="material-symbols-outlined !text-3xl">deployed_code</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--apple-text)]">Brain Office</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--apple-text)]">B Log</h1>
             <p className="text-[var(--apple-secondary)] text-sm mt-2">
               {isRegistering ? 'Crie sua conta profissional' : 'Acesse sua plataforma profissional'}
             </p>
@@ -262,7 +262,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             <a className="hover:text-[var(--apple-text)] transition-colors" href="#">Suporte</a>
           </div>
           <p className="text-[10px] text-gray-400 font-medium uppercase tracking-[0.2em]">
-            Brain Office v2.7 © 2024
+            B Log v2.7 © 2024
           </p>
         </div>
       </div>

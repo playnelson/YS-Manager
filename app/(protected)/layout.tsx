@@ -95,7 +95,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                 <div className="w-9 h-9 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-gray-900 shadow-md group-hover:scale-105 transition-transform duration-200">
                   <span className="material-symbols-outlined" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 0, 'wght' 400" }}>deployed_code</span>
                 </div>
-                <span className="font-bold text-xl tracking-tight hidden sm:block">BRAIN OFFICE</span>
+                <span className="font-bold text-xl tracking-tight hidden sm:block">B Log</span>
               </Link>
             </div>
 
@@ -236,7 +236,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
             <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>deployed_code</span>
-            Brain Office &copy; {new Date().getFullYear()}
+            B Log &copy; {new Date().getFullYear()}
           </p>
           <div className="flex items-center gap-4 text-sm text-gray-400 dark:text-gray-500">
             <span>Versão 1.2.0</span>

@@ -118,7 +118,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
             <span className="uppercase">Sessão: {activeSubTab}</span>
           </div>
           <span className="text-gray-300 dark:text-gray-700">|</span>
-          <span className="uppercase">Brain Office v2.7</span>
+          <span className="uppercase">B Log v2.7</span>
         </div>
         <div className="flex items-center gap-4 text-[10px] text-gray-500 font-medium">
           <span className="uppercase tracking-widest">Documentos: {personalFiles.length}</span>

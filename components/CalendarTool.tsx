@@ -977,7 +977,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({
           </div>
 
           <div class="footer">
-            YS-Manager Strategic Intelligence System - Relatório Privado e Confidencial
+            B Log - Relatório Privado e Confidencial
           </div>
 
           <script>

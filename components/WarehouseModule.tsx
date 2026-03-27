@@ -227,7 +227,7 @@ function generateDailyReport(logs: StockLog[]) {
         </div>
 
         <div style="margin-top: 80px; text-align: center; border-top: 1px solid #eee; pt: 20px; font-size: 10px; color: #aaa;">
-          Documento gerado automaticamente pelo Sistema YS-Manager em ${new Date().toLocaleString('pt-BR')}
+          Documento gerado automaticamente pelo Sistema B Log em ${new Date().toLocaleString('pt-BR')}
         </div>
 
         <script>
@@ -336,7 +336,7 @@ function printMaterialForm(employee: Employee, items: { code: string; name: stri
       <body>
         <div class="header">
           <h1 style="margin:0; font-size: 24px;">FICHA DE CAUTELA E ENTREGA DE MATERIAIS</h1>
-          <p style="margin:5px 0 0; opacity: 0.7;">YS-Manager - Sistema de Gestão Interna</p>
+          <p style="margin:5px 0 0; opacity: 0.7;">B Log - Sistema de Gestão Interna</p>
         </div>
         
         <div class="info">
