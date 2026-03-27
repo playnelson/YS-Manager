@@ -1,7 +1,8 @@
+'use client';
 
 import React, { useState } from 'react';
 import { Languages, ArrowRightLeft, Copy, Check, Sparkles, Loader2, Eraser, Globe } from 'lucide-react';
-import { Button } from './ui/Button';
+import { Button } from '@/components/ui/Button';
 
 const LANGUAGES = [
   { code: 'pt-BR', name: 'Português' },

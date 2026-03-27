@@ -1,8 +1,9 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useRef } from 'react';
 import { FileUp, Scissors, Combine, Download, Trash2, ArrowUp, ArrowDown, FileText, Loader2, AlertCircle } from 'lucide-react';
-import { Button } from './ui/Button';
+import { Button } from '@/components/ui/Button';
 import { PDFDocument } from 'pdf-lib';
 import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
 

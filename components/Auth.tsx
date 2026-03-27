@@ -1,3 +1,4 @@
+'use client';
 
 import React, { useState } from 'react';
 import {
@@ -11,9 +12,9 @@ import {
   IconMail,
   IconBrandGoogle
 } from '@tabler/icons-react';
-import { User } from '../types';
-import { supabase } from '../supabase';
-import { Button } from './ui/Button';
+import { User } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { Button } from '@/components/ui/Button';
 
 interface AuthProps {
   onLogin: (user: User) => void;

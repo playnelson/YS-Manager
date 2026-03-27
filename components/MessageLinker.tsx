@@ -1,8 +1,9 @@
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Link, Share2, Copy, ArrowLeft, Check, Cloud, Loader2, AlertTriangle, Database, Scissors, Clock, ShieldAlert, Timer, ChevronLeft } from 'lucide-react';
-import { Button } from './ui/Button';
-import { supabase } from '../supabase';
+import { Button } from '@/components/ui/Button';
+import { supabase } from '@/lib/supabase';
 import LZString from 'lz-string';
 
 interface MessageLinkerProps {

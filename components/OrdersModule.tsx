@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useMemo } from 'react';
 import { 
   ClipboardList, Plus, Search, Trash2, Clock, XCircle, 
@@ -5,7 +6,7 @@ import {
   Building2, Calendar, DollarSign, AlertCircle, Copy, Printer,
   MoreVertical, CheckCircle2, Factory, ExternalLink, RefreshCw, Download
 } from 'lucide-react';
-import { OrderAnnotation, OrderItem, OrderType, OrderStatus, OrderPriority } from '../types';
+import { OrderAnnotation, OrderItem, OrderType, OrderStatus, OrderPriority } from '@/types';
 import { generateUUID } from '../uuid';
 import * as XLSX from 'xlsx';
 

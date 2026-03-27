@@ -1,3 +1,4 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -26,8 +27,8 @@ import {
   IconTrendingUp,
   IconTrendingDown
 } from '@tabler/icons-react';
-import { CalendarConfig, Holiday, UserEvent, ShiftConfig, MoonPhase, FinancialTransaction, OrderAnnotation } from '../types';
-import { Button } from './ui/Button';
+import { CalendarConfig, Holiday, UserEvent, ShiftConfig, MoonPhase, FinancialTransaction, OrderAnnotation } from '@/types';
+import { Button } from '@/components/ui/Button';
 import { Moon as LucideMoon, MoonStar as LucideMoonStar, FileText as LucideFileText } from 'lucide-react';
 
 interface CalendarToolProps {

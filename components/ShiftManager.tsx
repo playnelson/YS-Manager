@@ -1,3 +1,4 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useMemo } from 'react';
@@ -17,8 +18,8 @@ import {
   ChevronRight,
   Zap
 } from 'lucide-react';
-import { ShiftConfig, ShiftSegment } from '../types';
-import { Button } from './ui/Button';
+import { ShiftConfig, ShiftSegment } from '@/types';
+import { Button } from '@/components/ui/Button';
 
 interface ShiftManagerProps {
   config?: ShiftConfig;

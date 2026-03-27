@@ -1,3 +1,4 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,9 +7,9 @@ import {
   Clock, Trash2, RotateCcw, QrCode, Copy, Check, Send,
   Plus, FileText, Share2, ExternalLink, Search as SearchIcon, RefreshCw, Users, Book
 } from 'lucide-react';
-import { Button } from './ui/Button';
+import { Button } from '@/components/ui/Button';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Contact, WhatsAppHistoryItem, WhatsAppTemplate } from '../types';
+import { Contact, WhatsAppHistoryItem, WhatsAppTemplate } from '@/types';
 import { fetchGoogleContacts } from '../services/googleContactsService';
 
 interface WhatsAppToolProps {

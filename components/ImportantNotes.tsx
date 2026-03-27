@@ -1,3 +1,4 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -6,8 +7,8 @@ import {
   Lock, Archive, Clock, Hash, Bold, Italic, Underline,
   AlignLeft, AlignCenter, AlignRight, List, ListOrdered
 } from 'lucide-react';
-import { ImportantNote, NotePriority } from '../types';
-import { Button } from './ui/Button';
+import { ImportantNote, NotePriority } from '@/types';
+import { Button } from '@/components/ui/Button';
 
 interface ImportantNotesProps {
   notes: ImportantNote[];

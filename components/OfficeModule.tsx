@@ -1,18 +1,19 @@
+'use client';
 
 import React, { useState } from 'react';
-import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile, KanbanState } from '../types';
-import { EmailManager } from './EmailManager';
-import { StickyNotesWall } from './StickyNotesWall';
-import { ImportantNotes } from './ImportantNotes';
-import { ShiftHandoffModule } from './ShiftHandoff';
-import { ProfessionalLinks } from './ProfessionalLinks';
-import { ExtensionsDirectory } from './ExtensionsDirectory';
-import { DocumentGenerator } from './DocumentGenerator';
-import { SignatureManager } from './SignatureManager';
-import { PersonalFileManager } from './DocumentsModule';
-import { PricingCalculator } from './PricingCalculator';
-import { BrasilApiModule } from './BrasilApiModule';
-import { KanbanBoard } from './KanbanBoard';
+import { EmailTemplate, Signature, UserEvent, PostIt, ImportantNote, ShiftHandoff, User, ProfessionalLink, Extension, StoredFile, KanbanState } from '@/types';
+import { EmailManager } from '@/components/EmailManager';
+import { StickyNotesWall } from '@/components/StickyNotesWall';
+import { ImportantNotes } from '@/components/ImportantNotes';
+import { ShiftHandoffModule } from '@/components/ShiftHandoff';
+import { ProfessionalLinks } from '@/components/ProfessionalLinks';
+import { ExtensionsDirectory } from '@/components/ExtensionsDirectory';
+import { DocumentGenerator } from '@/components/DocumentGenerator';
+import { SignatureManager } from '@/components/SignatureManager';
+import { PersonalFileManager } from '@/components/DocumentsModule';
+import { PricingCalculator } from '@/components/PricingCalculator';
+import { BrasilApiModule } from '@/components/BrasilApiModule';
+import { KanbanBoard } from '@/components/KanbanBoard';
 
 interface OfficeModuleProps {
   emails: EmailTemplate[];

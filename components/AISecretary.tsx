@@ -1,3 +1,4 @@
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
@@ -14,7 +15,7 @@ import {
   IconLoader2
 } from '@tabler/icons-react';
 import { GoogleGenAI, Type } from "@google/genai";
-import { Button } from './ui/Button';
+import { Button } from '@/components/ui/Button';
 
 interface Message {
   role: 'user' | 'assistant';

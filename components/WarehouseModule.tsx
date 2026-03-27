@@ -1,3 +1,4 @@
+'use client';
 import { generateUUID } from '../uuid';
 import React, { useState, useRef } from 'react';
 import {

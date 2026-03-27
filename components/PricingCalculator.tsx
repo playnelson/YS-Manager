@@ -1,8 +1,9 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Calculator, Percent, TrendingUp, Info, RefreshCw, Save, Trash2, History } from 'lucide-react';
-import { Button } from './ui/Button';
+import { Button } from '@/components/ui/Button';
 
 interface PricingCalculation {
   id: string;

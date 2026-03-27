@@ -1,3 +1,4 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useEffect, useRef } from 'react';
@@ -25,7 +26,7 @@ import {
   IconMap,
   IconStack
 } from '@tabler/icons-react';
-import { LogisticsState, FreightTable, LogisticsChecklist } from '../types';
+import { LogisticsState, FreightTable, LogisticsChecklist } from '@/types';
 
 declare global {
   interface Window {

@@ -1,11 +1,12 @@
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import {
   Building2, MapPin, Landmark, Search, Copy, Check, ExternalLink, AlertTriangle,
   Loader2, FileText, FileCheck, Barcode
 } from 'lucide-react';
-import { Button } from './ui/Button';
-import { CnpjData, CepData, BankData } from '../types';
+import { Button } from '@/components/ui/Button';
+import { CnpjData, CepData, BankData } from '@/types';
 
 export const ConsultationModule: React.FC = () => {
   const [activeTool, setActiveTool] = useState<'cnpj' | 'nfe' | 'cep' | 'banks'>('cnpj');

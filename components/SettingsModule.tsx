@@ -1,3 +1,4 @@
+'use client';
 
 import React, { useState, useRef } from 'react';
 import {
@@ -10,9 +11,9 @@ import {
   IconLink,
   IconLinkOff
 } from '@tabler/icons-react';
-import { User } from '../types';
-import { supabase } from '../supabase';
-import { Button } from './ui/Button';
+import { User } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { Button } from '@/components/ui/Button';
 
 interface SettingsModuleProps {
   user: User;

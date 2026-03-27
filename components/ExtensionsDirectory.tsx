@@ -1,9 +1,10 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useMemo } from 'react';
 import { Phone, Plus, Search, Trash2, Edit2, Copy } from 'lucide-react';
-import { Extension } from '../types';
-import { Button } from './ui/Button';
+import { Extension } from '@/types';
+import { Button } from '@/components/ui/Button';
 
 interface ExtensionsDirectoryProps {
   extensions: Extension[];

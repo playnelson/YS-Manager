@@ -1,10 +1,11 @@
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { IconCalendar, IconSettings, IconRepeat, IconRefresh } from '@tabler/icons-react';
-import { CalendarConfig, UserEvent, ShiftConfig, FinancialTransaction, OrderAnnotation } from '../types';
-import { CalendarTool } from './CalendarTool';
-import { ShiftManager } from './ShiftManager';
-import { Button } from './ui/Button';
+import { CalendarConfig, UserEvent, ShiftConfig, FinancialTransaction, OrderAnnotation } from '@/types';
+import { CalendarTool } from '@/components/CalendarTool';
+import { ShiftManager } from '@/components/ShiftManager';
+import { Button } from '@/components/ui/Button';
 import { fetchGoogleCalendarEvents } from '../services/googleCalendarService';
 
 interface CalendarModuleProps {

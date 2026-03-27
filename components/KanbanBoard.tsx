@@ -1,3 +1,4 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useRef, useCallback } from 'react';
@@ -6,7 +7,7 @@ import {
   AlignLeft, Tag, Maximize2, Minimize2, MoreHorizontal,
   Circle, CheckCircle2, Clock, ChevronDown, Search, Filter
 } from 'lucide-react';
-import { KanbanState, KanbanCard, KanbanColumn, KanbanPriority } from '../types';
+import { KanbanState, KanbanCard, KanbanColumn, KanbanPriority } from '@/types';
 
 interface KanbanBoardProps {
   data: KanbanState;

@@ -1,8 +1,9 @@
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { MapPin, Landmark, DollarSign, Search, Loader2, ArrowUp, ArrowDown, Copy, ExternalLink, RefreshCw, Building2, Users, Phone, Mail, FileText, Briefcase, CheckCircle2, XCircle, Info, Check } from 'lucide-react';
-import { Button } from './ui/Button';
-import { CepData, BankData, CurrencyQuote, CnpjData } from '../types';
+import { Button } from '@/components/ui/Button';
+import { CepData, BankData, CurrencyQuote, CnpjData } from '@/types';
 
 export const BrasilTools: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cep' | 'cnpj' | 'banks' | 'finance'>('cep');

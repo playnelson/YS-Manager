@@ -1,8 +1,9 @@
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Search, Building2, MapPin, Users, AlertTriangle, Briefcase, Copy, Loader2, History, Info, Printer, DollarSign, FileText, CheckCircle2, XCircle, Check, ExternalLink, Car, User, Truck, Key, ShieldCheck, CreditCard } from 'lucide-react';
-import { Button } from './ui/Button';
-import { CnpjData, FipeBrand, FipeModel, FipeYear, FipeResult } from '../types';
+import { Button } from '@/components/ui/Button';
+import { CnpjData, FipeBrand, FipeModel, FipeYear, FipeResult } from '@/types';
 
 // URLs dos Sintegra Estaduais
 const SINTEGRA_URLS: Record<string, string> = {

@@ -1,9 +1,10 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState } from 'react';
 import { ClipboardList, Plus, AlertTriangle, CheckCircle2, Siren, Search, Clock, User, CalendarDays, History } from 'lucide-react';
-import { ShiftHandoff, HandoffStatus, User as AppUser } from '../types';
-import { Button } from './ui/Button';
+import { ShiftHandoff, HandoffStatus, User as AppUser } from '@/types';
+import { Button } from '@/components/ui/Button';
 
 interface ShiftHandoffProps {
   handoffs: ShiftHandoff[];

@@ -1,9 +1,10 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState } from 'react';
 import { Plus, Trash2, Palette, Calendar, StickyNote, Download, Clock, X, FileText, ArrowRight, Maximize2 } from 'lucide-react';
-import { PostIt } from '../types';
-import { Button } from './ui/Button';
+import { PostIt } from '@/types';
+import { Button } from '@/components/ui/Button';
 
 interface StickyNotesWallProps {
   notes: PostIt[];

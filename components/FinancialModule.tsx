@@ -1,3 +1,4 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useMemo } from 'react';
@@ -7,8 +8,8 @@ import {
   ArrowUpCircle, ArrowDownCircle, Filter, ChevronDown,
   Briefcase, Home, ShoppingCart, Car, HeartPulse, MoreHorizontal
 } from 'lucide-react';
-import { FinancialTransaction, TransactionType } from '../types';
-import { Button } from './ui/Button';
+import { FinancialTransaction, TransactionType } from '@/types';
+import { Button } from '@/components/ui/Button';
 
 interface FinancialModuleProps {
   transactions: FinancialTransaction[];

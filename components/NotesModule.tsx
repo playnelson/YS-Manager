@@ -1,11 +1,12 @@
+'use client';
 
 import React, { useState } from 'react';
 import { StickyNote, FileText, ClipboardList } from 'lucide-react';
-import { PostIt, ImportantNote, ShiftHandoff, User } from '../types';
-import { StickyNotesWall } from './StickyNotesWall';
-import { ImportantNotes } from './ImportantNotes';
-import { ShiftHandoffModule } from './ShiftHandoff';
-import { Button } from './ui/Button';
+import { PostIt, ImportantNote, ShiftHandoff, User } from '@/types';
+import { StickyNotesWall } from '@/components/StickyNotesWall';
+import { ImportantNotes } from '@/components/ImportantNotes';
+import { ShiftHandoffModule } from '@/components/ShiftHandoff';
+import { Button } from '@/components/ui/Button';
 
 interface NotesModuleProps {
   postIts: PostIt[];

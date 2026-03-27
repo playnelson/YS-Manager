@@ -1,7 +1,8 @@
+'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Cloud, Download, RefreshCw, File, LogIn, ExternalLink, Search, Filter, LayoutGrid, List as ListIcon, FileText, Image as ImageIcon, FileSpreadsheet } from 'lucide-react';
-import { Button } from './ui/Button';
-import { User } from '../types';
+import { Button } from '@/components/ui/Button';
+import { User } from '@/types';
 
 declare global {
     interface Window {

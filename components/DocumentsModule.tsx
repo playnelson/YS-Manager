@@ -1,3 +1,4 @@
+'use client';
 import { generateUUID } from '../uuid';
 import React, { useState, useRef, useMemo } from 'react';
 import { 
@@ -6,11 +7,11 @@ import {
   ArrowRightLeft, Edit2, Check, X, CornerDownRight,
   Search, FileDown, Layers, Sparkles, Cloud, FileCheck
 } from 'lucide-react';
-import { Button } from './ui/Button';
-import { StoredFile, Signature, UserEvent, User } from '../types';
-import { DocumentGenerator } from './DocumentGenerator';
-import { SharedDocumentsModule } from './SharedDocumentsModule';
-import { SignatureManager } from './SignatureManager';
+import { Button } from '@/components/ui/Button';
+import { StoredFile, Signature, UserEvent, User } from '@/types';
+import { DocumentGenerator } from '@/components/DocumentGenerator';
+import { SharedDocumentsModule } from '@/components/SharedDocumentsModule';
+import { SignatureManager } from '@/components/SignatureManager';
 
 // --- Sub-Component: PersonalFileManager ---
 export const PersonalFileManager: React.FC<{ 

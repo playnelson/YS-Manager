@@ -1,3 +1,4 @@
+'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
@@ -7,8 +8,8 @@ import {
   ExternalLink, Cloud, HardDrive, RefreshCw, FileSignature,
   BookOpen, Layers, BadgeCheck, FileDown, Globe, Lock
 } from 'lucide-react';
-import { Button } from './ui/Button';
-import { DocTemplate } from '../types';
+import { Button } from '@/components/ui/Button';
+import { DocTemplate } from '@/types';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { generate } from '@pdfme/generator';
 import { text, image, line } from '@pdfme/schemas';

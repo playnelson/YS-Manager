@@ -1,9 +1,10 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useMemo } from 'react';
 import { Plus, Globe, ExternalLink, Trash2, Search, Tag, Edit2, Upload, Image as ImageIcon, MoreVertical, X } from 'lucide-react';
-import { ProfessionalLink } from '../types';
-import { Button } from './ui/Button';
+import { ProfessionalLink } from '@/types';
+import { Button } from '@/components/ui/Button';
 
 interface ProfessionalLinksProps {
   links: ProfessionalLink[];

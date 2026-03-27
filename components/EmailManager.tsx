@@ -1,9 +1,10 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useMemo, useRef } from 'react';
 import { Plus, Save, Mail, Trash2, Send, ExternalLink, Filter, Tag, Folder, FolderPlus, Edit2, Check, X, ArrowRightLeft, FileText, LayoutList } from 'lucide-react';
-import { EmailTemplate } from '../types';
-import { Button } from './ui/Button';
+import { EmailTemplate } from '@/types';
+import { Button } from '@/components/ui/Button';
 
 interface EmailManagerProps {
   emails: EmailTemplate[];

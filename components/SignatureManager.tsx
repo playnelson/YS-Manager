@@ -1,9 +1,10 @@
+'use client';
 
 import { generateUUID } from '../uuid';
 import React, { useState, useRef, useEffect } from 'react';
 import { PenTool, Upload, Eraser, Save, FileCheck, Trash2, Download, MousePointer2, Move, ZoomIn, ZoomOut, Loader2, Sliders, Calendar, Type, Stamp, Globe, Shield } from 'lucide-react';
-import { Button } from './ui/Button';
-import { Signature, UserEvent } from '../types';
+import { Button } from '@/components/ui/Button';
+import { Signature, UserEvent } from '@/types';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
 
