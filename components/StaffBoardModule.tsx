@@ -21,34 +21,73 @@ function exportEmployeeReport(
 ) {
   const workbook = XLSX.utils.book_new();
 
-  // ── ABA 1: Resumo por Funcionário ──────────────────────────────────────────
-  const summaryRows = employees.map(emp => {
-    const data = possessionData[emp.id] || { items: [], epiCount: 0, matCount: 0, lastUpdate: null };
-    const allLogs = logs.filter(l => l.employeeId === emp.id);
-    return {
-      'Nome': emp.name,
-      'CPF': emp.cpf || '',
-      'Cargo': emp.role || '',
-      'Departamento': emp.department || '',
-      'Status': emp.active ? 'Ativo' : 'Inativo',
-      'EPIs em Posse': data.epiCount,
-      'Ferramentas/Materiais em Posse': data.matCount,
-      'Total de Itens em Posse': data.epiCount + data.matCount,
-      'Última Movimentação': data.lastUpdate
-        ? new Date(data.lastUpdate).toLocaleString('pt-BR')
-        : 'Sem registros',
-      'Total de Movimentações': allLogs.length,
-    };
+  // ABA 1: Retiradas e Devolucoes por Funcionario (uma linha por funcionario+item)
+  const detailRows: any[] = [];
+
+  employees.forEach(emp => {
+    const empLogs = logs.filter(l => l.employeeId === emp.id);
+    if (empLogs.length === 0) return;
+
+    const itemMap: Record<string, {
+      code: string; name: string; category: string; unit: string;
+      totalRetirado: number; totalDevolvido: number; lastDate: string | null;
+    }> = {};
+
+    empLogs.forEach(log => {
+      const invItem = inventory.find(i => i.id === log.itemId);
+      const key = log.itemId || log.itemCode || log.itemName;
+      if (!itemMap[key]) {
+        itemMap[key] = {
+          code: log.itemCode || '',
+          name: log.itemName || '',
+          category: invItem?.category || '',
+          unit: invItem?.unit || '',
+          totalRetirado: 0,
+          totalDevolvido: 0,
+          lastDate: null,
+        };
+      }
+      if (log.type === 'exit') {
+        itemMap[key].totalRetirado += log.quantity;
+      } else {
+        itemMap[key].totalDevolvido += log.quantity;
+      }
+      if (!itemMap[key].lastDate || new Date(log.date) > new Date(itemMap[key].lastDate!)) {
+        itemMap[key].lastDate = log.date;
+      }
+    });
+
+    Object.values(itemMap).forEach(item => {
+      const saldo = item.totalRetirado - item.totalDevolvido;
+      detailRows.push({
+        'Funcionario': emp.name,
+        'CPF': emp.cpf || '',
+        'Cargo': emp.role || '',
+        'Departamento': emp.department || '',
+        'Status': emp.active ? 'Ativo' : 'Inativo',
+        'Codigo do Item': item.code,
+        'Descricao do Item': item.name,
+        'Categoria': item.category,
+        'Unidade': item.unit,
+        'Total Retirado': item.totalRetirado,
+        'Total Devolvido': item.totalDevolvido,
+        'Saldo Atual (em Posse)': saldo > 0 ? saldo : 0,
+        'Ultima Movimentacao': item.lastDate ? new Date(item.lastDate).toLocaleString('pt-BR') : '',
+      });
+    });
   });
 
-  const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
-  wsSummary['!cols'] = [
+  const wsDetail = XLSX.utils.json_to_sheet(
+    detailRows.length > 0 ? detailRows : [{ Info: 'Nenhuma movimentacao registrada.' }]
+  );
+  wsDetail['!cols'] = [
     { wch: 30 }, { wch: 16 }, { wch: 22 }, { wch: 18 }, { wch: 10 },
-    { wch: 14 }, { wch: 24 }, { wch: 20 }, { wch: 22 }, { wch: 22 },
+    { wch: 14 }, { wch: 40 }, { wch: 14 }, { wch: 8  },
+    { wch: 16 }, { wch: 16 }, { wch: 20 }, { wch: 22 },
   ];
-  XLSX.utils.book_append_sheet(workbook, wsSummary, 'Resumo de Funcionários');
+  XLSX.utils.book_append_sheet(workbook, wsDetail, 'Retiradas e Devolucoes');
 
-  // ── ABA 2: Histórico Completo de Movimentações ─────────────────────────────
+  // ABA 2: Historico Cronologico Completo
   const historyRows = [...logs]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .map(log => {
@@ -56,59 +95,55 @@ function exportEmployeeReport(
       const invItem = inventory.find(i => i.id === log.itemId);
       return {
         'Data / Hora': log.date ? new Date(log.date).toLocaleString('pt-BR') : '',
-        'Tipo': log.type === 'exit' ? 'RETIRADA' : 'DEVOLUÇÃO / ENTRADA',
-        'Funcionário': emp?.name || log.employeeName || '—',
-        'CPF': emp?.cpf || '—',
-        'Cargo': emp?.role || '—',
-        'Código do Item': log.itemCode || '',
-        'Descrição do Item': log.itemName || '',
-        'Categoria': invItem?.category || '—',
-        'Consumível?': invItem?.consumable ? 'Sim' : 'Não',
+        'Tipo': log.type === 'exit' ? 'RETIRADA' : 'DEVOLUCAO',
+        'Funcionario': emp?.name || log.employeeName || '',
+        'CPF': emp?.cpf || '',
+        'Cargo': emp?.role || '',
+        'Codigo': log.itemCode || '',
+        'Item': log.itemName || '',
+        'Categoria': invItem?.category || '',
         'Quantidade': log.quantity,
         'Unidade': invItem?.unit || '',
-        'Observação': log.note || '',
+        'Observacao': log.note || '',
       };
     });
 
-  const wsHistory = XLSX.utils.json_to_sheet(historyRows);
+  const wsHistory = XLSX.utils.json_to_sheet(
+    historyRows.length > 0 ? historyRows : [{ Info: 'Nenhum registro.' }]
+  );
   wsHistory['!cols'] = [
-    { wch: 20 }, { wch: 22 }, { wch: 30 }, { wch: 16 }, { wch: 20 },
-    { wch: 16 }, { wch: 40 }, { wch: 14 }, { wch: 12 }, { wch: 10 },
-    { wch: 8 },  { wch: 40 },
+    { wch: 20 }, { wch: 12 }, { wch: 30 }, { wch: 16 }, { wch: 20 },
+    { wch: 12 }, { wch: 40 }, { wch: 14 }, { wch: 10 }, { wch: 8 }, { wch: 40 },
   ];
-  XLSX.utils.book_append_sheet(workbook, wsHistory, 'Histórico de Movimentações');
+  XLSX.utils.book_append_sheet(workbook, wsHistory, 'Historico Completo');
 
-  // ── ABA 3: Itens Atualmente em Posse (não consumíveis) ─────────────────────
-  const possessionRows: any[] = [];
-  employees.forEach(emp => {
-    const data = possessionData[emp.id];
-    if (!data || data.items.length === 0) return;
-    data.items.forEach(item => {
-      possessionRows.push({
-        'Funcionário': emp.name,
-        'CPF': emp.cpf || '',
-        'Cargo': emp.role || '',
-        'Status': emp.active ? 'Ativo' : 'Inativo',
-        'Código do Item': item.code,
-        'Descrição': item.name,
-        'Categoria': item.category,
-        'Quantidade em Posse': item.possessedQty,
-        'Unidade': item.unit,
-        'Data da Última Movimentação': item.dateTaken
-          ? new Date(item.dateTaken).toLocaleDateString('pt-BR')
-          : '',
-      });
-    });
+  // ABA 3: Resumo Geral
+  const summaryRows = employees.map(emp => {
+    const data = possessionData[emp.id] || { items: [], epiCount: 0, matCount: 0, lastUpdate: null };
+    const allLogs = logs.filter(l => l.employeeId === emp.id);
+    const totalRet = allLogs.filter(l => l.type === 'exit').reduce((s, l) => s + l.quantity, 0);
+    const totalDev = allLogs.filter(l => l.type === 'entry').reduce((s, l) => s + l.quantity, 0);
+    return {
+      'Nome': emp.name,
+      'CPF': emp.cpf || '',
+      'Cargo': emp.role || '',
+      'Departamento': emp.department || '',
+      'Status': emp.active ? 'Ativo' : 'Inativo',
+      'EPIs em Posse': data.epiCount,
+      'Ferramentas em Posse': data.matCount,
+      'Total Retirado (historico)': totalRet,
+      'Total Devolvido (historico)': totalDev,
+      'Total Movimentacoes': allLogs.length,
+      'Ultima Movimentacao': data.lastUpdate ? new Date(data.lastUpdate).toLocaleString('pt-BR') : 'Sem registros',
+    };
   });
 
-  const wsPossession = XLSX.utils.json_to_sheet(
-    possessionRows.length > 0 ? possessionRows : [{ 'Info': 'Nenhum item não-consumível em posse no momento.' }]
-  );
-  wsPossession['!cols'] = [
-    { wch: 30 }, { wch: 16 }, { wch: 20 }, { wch: 10 },
-    { wch: 14 }, { wch: 40 }, { wch: 14 }, { wch: 18 }, { wch: 8 }, { wch: 24 },
+  const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+  wsSummary['!cols'] = [
+    { wch: 30 }, { wch: 16 }, { wch: 22 }, { wch: 18 }, { wch: 10 },
+    { wch: 14 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 24 },
   ];
-  XLSX.utils.book_append_sheet(workbook, wsPossession, 'Itens em Posse');
+  XLSX.utils.book_append_sheet(workbook, wsSummary, 'Resumo Geral');
 
   const date = new Date().toISOString().split('T')[0];
   XLSX.writeFile(workbook, `relatorio_funcionarios_${date}.xlsx`);
