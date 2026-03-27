@@ -744,7 +744,7 @@ const stats = useMemo(() => {
             </div>
             
             <div className="p-8 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-black/20">
-              <p className="text-[9px] font-black text-gray-400 text-center uppercase tracking-widest">Acesso Restrito ao Gestor de Ativos • B Log Cloud</p>
+              <p className="text-[9px] font-black text-gray-400 text-center uppercase tracking-widest">Acesso Restrito ao Gestor de Ativos • LogB Cloud</p>
             </div>
           </div>
         </div>

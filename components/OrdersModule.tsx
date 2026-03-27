@@ -9,6 +9,7 @@ import {
 import { OrderAnnotation, OrderItem, OrderType, OrderStatus, OrderPriority } from '@/types';
 import { generateUUID } from '../uuid';
 import * as XLSX from 'xlsx';
+import { parseProductUrl } from '@/app/actions/parse-product';
 
 interface OrdersModuleProps {
   orders: OrderAnnotation[];
@@ -39,6 +40,9 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
   
   const [editingOrder, setEditingOrder] = useState<OrderAnnotation | null>(null);
   const [viewDetailOrder, setViewDetailOrder] = useState<OrderAnnotation | null>(null);
+
+  const [productUrl, setProductUrl] = useState('');
+  const [parsingUrl, setParsingUrl] = useState(false);
 
   const [formState, setFormState] = useState<Partial<OrderAnnotation>>({
     type: 'purchase',
@@ -86,6 +90,28 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
 
   const calculateTotal = (items: OrderItem[]) => {
     return items.reduce((sum, item) => sum + (item.quantity * (item.unitPrice || 0)), 0);
+  };
+
+  const handleUrlPaste = async (url: string) => {
+    setProductUrl(url);
+    if (!url || !url.startsWith('http')) return;
+    setParsingUrl(true);
+    try {
+      const result = await parseProductUrl(url);
+      if (result.success && result.data) {
+        setNewItem({
+          ...newItem,
+          description: result.data.title || newItem.description,
+          unitPrice: result.data.price || newItem.unitPrice
+        });
+      } else {
+        alert('Não foi possível ler as informações completas deste link automaticamente. Preencha manualmente.');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setParsingUrl(false);
+    }
   };
 
   const openForm = (order?: OrderAnnotation) => {
@@ -1086,6 +1112,20 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
                       </div>
                     </div>
                   )}
+
+                  <div className="mb-3">
+                    <label className="text-[10px] text-gray-500 font-bold block mb-1 flex items-center gap-1">
+                      {parsingUrl ? <><RefreshCw size={10} className="animate-spin text-blue-500" /> Extraindo dados do link...</> : 'Link do Produto (Preenchimento Automático Opcional)'}
+                    </label>
+                    <input 
+                      type="url" 
+                      placeholder="https:// cole o link do mercado livre, amazon, kabum, etc..." 
+                      className={`w-full bg-gray-50 dark:bg-gray-800 border ${parsingUrl ? 'border-blue-400 dark:border-blue-600 ring-2 ring-blue-500/20' : 'border-gray-200 dark:border-gray-700'} px-3 py-2 rounded-lg outline-none text-sm transition-all`}
+                      value={productUrl}
+                      onChange={e => handleUrlPaste(e.target.value)}
+                      disabled={parsingUrl}
+                    />
+                  </div>
 
                   <div className="flex flex-wrap md:flex-nowrap gap-2 items-end">
                     <div className="flex-1 min-w-[200px]">

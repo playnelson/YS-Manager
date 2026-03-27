@@ -3,13 +3,13 @@ import type { Metadata } from 'next';
 import { AppProvider } from '@/providers/AppProvider';
 
 export const metadata: Metadata = {
-  title: 'B Log — Sistema Integrado de Gestão',
+  title: 'LogB — Sistema Integrado de Gestão',
   description: 'Sistema de gestão empresarial completo para profissionais e empresas. Organização, fluxo e ferramentas integradas em um só lugar.',
   robots: 'noindex, nofollow',
   themeColor: '#111827',
   openGraph: {
     type: 'website',
-    title: 'B Log — Sistema Integrado de Gestão',
+    title: 'LogB — Sistema Integrado de Gestão',
     description: 'Sua central de produtividade e organização pessoal e profissional.',
   },
 };

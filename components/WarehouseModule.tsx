@@ -101,7 +101,7 @@ function downloadTemplate() {
   document.body.removeChild(link);
 }
 
-function exportInventory(inventory: InventoryItem[], logs: StockLog[]) {
+function exportInventory(inventory: InventoryItem[], logs: StockLog[], selectedCols?: Record<string, boolean>, selectedCats?: string[]) {
   const possessionMap: Record<string, number> = {};
   logs.forEach(l => {
     if (!l.employeeId || l.employeeId === 'system') return;
@@ -110,38 +110,29 @@ function exportInventory(inventory: InventoryItem[], logs: StockLog[]) {
     else if (l.type === 'entry') possessionMap[l.itemId] -= l.quantity;
   });
 
-  const data = inventory.map(item => {
+  const filtered = inventory.filter(i => {
+    if (!selectedCats || selectedCats.length === 0) return true;
+    return selectedCats.includes(i.category || 'Geral');
+  });
+
+  const data = filtered.map(item => {
     const inPossession = item.consumable ? 0 : (possessionMap[item.id] || 0);
-    return {
-      'Código': item.code,
-      'Descrição': item.name,
-      'Categoria': item.category,
-      'Consumível?': item.consumable ? 'Sim' : 'Não',
-      'Qtd. em Estoque': item.quantity,
-      'Qtd. em Posse': inPossession,
-      'Qtd. Total': item.quantity + inPossession,
-      'Qtd. Mínima': item.minStock,
-      'Unidade': item.unit
-    };
+    const row: any = {};
+    if (!selectedCols || selectedCols['Código']) row['Código'] = item.code;
+    if (!selectedCols || selectedCols['Descrição']) row['Descrição'] = item.name;
+    if (!selectedCols || selectedCols['Categoria']) row['Categoria'] = item.category;
+    if (!selectedCols || selectedCols['Consumível']) row['Consumível?'] = item.consumable ? 'Sim' : 'Não';
+    if (!selectedCols || selectedCols['Qtd. Estoque']) row['Qtd. em Estoque'] = item.quantity;
+    if (!selectedCols || selectedCols['Qtd. Posse']) row['Qtd. em Posse'] = inPossession;
+    if (!selectedCols || selectedCols['Qtd. Total']) row['Qtd. Total'] = item.quantity + inPossession;
+    if (!selectedCols || selectedCols['Qtd. Mínima']) row['Qtd. Mínima'] = item.minStock;
+    if (!selectedCols || selectedCols['Unidade']) row['Unidade'] = item.unit;
+    return row;
   });
 
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Almoxarifado Atual');
-  
-  // Apply some basic column widths
-  const wscols = [
-    { wch: 15 }, // Código
-    { wch: 40 }, // Descrição
-    { wch: 15 }, // Categoria
-    { wch: 12 }, // Consumível
-    { wch: 15 }, // Qtd em Estoque
-    { wch: 15 }, // Qtd em Posse
-    { wch: 15 }, // Qtd Total
-    { wch: 10 }, // Qtd Minima
-    { wch: 10 }  // Unidade
-  ];
-  worksheet['!cols'] = wscols;
 
   XLSX.writeFile(workbook, `almoxarifado_atual_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
@@ -227,7 +218,7 @@ function generateDailyReport(logs: StockLog[]) {
         </div>
 
         <div style="margin-top: 80px; text-align: center; border-top: 1px solid #eee; pt: 20px; font-size: 10px; color: #aaa;">
-          Documento gerado automaticamente pelo Sistema B Log em ${new Date().toLocaleString('pt-BR')}
+          Documento gerado automaticamente pelo Sistema LogB em ${new Date().toLocaleString('pt-BR')}
         </div>
 
         <script>
@@ -336,7 +327,7 @@ function printMaterialForm(employee: Employee, items: { code: string; name: stri
       <body>
         <div class="header">
           <h1 style="margin:0; font-size: 24px;">FICHA DE CAUTELA E ENTREGA DE MATERIAIS</h1>
-          <p style="margin:5px 0 0; opacity: 0.7;">B Log - Sistema de Gestão Interna</p>
+          <p style="margin:5px 0 0; opacity: 0.7;">LogB - Sistema de Gestão Interna</p>
         </div>
         
         <div class="info">
@@ -806,6 +797,24 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportCols, setExportCols] = useState<Record<string, boolean>>({
+    'Código': true, 'Descrição': true, 'Categoria': true,
+    'Consumível': true, 'Qtd. Estoque': true, 'Qtd. Posse': true,
+    'Qtd. Total': true, 'Qtd. Mínima': true, 'Unidade': true
+  });
+  
+  // All unique available categories from the actual inventory data
+  const uniqueInvCats = Array.from(new Set(inventory.map(i => i.category || 'Geral')));
+  const [exportCats, setExportCats] = useState<string[]>([]);
+  
+  // populate default selected cats initially
+  React.useEffect(() => {
+    if (showExportModal && exportCats.length === 0) {
+      setExportCats(uniqueInvCats);
+    }
+  }, [showExportModal, uniqueInvCats, exportCats.length]);
+
   const emptyItem: Partial<InventoryItem> = { 
     code: '', 
     name: '', 
@@ -1138,7 +1147,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
 
         <div className="flex items-center gap-2 flex-wrap">
           {activeTab === 'inventory' && <>
-            <button onClick={() => exportInventory(inventory, logs)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800">
+            <button onClick={() => setShowExportModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800">
               <Download size={13}/><span className="hidden sm:inline">Exportar Planilha</span>
             </button>
             <button onClick={downloadTemplate} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-700">
@@ -1574,6 +1583,87 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
           onCategoriesChange={onCategoriesChange} 
           onClose={() => setShowCategoryManager(false)}
         />
+      )}
+
+      {/* ── Export Modal ── */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[70]">
+          <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-4 duration-200">
+            <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center sticky top-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur z-10">
+              <h3 className="text-base font-bold flex items-center gap-2 text-gray-900 dark:text-white"><Download size={20} className="text-emerald-500" /> Exportação Avançada (Excel)</h3>
+              <button onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1"><X size={20}/></button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-6">
+              {/* Columns Section */}
+              <div>
+                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Colunas Visíveis</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.keys(exportCols).map(col => (
+                    <label key={col} className="flex items-center justify-between p-3 border border-gray-100 dark:border-gray-800 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{col}</span>
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-emerald-600 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded focus:ring-emerald-500 cursor-pointer"
+                        checked={exportCols[col]}
+                        onChange={(e) => setExportCols(prev => ({...prev, [col]: e.target.checked}))}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-gray-800/50"></div>
+
+              {/* Categories Section */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Filtrar por Categorias</h4>
+                  <div className="flex gap-1.5">
+                    <button type="button" onClick={() => setExportCats(uniqueInvCats)} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md uppercase hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">Todas</button>
+                    <button type="button" onClick={() => setExportCats([])} className="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md uppercase hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Limpar</button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5 max-h-[180px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700">
+                  {uniqueInvCats.map(cat => (
+                    <label key={cat} className="flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-gray-800/30 hover:bg-gray-50 dark:hover:bg-gray-800/80 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700/50">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-blue-600 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 cursor-pointer"
+                        checked={exportCats.includes(cat)}
+                        onChange={(e) => {
+                          setExportCats(prev => 
+                            e.target.checked ? [...prev, cat] : prev.filter(c => c !== cat)
+                          );
+                        }}
+                      />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{cat}</span>
+                    </label>
+                  ))}
+                  {uniqueInvCats.length === 0 && (
+                    <div className="text-xs text-center p-4 text-gray-400 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">Nenhuma categoria registrada no estoque.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-[#1C1C1E] sticky bottom-0 z-10 flex justify-end gap-3">
+              <button onClick={() => setShowExportModal(false)} className="px-5 py-2.5 font-bold text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  exportInventory(inventory, logs, exportCols, exportCats);
+                  setShowExportModal(false);
+                }}
+                disabled={exportCats.length === 0 || !Object.values(exportCols).some(v => v)}
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold text-sm rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20 disabled:shadow-none focus:ring-4 focus:ring-emerald-500/20"
+              >
+                <Download size={16}/> Baixar Relatório (.xlsx)
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       </div>
     </div>

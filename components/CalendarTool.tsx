@@ -977,7 +977,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({
           </div>
 
           <div class="footer">
-            B Log - Relatório Privado e Confidencial
+            LogB - Relatório Privado e Confidencial
           </div>
 
           <script>

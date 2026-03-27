@@ -618,7 +618,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ onSaveFile
 
                 {/* Marca d'água Profissional */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] rotate-[-45deg] scale-150">
-                  <span className="text-[120px] font-black tracking-tighter select-none">B LOG</span>
+                  <span className="text-[120px] font-black tracking-tighter select-none">LogB</span>
                 </div>
 
                 {/* Rodapé da Folha Timbrada */}
