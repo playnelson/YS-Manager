@@ -3,12 +3,115 @@ import React, { useState, useMemo } from 'react';
 import { 
   Users, Search, UserCircle2, ArrowRight, Printer, 
   Package, LayoutGrid, List, ChevronRight, UserPlus,
-  ArrowUpRight, ArrowDownLeft, ShieldCheck, HardHat, Info, Check, X, Edit, Trash2, Clock
+  ArrowUpRight, ArrowDownLeft, ShieldCheck, HardHat, Info, Check, X, Edit, Trash2, Clock,
+  FileSpreadsheet
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 function genId() { 
   try { return crypto.randomUUID(); } 
   catch (e) { return Math.random().toString(36).substring(2, 15); }
+}
+
+function exportEmployeeReport(
+  employees: any[],
+  logs: any[],
+  inventory: any[],
+  possessionData: Record<string, { items: any[]; epiCount: number; matCount: number; lastUpdate: string | null }>
+) {
+  const workbook = XLSX.utils.book_new();
+
+  // ── ABA 1: Resumo por Funcionário ──────────────────────────────────────────
+  const summaryRows = employees.map(emp => {
+    const data = possessionData[emp.id] || { items: [], epiCount: 0, matCount: 0, lastUpdate: null };
+    const allLogs = logs.filter(l => l.employeeId === emp.id);
+    return {
+      'Nome': emp.name,
+      'CPF': emp.cpf || '',
+      'Cargo': emp.role || '',
+      'Departamento': emp.department || '',
+      'Status': emp.active ? 'Ativo' : 'Inativo',
+      'EPIs em Posse': data.epiCount,
+      'Ferramentas/Materiais em Posse': data.matCount,
+      'Total de Itens em Posse': data.epiCount + data.matCount,
+      'Última Movimentação': data.lastUpdate
+        ? new Date(data.lastUpdate).toLocaleString('pt-BR')
+        : 'Sem registros',
+      'Total de Movimentações': allLogs.length,
+    };
+  });
+
+  const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+  wsSummary['!cols'] = [
+    { wch: 30 }, { wch: 16 }, { wch: 22 }, { wch: 18 }, { wch: 10 },
+    { wch: 14 }, { wch: 24 }, { wch: 20 }, { wch: 22 }, { wch: 22 },
+  ];
+  XLSX.utils.book_append_sheet(workbook, wsSummary, 'Resumo de Funcionários');
+
+  // ── ABA 2: Histórico Completo de Movimentações ─────────────────────────────
+  const historyRows = [...logs]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .map(log => {
+      const emp = employees.find(e => e.id === log.employeeId);
+      const invItem = inventory.find(i => i.id === log.itemId);
+      return {
+        'Data / Hora': log.date ? new Date(log.date).toLocaleString('pt-BR') : '',
+        'Tipo': log.type === 'exit' ? 'RETIRADA' : 'DEVOLUÇÃO / ENTRADA',
+        'Funcionário': emp?.name || log.employeeName || '—',
+        'CPF': emp?.cpf || '—',
+        'Cargo': emp?.role || '—',
+        'Código do Item': log.itemCode || '',
+        'Descrição do Item': log.itemName || '',
+        'Categoria': invItem?.category || '—',
+        'Consumível?': invItem?.consumable ? 'Sim' : 'Não',
+        'Quantidade': log.quantity,
+        'Unidade': invItem?.unit || '',
+        'Observação': log.note || '',
+      };
+    });
+
+  const wsHistory = XLSX.utils.json_to_sheet(historyRows);
+  wsHistory['!cols'] = [
+    { wch: 20 }, { wch: 22 }, { wch: 30 }, { wch: 16 }, { wch: 20 },
+    { wch: 16 }, { wch: 40 }, { wch: 14 }, { wch: 12 }, { wch: 10 },
+    { wch: 8 },  { wch: 40 },
+  ];
+  XLSX.utils.book_append_sheet(workbook, wsHistory, 'Histórico de Movimentações');
+
+  // ── ABA 3: Itens Atualmente em Posse (não consumíveis) ─────────────────────
+  const possessionRows: any[] = [];
+  employees.forEach(emp => {
+    const data = possessionData[emp.id];
+    if (!data || data.items.length === 0) return;
+    data.items.forEach(item => {
+      possessionRows.push({
+        'Funcionário': emp.name,
+        'CPF': emp.cpf || '',
+        'Cargo': emp.role || '',
+        'Status': emp.active ? 'Ativo' : 'Inativo',
+        'Código do Item': item.code,
+        'Descrição': item.name,
+        'Categoria': item.category,
+        'Quantidade em Posse': item.possessedQty,
+        'Unidade': item.unit,
+        'Data da Última Movimentação': item.dateTaken
+          ? new Date(item.dateTaken).toLocaleDateString('pt-BR')
+          : '',
+      });
+    });
+  });
+
+  const wsPossession = XLSX.utils.json_to_sheet(
+    possessionRows.length > 0 ? possessionRows : [{ 'Info': 'Nenhum item não-consumível em posse no momento.' }]
+  );
+  wsPossession['!cols'] = [
+    { wch: 30 }, { wch: 16 }, { wch: 20 }, { wch: 10 },
+    { wch: 14 }, { wch: 40 }, { wch: 14 }, { wch: 18 }, { wch: 8 }, { wch: 24 },
+  ];
+  XLSX.utils.book_append_sheet(workbook, wsPossession, 'Itens em Posse');
+
+  const date = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(workbook, `relatorio_funcionarios_${date}.xlsx`);
 }
 
 const applyCPFMask = (value: string) => {
@@ -309,6 +412,13 @@ const stats = useMemo(() => {
         </div>
         
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => exportEmployeeReport(employees, logs, inventory, possessionData)}
+            title="Exportar relatório completo de funcionários com retiradas e devoluções"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm"
+          >
+            <FileSpreadsheet size={16} /> Exportar XLSX
+          </button>
           <button 
             onClick={() => { setEditingEmp(null); setNewEmp({ name: '', role: '', cpf: '', department: '' }); setShowAddEmp(true); }}
             className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-sm font-semibold hover:bg-gray-700 dark:hover:bg-gray-100 transition-all shadow-sm"
