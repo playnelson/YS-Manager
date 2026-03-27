@@ -44,7 +44,7 @@ type SubTab = 'kanban' | 'mural' | 'notes' | 'handoff' | 'directory' | 'extensio
 const SUB_TABS: { id: SubTab; label: string }[] = [
   { id: 'kanban', label: 'Kanban' },
   { id: 'mural', label: 'Mural' },
-  { id: 'notes', label: 'Anotações' },
+  { id: 'notes', label: 'Pedidos' },
   { id: 'handoff', label: 'Passagem' },
   { id: 'directory', label: 'Diretório' },
   { id: 'extensions', label: 'Ramais' },

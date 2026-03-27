@@ -5,7 +5,7 @@ import { LoadingPlaceholder } from '@/components/LoadingPlaceholder';
 
 const OrdersModule = lazy(() => import('@/components/OrdersModule').then(m => ({ default: m.OrdersModule })));
 
-export default function AnotacoesPage() {
+export default function PedidosPage() {
   const { orderAnnotations, setOrderAnnotations, setHasUnsavedChanges, warehouseInventory, user } = useAppContext();
   return (
     <Suspense fallback={<LoadingPlaceholder />}>

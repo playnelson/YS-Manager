@@ -45,7 +45,7 @@ export const NotesModule: React.FC<NotesModuleProps> = ({
           className={activeSubTab === 'docs' ? 'bg-white win95-sunken' : ''}
           icon={<FileText size={14} />}
         >
-          Anotações
+          Pedidos
         </Button>
         <Button 
           onClick={() => setActiveSubTab('handoff')} 
