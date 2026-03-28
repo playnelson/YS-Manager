@@ -348,108 +348,165 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     fetchData();
   }, [user?.id]);
 
-  // Data Save Effect
-  useEffect(() => {
-    if (!user || !isDataLoaded) return;
-    const saveData = async () => {
-      if (user.id === 'demo_user_id') {
-        const payload = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs, financialTransactions, warehouseInventory, warehouseLogs, orderAnnotations, purchasedMaterialLinks };
-        localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
-        setHasUnsavedChanges(false);
-        setIsSyncing(false);
-        return;
+  // Shared sync utility (Safe Version)
+  const syncTableData = async (tableName: string, currentData: any[], initKey: string = tableName) => {
+    if (!user || !isDataLoaded || !initializedTables.current.has(initKey)) return;
+    
+    try {
+      const currentIds = currentData.map(item => item.id).filter(Boolean);
+      
+      // Get existing IDs to perform a proper diff (Delete only what was removed)
+      const { data: existing, error: fetchErr } = await supabase.from(tableName).select('id').eq('user_id', user.id);
+      
+      if (fetchErr) {
+        console.warn(`Sync fetch error for ${tableName}:`, fetchErr);
+        return; // Don't proceed with deletion if we can't fetch current state
       }
 
-      try {
+      if (existing) {
+        const idsToDelete = existing.map(r => r.id).filter(id => !currentIds.includes(id));
+        if (idsToDelete.length > 0) {
+          await supabase.from(tableName).delete().in('id', idsToDelete);
+        }
+      }
+
+      if (currentData.length > 0) {
+        const { error: upsertErr } = await supabase.from(tableName).upsert(currentData);
+        if (upsertErr) console.error(`Sync upsert error for ${tableName}:`, upsertErr);
+      }
+    } catch (e) {
+      console.error(`Fatal sync error for ${tableName}:`, e);
+    }
+  };
+
+  const safeSave = async (query: any, tableName: string) => {
+    try {
+      const res = await query;
+      if (res.error) console.error(`Save error for ${tableName}:`, res.error);
+      return res;
+    } catch (e) {
+      console.error(`Save crash for ${tableName}:`, e);
+    }
+  };
+
+  // individual debounced effect for general settings
+  useEffect(() => {
+    if (!user || !isDataLoaded || !initializedTables.current.has('user_settings')) return;
+    const timeout = setTimeout(() => {
+      setIsSyncing(true);
+      safeSave(supabase.from('user_settings').upsert({
+        user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs,
+        shift_config: shiftConfig, sidebar_collapsed: isSidebarCollapsed, updated_at: new Date().toISOString()
+      }), 'user_settings').finally(() => setIsSyncing(false));
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }, [calendarConfig, hiddenTabs, shiftConfig, isSidebarCollapsed]);
+
+  // Warehouse Sync
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (hasUnsavedChanges) {
+        setIsSyncing(true);
+        Promise.all([
+          syncTableData('warehouse_inventory', warehouseInventory.map(i => ({ id: i.id, user_id: user.id, code: i.code, name: i.name, category: i.category, quantity: i.quantity, min_stock: i.minStock, unit: i.unit, consumable: i.consumable, items_per_container: i.itemsPerContainer || 1, last_updated: i.lastUpdated }))),
+          syncTableData('warehouse_employees', warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active, cpf: e.cpf }))),
+          syncTableData('warehouse_logs', warehouseLogs.map(l => ({ id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: l.employeeId || null, employee_name: l.employeeName, note: l.note, date: l.date }))),
+          syncTableData('warehouse_categories', warehouseCategories.map(c => ({ id: c.id, user_id: user.id, name: c.name, color: c.color })))
+        ]).finally(() => { 
+          setIsSyncing(false); 
+          setHasUnsavedChanges(false); 
+          setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
+        });
+      }
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, [warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories]);
+
+  // Kanban & Flow Sync
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (hasUnsavedChanges) {
+        setIsSyncing(true);
         const kanbanCols = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
         const kanbanCards = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ 
             id: card.id, user_id: user.id, column_id: col.id, order: idx, title: card.title, description: card.description || '', priority: card.priority || 'medium', due_date: card.dueDate, labels: card.labels || [], created_at: card.createdAt || new Date().toISOString()
         })));
 
-        const safeSave = async (query: any, tableName: string) => {
-          try {
-            const res = await query;
-            return res;
-          } catch (e) {
-            console.error(tableName, e);
-          }
-        };
-
-        const logisticsFreightToSave = logisticsData.freightTables.map(t => ({
-          id: t.id, user_id: user.id, name: t.name, fuel_price: t.fuelPrice, avg_consumption: t.avgConsumption, driver_per_dieum: t.driverPerDieum, insurance_rate: t.insuranceRate, updated_at: t.updatedAt
-        }));
-
-        const syncTableData = async (tableName: string, currentData: any[], initKey: string = tableName) => {
-          if (!initializedTables.current.has(initKey)) return;
-          try {
-            const currentIds = currentData.map(item => item.id).filter(Boolean);
-            if (currentIds.length > 0) {
-              const { data: existing } = await supabase.from(tableName).select('id').eq('user_id', user.id);
-              if (existing) {
-                const idsToDelete = existing.map(r => r.id).filter(id => !currentIds.includes(id));
-                if (idsToDelete.length > 0) await supabase.from(tableName).delete().in('id', idsToDelete);
-              }
-              await safeSave(supabase.from(tableName).upsert(currentData), tableName);
-            } else {
-              await supabase.from(tableName).delete().eq('user_id', user.id);
-            }
-          } catch (e) {}
-        };
-
-        await Promise.all([
+        Promise.all([
           syncTableData('kanban_columns', kanbanCols),
           syncTableData('kanban_cards', kanbanCards),
-          syncTableData('calendar_events', calendarEvents.map(e => ({ id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description }))),
-          syncTableData('important_notes', importantNotes.map(n => ({ id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt }))),
-          syncTableData('post_its', postIts.map(p => ({ id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation }))),
-          syncTableData('financial_transactions', financialTransactions.map(t => ({ id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date }))),
-          syncTableData('email_templates', emails.map(e => ({ id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt }))),
-          syncTableData('professional_links', links.map(l => ({ id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon }))),
-          syncTableData('extensions', extensions.map(e => ({ id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes }))),
-          syncTableData('signatures', signatures.map(s => ({ id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt }))),
-          syncTableData('personal_files', personalFiles.map(f => ({ id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt }))),
-          syncTableData('warehouse_inventory', warehouseInventory.map(i => ({ id: i.id, user_id: user.id, code: i.code, name: i.name, category: i.category, quantity: i.quantity, min_stock: i.minStock, unit: i.unit, consumable: i.consumable, items_per_container: i.itemsPerContainer || 1, last_updated: i.lastUpdated }))),
-          syncTableData('warehouse_employees', warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active, cpf: e.cpf }))),
-          syncTableData('warehouse_logs', warehouseLogs.map(l => ({ id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: l.employeeId || null, employee_name: l.employeeName, note: l.note, date: l.date }))),
-          syncTableData('warehouse_categories', warehouseCategories.map(c => ({ id: c.id, user_id: user.id, name: c.name, color: c.color }))),
-          syncTableData('whatsapp_templates', whatsappTemplates.map(t => ({ id: t.id, user_id: user.id, title: t.title, content: t.content }))),
-          syncTableData('whatsapp_history', whatsappHistory.map(h => ({ id: h.id, user_id: user.id, name: h.name, phone: h.phone, message: h.message, method: h.method, timestamp: h.timestamp }))),
-          syncTableData('logistics_freight_tables', logisticsFreightToSave, 'logistics'),
-          
-          initializedTables.current.has('user_settings') && safeSave(supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, sidebar_collapsed: isSidebarCollapsed, updated_at: new Date().toISOString() }), 'user_settings'),
-          initializedTables.current.has('flow_builder_states') && safeSave(supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData }), 'flow_builder_states'),
-          initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes }), 'logistics_data'),
-          syncTableData('order_annotations', orderAnnotations.filter(o => {
-            if (o.deletedAt) {
-              const limit = new Date();
-              limit.setDate(limit.getDate() - 7);
-              return new Date(o.deletedAt) > limit;
-            }
-            return true;
-          }).map(o => ({
-            id: o.id, user_id: user.id, order_number: o.orderNumber, type: o.type, requester: o.requester, customer_name: o.requester,
-            supplier: o.supplier, date: o.date, expected_delivery: o.expectedDelivery || null, items: o.items, notes: o.notes || null,
-            payment_method: o.paymentMethod || null, status: o.status, priority: o.priority, total_value: o.totalValue || 0, status_history: o.statusHistory || [],
-            deleted_at: o.deletedAt || null, archived: o.archived || false
-          }))),
-          syncTableData('purchased_material_links', purchasedMaterialLinks.map(p => ({
-            id: p.id, user_id: user.id, name: p.name, url: p.url, category: p.category || null, notes: p.notes || null, created_at: p.createdAt
-          })))
-        ].filter(Boolean));
-      } catch (err) {} finally { 
+          syncTableData('flow_builder_states', [{ user_id: user.id, payload: flowData }], 'flow_builder_states')
+        ]).finally(() => { 
+          setIsSyncing(false); 
+          setHasUnsavedChanges(false);
+          setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
+        });
+      }
+    }, 4000);
+    return () => clearTimeout(timeout);
+  }, [kanbanData, flowData]);
+
+  // Logistics & Finance Sync
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!user || !isDataLoaded || !hasUnsavedChanges) return;
+      setIsSyncing(true);
+      const logisticsFreightToSave = logisticsData.freightTables.map(t => ({
+        id: t.id, user_id: user.id, name: t.name, fuel_price: t.fuelPrice, avg_consumption: t.avgConsumption, driver_per_dieum: t.driverPerDieum, insurance_rate: t.insuranceRate, updated_at: t.updatedAt
+      }));
+      Promise.all([
+        syncTableData('financial_transactions', financialTransactions.map(t => ({ id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date }))),
+        syncTableData('logistics_freight_tables', logisticsFreightToSave, 'logistics'),
+        initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes }), 'logistics_data')
+      ]).finally(() => { 
         setIsSyncing(false); 
         setHasUnsavedChanges(false);
         setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
-      }
-    };
-
-    const timeout = setTimeout(() => {
-        if (!isDataLoaded || !hasUnsavedChanges) return;
-        setIsSyncing(true);
-        saveData();
-    }, 2000);
+      });
+    }, 6000);
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories, whatsappTemplates, whatsappHistory, kanbanData, isSidebarCollapsed, orderAnnotations, purchasedMaterialLinks]);
+  }, [financialTransactions, logisticsData]);
+
+  // Communication & Files Sync
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!user || !isDataLoaded || !hasUnsavedChanges) return;
+      setIsSyncing(true);
+      Promise.all([
+        syncTableData('email_templates', emails.map(e => ({ id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt }))),
+        syncTableData('extensions', extensions.map(e => ({ id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes }))),
+        syncTableData('signatures', signatures.map(s => ({ id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt }))),
+        syncTableData('personal_files', personalFiles.map(f => ({ id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt }))),
+        syncTableData('whatsapp_templates', whatsappTemplates.map(t => ({ id: t.id, user_id: user.id, title: t.title, content: t.content })))
+      ]).finally(() => { 
+        setIsSyncing(false); 
+        setHasUnsavedChanges(false);
+        setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
+      });
+    }, 7000);
+    return () => clearTimeout(timeout);
+  }, [emails, extensions, signatures, personalFiles, whatsappTemplates]);
+
+  // Others & Documents Sync
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!user || !isDataLoaded || !hasUnsavedChanges) return;
+      setIsSyncing(true);
+      Promise.all([
+        syncTableData('calendar_events', calendarEvents.map(e => ({ id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description }))),
+        syncTableData('important_notes', importantNotes.map(n => ({ id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt }))),
+        syncTableData('post_its', postIts.map(p => ({ id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation }))),
+        syncTableData('professional_links', links.map(l => ({ id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon }))),
+        syncTableData('order_annotations', orderAnnotations.map(o => ({ id: o.id, user_id: user.id, order_number: o.orderNumber, type: o.type, requester: o.requester, date: o.date, items: o.items, status: o.status }))),
+        syncTableData('purchased_material_links', purchasedMaterialLinks.map(p => ({ id: p.id, user_id: user.id, name: p.name, url: p.url, category: p.category, created_at: p.createdAt })))
+      ]).finally(() => { 
+        setIsSyncing(false); 
+        setHasUnsavedChanges(false); 
+        setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
+      });
+    }, 8000);
+    return () => clearTimeout(timeout);
+  }, [calendarEvents, importantNotes, postIts, links, orderAnnotations, purchasedMaterialLinks]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
