@@ -23,7 +23,7 @@ const NAV_ITEMS = [
 ];
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const { user, isSyncing, hasUnsavedChanges, lastSavedAt, isDark, setIsDark,
+  const { user, isDataLoaded, isSyncing, hasUnsavedChanges, lastSavedAt, isDark, setIsDark,
     hiddenTabs, handleLogout } = useAppContext();
 
   const router = useRouter();
@@ -60,8 +60,8 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // Guard: aguarda carregamento do usuário
-  if (user === undefined || user === null) {
+  // Guard: aguarda carregamento do usuário e sincronização inicial
+  if (user === undefined || user === null || !isDataLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-palette-lightest dark:bg-[#111111]">
         <LoadingPlaceholder />

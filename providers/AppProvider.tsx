@@ -133,10 +133,14 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       return; 
     }
     
-    if (lastLoadedUserId.current === user.id) return;
+    if (lastLoadedUserId.current === user.id) {
+      setIsDataLoaded(true);
+      return;
+    }
 
     const fetchData = async () => {
       setIsSyncing(true);
+      setIsDataLoaded(false); // Reset while loading new user
       try {
         if (user.id === 'demo_user_id') {
           const saved = localStorage.getItem('ysoffice_demo_data');
