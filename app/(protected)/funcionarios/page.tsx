@@ -1,21 +1,22 @@
 'use client';
-import { lazy, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useAppContext } from '@/providers/AppProvider';
 import { LoadingPlaceholder } from '@/components/LoadingPlaceholder';
 
-const StaffBoardModule = lazy(() => import('@/components/StaffBoardModule').then(m => ({ default: m.StaffBoardModule })));
+const StaffBoardModule = dynamic(() => import('@/components/StaffBoardModule').then(m => m.StaffBoardModule), {
+  ssr: false,
+  loading: () => <LoadingPlaceholder />
+});
 
 export default function FuncionariosPage() {
   const { warehouseEmployees, setWarehouseEmployees, setHasUnsavedChanges, warehouseInventory, warehouseLogs, companySettings } = useAppContext();
   return (
-    <Suspense fallback={<LoadingPlaceholder />}>
-      <StaffBoardModule
-        employees={warehouseEmployees}
-        onEmployeesChange={(data: any) => { setWarehouseEmployees(data); setHasUnsavedChanges(true); }}
-        inventory={warehouseInventory}
-        logs={warehouseLogs}
-        companySettings={companySettings}
-      />
-    </Suspense>
+    <StaffBoardModule
+      employees={warehouseEmployees}
+      onEmployeesChange={(data: any) => { setWarehouseEmployees(data); setHasUnsavedChanges(true); }}
+      inventory={warehouseInventory}
+      logs={warehouseLogs}
+      companySettings={companySettings}
+    />
   );
 }

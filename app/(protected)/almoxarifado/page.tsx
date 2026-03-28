@@ -1,9 +1,12 @@
 'use client';
-import { lazy, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useAppContext } from '@/providers/AppProvider';
 import { LoadingPlaceholder } from '@/components/LoadingPlaceholder';
 
-const WarehouseModule = lazy(() => import('@/components/WarehouseModule').then(m => ({ default: m.WarehouseModule })));
+const WarehouseModule = dynamic(() => import('@/components/WarehouseModule').then(m => m.WarehouseModule), {
+  ssr: false,
+  loading: () => <LoadingPlaceholder />
+});
 
 export default function AlmoxarifadoPage() {
   const {
@@ -15,17 +18,15 @@ export default function AlmoxarifadoPage() {
   } = useAppContext();
 
   return (
-    <Suspense fallback={<LoadingPlaceholder />}>
-      <WarehouseModule
-        inventory={warehouseInventory}
-        onInventoryChange={(data: any) => { setWarehouseInventory(data); setHasUnsavedChanges(true); }}
-        employees={warehouseEmployees}
-        onEmployeesChange={(data: any) => { setWarehouseEmployees(data); setHasUnsavedChanges(true); }}
-        logs={warehouseLogs}
-        onLogsChange={(data: any) => { setWarehouseLogs(data); setHasUnsavedChanges(true); }}
-        categories={warehouseCategories}
-        onCategoriesChange={(data: any) => { setWarehouseCategories(data); setHasUnsavedChanges(true); }}
-      />
-    </Suspense>
+    <WarehouseModule
+      inventory={warehouseInventory}
+      onInventoryChange={(data: any) => { setWarehouseInventory(data); setHasUnsavedChanges(true); }}
+      employees={warehouseEmployees}
+      onEmployeesChange={(data: any) => { setWarehouseEmployees(data); setHasUnsavedChanges(true); }}
+      logs={warehouseLogs}
+      onLogsChange={(data: any) => { setWarehouseLogs(data); setHasUnsavedChanges(true); }}
+      categories={warehouseCategories}
+      onCategoriesChange={(data: any) => { setWarehouseCategories(data); setHasUnsavedChanges(true); }}
+    />
   );
 }

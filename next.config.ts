@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.supabase.co' },
     ],
   },
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@tabler/icons-react'],
+  },
   // pdfjs-dist usa canvas nativo — ignorar no server
   webpack: (config, { isServer }) => {
     if (isServer) {
@@ -18,5 +21,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
-import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());

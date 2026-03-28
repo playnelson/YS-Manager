@@ -8,10 +8,12 @@ import {
   Search, FileDown, Layers, Sparkles, Cloud, FileCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import dynamic from 'next/dynamic';
 import { StoredFile, Signature, UserEvent, User } from '@/types';
-import { DocumentGenerator } from '@/components/DocumentGenerator';
-import { SharedDocumentsModule } from '@/components/SharedDocumentsModule';
-import { SignatureManager } from '@/components/SignatureManager';
+
+const DocumentGenerator = dynamic(() => import('@/components/DocumentGenerator').then(m => m.DocumentGenerator), { ssr: false });
+const SharedDocumentsModule = dynamic(() => import('@/components/SharedDocumentsModule').then(m => m.SharedDocumentsModule), { ssr: false });
+const SignatureManager = dynamic(() => import('@/components/SignatureManager').then(m => m.SignatureManager), { ssr: false });
 
 // --- Sub-Component: PersonalFileManager ---
 export const PersonalFileManager: React.FC<{ 

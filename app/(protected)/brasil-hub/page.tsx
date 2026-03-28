@@ -1,13 +1,14 @@
 'use client';
-import { lazy, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { LoadingPlaceholder } from '@/components/LoadingPlaceholder';
 
-const BrasilApiModule = lazy(() => import('@/components/BrasilApiModule').then(m => ({ default: m.BrasilApiModule })));
+const BrasilApiModule = dynamic(() => import('@/components/BrasilApiModule').then(m => m.BrasilApiModule), {
+  ssr: false,
+  loading: () => <LoadingPlaceholder />
+});
 
 export default function BrasilHubPage() {
   return (
-    <Suspense fallback={<LoadingPlaceholder />}>
-      <BrasilApiModule />
-    </Suspense>
+    <BrasilApiModule />
   );
 }

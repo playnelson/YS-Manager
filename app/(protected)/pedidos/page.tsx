@@ -1,20 +1,21 @@
 'use client';
-import { lazy, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useAppContext } from '@/providers/AppProvider';
 import { LoadingPlaceholder } from '@/components/LoadingPlaceholder';
 
-const OrdersModule = lazy(() => import('@/components/OrdersModule').then(m => ({ default: m.OrdersModule })));
+const OrdersModule = dynamic(() => import('@/components/OrdersModule').then(m => m.OrdersModule), {
+  ssr: false,
+  loading: () => <LoadingPlaceholder />
+});
 
 export default function PedidosPage() {
   const { orderAnnotations, setOrderAnnotations, setHasUnsavedChanges, warehouseInventory, user } = useAppContext();
   return (
-    <Suspense fallback={<LoadingPlaceholder />}>
-      <OrdersModule
-        orders={orderAnnotations}
-        onOrdersChange={(data: any) => { setOrderAnnotations(data); setHasUnsavedChanges(true); }}
-        inventory={warehouseInventory}
-        currentUser={user}
-      />
-    </Suspense>
+    <OrdersModule
+      orders={orderAnnotations}
+      onOrdersChange={(data: any) => { setOrderAnnotations(data); setHasUnsavedChanges(true); }}
+      inventory={warehouseInventory}
+      currentUser={user}
+    />
   );
 }

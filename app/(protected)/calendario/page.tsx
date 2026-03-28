@@ -1,9 +1,12 @@
 'use client';
-import { lazy, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useAppContext } from '@/providers/AppProvider';
 import { LoadingPlaceholder } from '@/components/LoadingPlaceholder';
 
-const CalendarModule = lazy(() => import('@/components/CalendarModule').then(m => ({ default: m.CalendarModule })));
+const CalendarModule = dynamic(() => import('@/components/CalendarModule').then(m => m.CalendarModule), {
+  ssr: false,
+  loading: () => <LoadingPlaceholder />
+});
 
 export default function CalendarioPage() {
   const {
@@ -15,16 +18,14 @@ export default function CalendarioPage() {
   } = useAppContext();
 
   return (
-    <Suspense fallback={<LoadingPlaceholder />}>
-      <CalendarModule
-        calendarConfig={calendarConfig} onCalendarConfigChange={setCalendarConfig}
-        events={calendarEvents} onEventsChange={setCalendarEvents}
-        shiftConfig={shiftConfig} onShiftConfigChange={setShiftConfig}
-        financialTransactions={financialTransactions}
-        warehouseLogs={warehouseLogs}
-        warehouseInventory={warehouseInventory}
-        orderAnnotations={orderAnnotations}
-      />
-    </Suspense>
+    <CalendarModule
+      calendarConfig={calendarConfig} onCalendarConfigChange={setCalendarConfig}
+      events={calendarEvents} onEventsChange={setCalendarEvents}
+      shiftConfig={shiftConfig} onShiftConfigChange={setShiftConfig}
+      financialTransactions={financialTransactions}
+      warehouseLogs={warehouseLogs}
+      warehouseInventory={warehouseInventory}
+      orderAnnotations={orderAnnotations}
+    />
   );
 }
