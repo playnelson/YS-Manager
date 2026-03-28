@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SEED_DATA } from '@/seeds';
+import { generateUUID } from '../uuid';
 import {
   AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt,
   CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig,
@@ -29,6 +30,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+
+  const SYSTEM_UUID = '00000000-0000-0000-0000-000000000000';
 
   // UI State
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(['warehouse', 'brasil-hub']);
@@ -213,7 +216,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             safeFetch(supabase.from('purchased_material_links').select('*').eq('user_id', user.id).order('created_at', { ascending: false }), 'purchased_material_links')
           ]);
           
-          const isFirstTimeUser = !settings.data;
+          const isFirstTimeUser = !settings.data && whInv.data?.length === 0;
 
           if (kbCols.data && kbCards.data) {
             initializedTables.current.add('kanban_columns'); initializedTables.current.add('kanban_cards');
@@ -235,17 +238,17 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             initializedTables.current.add('warehouse_inventory');
             if (whInv.data.length > 0) {
               setWarehouseInventory(whInv.data.map((i: any) => ({
-                id: i.id, 
-                itemId: i.id, // Adicionado para compatibilidade com componentes
-                code: i.code, 
-                name: i.name, 
-                category: i.category, 
-                consumable: i.consumable ?? false, 
+                id: i.id || generateUUID(), 
+                itemId: i.id || generateUUID(), 
+                code: i.code || 'MAT-???', 
+                name: i.name || 'Sem nome', 
+                category: i.category || 'Geral', 
+                consumable: !!i.consumable, 
                 quantity: parseFloat(i.quantity) || 0, 
                 minStock: parseFloat(i.min_stock) || 0, 
-                unit: i.unit, 
+                unit: i.unit || 'Unid.', 
                 itemsPerContainer: parseFloat(i.items_per_container) || 1, 
-                lastUpdated: i.last_updated
+                lastUpdated: i.last_updated || new Date().toISOString()
               })));
             } else if (isFirstTimeUser) setWarehouseInventory(SEED_DATA.warehouse.inventory);
           }
@@ -420,13 +423,26 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Warehouse Sync
   useEffect(() => {
+    if (!user || !isDataLoaded) return;
     const timeout = setTimeout(() => {
       if (hasUnsavedChanges) {
         setIsSyncing(true);
         Promise.all([
           syncTableData('warehouse_inventory', warehouseInventory.map(i => ({ id: i.id, user_id: user.id, code: i.code, name: i.name, category: i.category, quantity: i.quantity, min_stock: i.minStock, unit: i.unit, consumable: i.consumable, items_per_container: i.itemsPerContainer || 1, last_updated: i.lastUpdated }))),
           syncTableData('warehouse_employees', warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active, cpf: e.cpf }))),
-          syncTableData('warehouse_logs', warehouseLogs.map(l => ({ id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: l.employeeId || null, employee_name: l.employeeName, note: l.note, date: l.date }))),
+          syncTableData('warehouse_logs', warehouseLogs.map(l => ({ 
+            id: l.id, 
+            user_id: user.id, 
+            item_id: l.itemId, 
+            item_code: l.itemCode, 
+            item_name: l.itemName, 
+            type: l.type, 
+            quantity: l.quantity, 
+            employee_id: (l.employeeId === 'system' || !l.employeeId) ? SYSTEM_UUID : l.employeeId, 
+            employee_name: l.employeeName || 'Sistema', 
+            note: l.note, 
+            date: l.date 
+          }))),
           syncTableData('warehouse_categories', warehouseCategories.map(c => ({ id: c.id, user_id: user.id, name: c.name, color: c.color })))
         ]).finally(() => { 
           setIsSyncing(false); 
@@ -440,6 +456,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Kanban & Flow Sync
   useEffect(() => {
+    if (!user || !isDataLoaded) return;
     const timeout = setTimeout(() => {
       if (hasUnsavedChanges) {
         setIsSyncing(true);
