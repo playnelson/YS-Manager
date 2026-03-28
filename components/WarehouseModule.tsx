@@ -27,6 +27,7 @@ interface InventoryItem {
   unit: string;         // Unidade
   itemsPerContainer?: number; // Qtd. por Caixa/Embalagem
   lastUpdated: string;
+  location?: string;    // Localização
 }
 
 interface Employee {
@@ -62,15 +63,15 @@ interface CartItem {
 // ── Default data (from spreadsheet image) ───────────────────────────────────
 
 const DEFAULT_INVENTORY: InventoryItem[] = [
-  { id:'00000000-0000-0000-0000-000000000001', code:'MAT-001', name:'Bota de Segurança Nº 42',                  category:'EPI',       consumable:false, quantity:10, minStock:0, unit:'Par',   lastUpdated:new Date().toISOString() },
-  { id:'00000000-0000-0000-0000-000000000002', code:'MAT-002', name:'Perneira Bidim com Fivela',                 category:'EPI',       consumable:false, quantity:30, minStock:0, unit:'Par',   lastUpdated:new Date().toISOString() },
+  { id:'00000000-0000-0000-0000-000000000001', code:'MAT-001', name:'Bota de Segurança Nº 42',                  category:'EPI',       consumable:false, quantity:10, minStock:0, unit:'Par',   lastUpdated:new Date().toISOString(), location: '' },
+  { id:'00000000-0000-0000-0000-000000000002', code:'MAT-002', name:'Perneira Bidim com Fivela',                 category:'EPI',       consumable:false, quantity:30, minStock:0, unit:'Par',   lastUpdated:new Date().toISOString(), location: '' },
   { id:'00000000-0000-0000-0000-000000000003', code:'MAT-003', name:'Capacete Azul',                             category:'EPI',       consumable:false, quantity:33, minStock:0, unit:'Unid.', lastUpdated:new Date().toISOString() },
   { id:'00000000-0000-0000-0000-000000000004', code:'MAT-004', name:'Óculos de Segurança Lente Escura',          category:'EPI',       consumable:false, quantity:48, minStock:0, unit:'Unid.', lastUpdated:new Date().toISOString() },
   { id:'00000000-0000-0000-0000-000000000005', code:'MAT-005', name:'Óculos de Segurança Lente Incolor',         category:'EPI',       consumable:false, quantity:36, minStock:0, unit:'Unid.', lastUpdated:new Date().toISOString() },
   { id:'00000000-0000-0000-0000-000000000006', code:'MAT-006', name:'Óculos de Segurança Incolor (Sobrepor)',    category:'EPI',       consumable:false, quantity:12, minStock:0, unit:'Unid.', lastUpdated:new Date().toISOString() },
-  { id:'00000000-0000-0000-0000-000000000007', code:'MAT-007', name:'Luva de Vaqueta Cano Longo',                category:'EPI',       consumable:true,  quantity:40, minStock:0, unit:'Par',   lastUpdated:new Date().toISOString() },
-  { id:'00000000-0000-0000-0000-000000000008', code:'MAT-008', name:'Luva de Impacto',                           category:'EPI',       consumable:true,  quantity:29, minStock:0, unit:'Par',   lastUpdated:new Date().toISOString() },
-  { id:'00000000-0000-0000-0000-000000000009', code:'MAT-009', name:'Luva Vibraflex',                            category:'EPI',       consumable:true,  quantity:14, minStock:0, unit:'Par',   lastUpdated:new Date().toISOString() },
+  { id:'00000000-0000-0000-0000-000000000007', code:'MAT-007', name:'Luva de Vaqueta Cano Longo',                category:'EPI',       consumable:true,  quantity:40, minStock:0, unit:'Par',   lastUpdated:new Date().toISOString(), location: '' },
+  { id:'00000000-0000-0000-0000-000000000008', code:'MAT-008', name:'Luva de Impacto',                           category:'EPI',       consumable:true,  quantity:29, minStock:0, unit:'Par',   lastUpdated:new Date().toISOString(), location: '' },
+  { id:'00000000-0000-0000-0000-000000000009', code:'MAT-009', name:'Luva Vibraflex',                            category:'EPI',       consumable:true,  quantity:14, minStock:0, unit:'Par',   lastUpdated:new Date().toISOString(), location: '' },
   { id:'00000000-0000-0000-0000-000000000010', code:'MAT-010', name:'Manga de Raspa para Soldador',              category:'EPI',       consumable:true,  quantity:24, minStock:0, unit:'Unid.', lastUpdated:new Date().toISOString() },
   { id:'00000000-0000-0000-0000-000000000011', code:'MAT-011', name:'Máscara de Solda com Carneira',             category:'EPI',       consumable:false, quantity:15, minStock:0, unit:'Unid.', lastUpdated:new Date().toISOString() },
   { id:'00000000-0000-0000-0000-000000000012', code:'MAT-012', name:'Máscara PFF2 (Valvulada)',                  category:'EPI',       consumable:true,  quantity:45, minStock:0, unit:'Unid.', lastUpdated:new Date().toISOString() },
@@ -127,6 +128,7 @@ async function exportInventory(inventory: InventoryItem[], logs: StockLog[], sel
     if (!selectedCols || selectedCols['Qtd. Total']) row['Qtd. Total'] = item.quantity + inPossession;
     if (!selectedCols || selectedCols['Qtd. Mínima']) row['Qtd. Mínima'] = item.minStock;
     if (!selectedCols || selectedCols['Unidade']) row['Unidade'] = item.unit;
+    if (!selectedCols || selectedCols['Local']) row['Localização'] = item.location;
     return row;
   });
 
@@ -253,6 +255,7 @@ function parseCSV(text: string): Partial<InventoryItem>[] {
       quantity:   Number(obj['qtd_atual']  || obj['quantidade'] || 0),
       minStock:   Number(obj['qtd_minima'] || obj['estoque_minimo'] || 0),
       unit:       obj['unidade'] || obj['unit'] || 'Unid.',
+      location:   obj['local'] || obj['localizacao'] || obj['location'] || '',
     };
   }).filter(i => i.name);
 }
@@ -275,6 +278,7 @@ async function parseXLSX(data: ArrayBuffer): Promise<Partial<InventoryItem>[]> {
       quantity:   Number(row['Qtd. Atual'] || row['qtd_atual'] || row['quantity'] || 0),
       minStock:   Number(row['Qtd. Mínima']|| row['qtd_minima']|| row['min_stock'] || 0),
       unit:       String(row['Unidade']   || row['unidade']   || row['unit'] || 'Unid.'),
+      location:   String(row['Local']     || row['localizacao'] || row['location'] || ''),
     };
   }).filter(i => i.name && i.name !== 'undefined');
 }
@@ -802,7 +806,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
   const [exportCols, setExportCols] = useState<Record<string, boolean>>({
     'Código': true, 'Descrição': true, 'Categoria': true,
     'Consumível': true, 'Qtd. Estoque': true, 'Qtd. Posse': true,
-    'Qtd. Total': true, 'Qtd. Mínima': true, 'Unidade': true
+    'Qtd. Total': true, 'Qtd. Mínima': true, 'Unidade': true, 'Local': true
   });
   
   // All unique available categories from the actual inventory data
@@ -824,7 +828,8 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
     quantity: 0, 
     minStock: 0, 
     unit: 'Unid.', 
-    itemsPerContainer: 1 
+    itemsPerContainer: 1,
+    location: ''
   };
 
   const [newItem, setNewItem] = useState<Partial<InventoryItem>>(emptyItem);
@@ -847,6 +852,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
       unit: newItem.unit || 'Unid.',
       itemsPerContainer: Number(newItem.itemsPerContainer) || 1,
       lastUpdated: new Date().toISOString(),
+      location: newItem.location || ''
     };
     
     if (editingItem) {
@@ -1061,6 +1067,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
       minStock: Number(p.minStock) || 0,
       unit: p.unit || 'Unid.', 
       lastUpdated: new Date().toISOString(),
+      location: p.location || ''
     }));
     saveInventory([...inventory, ...newItems]);
     setImportPreview(null);
@@ -1218,6 +1225,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                     <th className="px-4 py-2.5 text-left w-24">Código</th>
                     <th className="px-4 py-2.5 text-left">Descrição</th>
                     <th className="px-4 py-2.5 text-left w-32">Categoria</th>
+                    <th className="px-4 py-2.5 text-left w-32">Local</th>
                     <th className="px-4 py-2.5 text-center w-28">Consumível?</th>
                     <th className="px-4 py-2.5 text-center w-24">Qtd. Atual</th>
                     <th className="px-4 py-2.5 text-left w-32">Posse</th>
@@ -1244,6 +1252,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                         <td className="px-4 py-2.5 font-mono text-xs font-semibold text-[#3a5f8a] dark:text-blue-400">{item.code}</td>
                         <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-100">{item.name}</td>
                         <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400 text-xs">{item.category}</td>
+                        <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-[10px] font-medium uppercase tracking-wider">{item.location || '—'}</td>
                         <td className="px-4 py-2.5 text-center">
                           <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-bold ${item.consumable ? 'bg-[#f4c97e] text-[#7a4f00]' : 'bg-[#b7e3b7] text-[#1a5c1a]'}`}>
                             {item.consumable ? 'Sim' : 'Não'}
@@ -1406,6 +1415,13 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                   {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </div>
+              
+              {/* Localização */}
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Localização (Opcional)</label>
+                <input type="text" value={newItem.location||''} onChange={e => setNewItem({...newItem,location:e.target.value})} placeholder="Ex: Prateleira A-1"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+              </div>
 
               {/* Descrição */}
               <div className="col-span-2">
@@ -1542,7 +1558,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-[#3a5f8a] text-white">
-                    {['Código','Descrição','Categoria','Consumível?','Qtd. Atual','Qtd. Mínima','Unidade'].map(h => (
+                    {['Código','Descrição','Categoria','Local','Consumível?','Qtd. Atual','Qtd. Mínima','Unidade'].map(h => (
                       <th key={h} className="px-4 py-2.5 text-left font-bold uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -1553,6 +1569,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
                       <td className="px-4 py-2 font-mono text-[#3a5f8a] dark:text-blue-400">{item.code||'—'}</td>
                       <td className="px-4 py-2 font-medium text-gray-800 dark:text-gray-100">{item.name}</td>
                       <td className="px-4 py-2 text-gray-500">{item.category}</td>
+                      <td className="px-4 py-2 text-[10px] text-gray-400 uppercase">{item.location||'—'}</td>
                       <td className="px-4 py-2 text-center">
                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${item.consumable?'bg-[#f4c97e] text-[#7a4f00]':'bg-[#b7e3b7] text-[#1a5c1a]'}`}>{item.consumable?'Sim':'Não'}</span>
                       </td>

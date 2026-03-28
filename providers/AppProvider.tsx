@@ -46,7 +46,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   // UI State
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(['warehouse', 'brasil-hub']);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isDark, setIsDark] = useState<boolean>(false);
   
   // Initialize dark mode on client only
@@ -159,6 +158,17 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("SINC_YURI: Iniciando fetch para", user.id);
       try {
         if (user.id === 'demo_user_id') {
+          // Initialize all tables as ready for demo mode
+          const allTables = [
+            'kanban_columns', 'kanban_cards', 'calendar_events', 'important_notes', 'post_its',
+            'financial_transactions', 'logistics', 'user_settings', 'email_templates',
+            'professional_links', 'extensions', 'signatures', 'personal_files',
+            'flow_builder_states', 'warehouse_inventory', 'warehouse_employees',
+            'warehouse_logs', 'warehouse_categories', 'whatsapp_templates',
+            'whatsapp_history', 'order_annotations', 'purchased_material_links'
+          ];
+          allTables.forEach(t => initializedTables.current.add(t));
+
           const saved = localStorage.getItem('ysoffice_demo_data');
           if (saved) {
             const parsed: any = JSON.parse(saved);
@@ -261,7 +271,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
                 minStock: parseFloat(i.min_stock) || 0, 
                 unit: i.unit || 'Unid.', 
                 itemsPerContainer: parseFloat(i.items_per_container) || 1, 
-                lastUpdated: i.last_updated || new Date().toISOString()
+                lastUpdated: i.last_updated || new Date().toISOString(),
+                location: i.location || ''
               })));
             } else if (isFirstTimeUser) setWarehouseInventory(SEED_DATA.warehouse.inventory);
           }
@@ -330,7 +341,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             setCalendarConfig(settings.data.calendar_config || { uf: 'SP', city: 'São Paulo' });
             setHiddenTabs(settings.data.hidden_tabs || []);
             setShiftConfig(settings.data.shift_config);
-            setIsSidebarCollapsed(!!settings.data.sidebar_collapsed);
           } else initializedTables.current.add('user_settings');
 
           if (orderAnnRes && orderAnnRes.data) {
@@ -408,6 +418,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (e) {
       console.error(`Fatal sync error for ${tableName}:`, e);
+      throw e; // Relaunch to be caught by the motor
     }
   };
 
@@ -421,18 +432,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // individual debounced effect for general settings
-  useEffect(() => {
-    if (!user || !isDataLoaded || !initializedTables.current.has('user_settings')) return;
-    const timeout = setTimeout(() => {
-      setIsSyncing(true);
-      safeSave(supabase.from('user_settings').upsert({
-        user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs,
-        shift_config: shiftConfig, sidebar_collapsed: isSidebarCollapsed, updated_at: new Date().toISOString()
-      }), 'user_settings').finally(() => setIsSyncing(false));
-    }, 2000);
-    return () => clearTimeout(timeout);
-  }, [calendarConfig, hiddenTabs, shiftConfig, isSidebarCollapsed]);
 
   // ── MOTOR DE SINCRONIZAÇÃO CENTRALIZADO ──────────────────────────────────
   useEffect(() => {
@@ -444,85 +443,133 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("MOTOR_SYNC: Salvando tabelas sujas:", tablesToSave);
 
       try {
-        const savePromises = tablesToSave.map(async (table) => {
-          let dataToSave: any[] = [];
-          
-          // Mapeamento de estado para banco (toDB)
-          switch (table) {
-            case 'warehouse_inventory':
-              dataToSave = warehouseInventory.map(i => ({ id: i.id, user_id: user.id, code: i.code, name: i.name, category: i.category, quantity: i.quantity, min_stock: i.minStock, unit: i.unit, consumable: i.consumable, items_per_container: i.itemsPerContainer || 1, last_updated: i.lastUpdated }));
-              break;
-            case 'warehouse_employees':
-              dataToSave = warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active, cpf: e.cpf }));
-              break;
-            case 'warehouse_logs':
-              dataToSave = warehouseLogs.map(l => ({ id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: (l.employeeId === 'system' || !l.employeeId) ? SYSTEM_UUID : l.employeeId, employee_name: l.employeeName || 'Sistema', note: l.note, date: l.date }));
-              break;
-            case 'user_settings':
-              await supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, sidebar_collapsed: isSidebarCollapsed, updated_at: new Date().toISOString() });
-              return; // Upsert direto
-            case 'kanban_columns':
-              dataToSave = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
-              break;
-            case 'kanban_cards':
-              dataToSave = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ id: card.id, user_id: user.id, column_id: col.id, order: idx, title: card.title, description: card.description || '', priority: card.priority || 'medium', due_date: card.dueDate, labels: card.labels || [], created_at: card.createdAt || new Date().toISOString() })));
-              break;
-            case 'calendar_events':
-              dataToSave = calendarEvents.map(e => ({ id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description }));
-              break;
-            case 'financial_transactions':
-              dataToSave = financialTransactions.map(t => ({ id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date }));
-              break;
-            case 'logistics_freight_tables':
-              dataToSave = logisticsData.freightTables.map(t => ({ id: t.id, user_id: user.id, name: t.name, fuel_price: t.fuelPrice, avg_consumption: t.avgConsumption, driver_per_dieum: t.driverPerDieum, insurance_rate: t.insuranceRate, updated_at: t.updatedAt }));
-              break;
-            case 'email_templates':
-              dataToSave = emails.map(e => ({ id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt }));
-              break;
-            case 'extensions':
-              dataToSave = extensions.map(e => ({ id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes }));
-              break;
-            case 'signatures':
-              dataToSave = signatures.map(s => ({ id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt }));
-              break;
-            case 'personal_files':
-              dataToSave = personalFiles.map(f => ({ id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt }));
-              break;
-            case 'whatsapp_templates':
-              dataToSave = whatsappTemplates.map(t => ({ id: t.id, user_id: user.id, title: t.title, content: t.content }));
-              break;
-            case 'important_notes':
-              dataToSave = importantNotes.map(n => ({ id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt }));
-              break;
-            case 'post_its':
-              dataToSave = postIts.map(p => ({ id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation }));
-              break;
-            case 'professional_links':
-              dataToSave = links.map(l => ({ id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon }));
-              break;
-            case 'order_annotations':
-              dataToSave = orderAnnotations.map(o => ({ id: o.id, user_id: user.id, order_number: o.orderNumber, type: o.type, requester: o.requester, date: o.date, items: o.items, status: o.status }));
-              break;
-            case 'purchased_material_links':
-              dataToSave = purchasedMaterialLinks.map(p => ({ id: p.id, user_id: user.id, name: p.name, url: p.url, category: p.category, created_at: p.createdAt }));
-              break;
-            case 'flow_builder_states':
-              await supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData });
-              return;
-            case 'logistics_data':
-              await supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes });
-              return;
-            case 'warehouse_categories':
-              dataToSave = warehouseCategories.map(c => ({ id: c.id, user_id: user.id, name: c.name, color: c.color }));
-              break;
-          }
-
-          if (dataToSave.length > 0 || table === 'user_settings') {
-             await syncTableData(table, dataToSave);
-          }
-        });
-
-        await Promise.all(savePromises);
+        // Real user: sync to Supabase
+        if (user.id !== 'demo_user_id') {
+          const savePromises = tablesToSave.map(async (table) => {
+            let dataToSave: any[] = [];
+            
+            // Mapeamento de estado para banco (toDB)
+            switch (table) {
+              case 'warehouse_inventory':
+                dataToSave = warehouseInventory.map(i => ({ 
+                  id: i.id, user_id: user.id, code: i.code, name: i.name, 
+                  category: i.category, quantity: i.quantity, min_stock: i.minStock, 
+                  unit: i.unit, consumable: i.consumable, 
+                  items_per_container: i.itemsPerContainer || 1, 
+                  last_updated: i.lastUpdated,
+                  location: i.location || ''
+                }));
+                break;
+              case 'warehouse_employees':
+                dataToSave = warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active, cpf: e.cpf }));
+                break;
+              case 'warehouse_logs':
+                dataToSave = warehouseLogs.map(l => ({ id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: (l.employeeId === 'system' || !l.employeeId) ? SYSTEM_UUID : l.employeeId, employee_name: l.employeeName || 'Sistema', note: l.note, date: l.date }));
+                break;
+              case 'user_settings':
+                await supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, updated_at: new Date().toISOString() });
+                return; 
+              case 'kanban_columns':
+                dataToSave = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
+                break;
+              case 'kanban_cards':
+                dataToSave = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ id: card.id, user_id: user.id, column_id: col.id, order: idx, title: card.title, description: card.description || '', priority: card.priority || 'medium', due_date: card.dueDate, labels: card.labels || [], created_at: card.createdAt || new Date().toISOString() })));
+                break;
+              case 'calendar_events':
+                dataToSave = calendarEvents.map(e => ({ id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description }));
+                break;
+              case 'financial_transactions':
+                dataToSave = financialTransactions.map(t => ({ id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date }));
+                break;
+              case 'logistics_freight_tables':
+                dataToSave = logisticsData.freightTables.map(t => ({ id: t.id, user_id: user.id, name: t.name, fuel_price: t.fuelPrice, avg_consumption: t.avgConsumption, driver_per_dieum: t.driverPerDieum, insurance_rate: t.insuranceRate, updated_at: t.updatedAt }));
+                break;
+              case 'email_templates':
+                dataToSave = emails.map(e => ({ id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt }));
+                break;
+              case 'extensions':
+                dataToSave = extensions.map(e => ({ id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes }));
+                break;
+              case 'signatures':
+                dataToSave = signatures.map(s => ({ id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt }));
+                break;
+              case 'personal_files':
+                dataToSave = personalFiles.map(f => ({ id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt }));
+                break;
+              case 'whatsapp_templates':
+                dataToSave = whatsappTemplates.map(t => ({ id: t.id, user_id: user.id, title: t.title, content: t.content }));
+                break;
+              case 'important_notes':
+                dataToSave = importantNotes.map(n => ({ id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt }));
+                break;
+              case 'post_its':
+                dataToSave = postIts.map(p => ({ id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation }));
+                break;
+              case 'professional_links':
+                dataToSave = links.map(l => ({ id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon }));
+                break;
+               case 'order_annotations':
+                dataToSave = orderAnnotations.map(o => ({ 
+                  id: o.id, user_id: user.id, customer_name: o.requester, 
+                  order_number: o.orderNumber, type: o.type, 
+                  requester: o.requester, supplier: o.supplier, date: o.date, 
+                  expected_delivery: o.expectedDelivery, items: o.items, notes: o.notes, 
+                  payment_method: o.paymentMethod, status: o.status, priority: o.priority,
+                  total_value: o.totalValue, status_history: o.statusHistory,
+                  deleted_at: o.deletedAt, archived: !!o.archived
+                }));
+                break;
+              case 'purchased_material_links':
+                dataToSave = purchasedMaterialLinks.map(p => ({ 
+                  id: p.id, user_id: user.id, name: p.name, url: p.url, 
+                  category: p.category, notes: p.notes, created_at: p.createdAt 
+                }));
+                break;
+              case 'flow_builder_states':
+                await supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData });
+                return;
+              case 'logistics_data':
+                await supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes });
+                return;
+              case 'warehouse_categories':
+                dataToSave = warehouseCategories.map(c => ({ id: c.id, user_id: user.id, name: c.name, color: c.color }));
+                break;
+            }
+  
+            if (dataToSave.length > 0) {
+               await syncTableData(table, dataToSave);
+            }
+          });
+          await Promise.all(savePromises);
+        } else {
+          // Demo user: sync to localStorage
+          console.log("MOTOR_SYNC: Salvando estado demo no localStorage");
+          const demoData = {
+            flow: flowData,
+            calendarConfig,
+            calendarEvents,
+            emails,
+            links,
+            extensions,
+            postIts,
+            importantNotes,
+            shiftHandoffs,
+            shiftConfig,
+            signatures,
+            personalFiles,
+            logistics: logisticsData,
+            hiddenTabs,
+            kanban: kanbanData,
+            financialTransactions,
+            warehouseInventory,
+            warehouseEmployees,
+            warehouseLogs,
+            warehouseCategories,
+            orderAnnotations,
+            purchasedMaterialLinks
+          };
+          localStorage.setItem('ysoffice_demo_data', JSON.stringify(demoData));
+        }
         setDirtyTables(new Set()); // Limpa após sucesso
         setHasUnsavedChanges(false);
         setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
@@ -536,7 +583,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     return () => clearTimeout(timeout);
   }, [
     dirtyTables, warehouseInventory, warehouseEmployees, warehouseLogs, 
-    calendarConfig, hiddenTabs, shiftConfig, isSidebarCollapsed,
+    calendarConfig, hiddenTabs, shiftConfig,
     kanbanData, calendarEvents, financialTransactions, logisticsData,
     emails, extensions, signatures, personalFiles, whatsappTemplates,
     importantNotes, postIts, links, orderAnnotations, purchasedMaterialLinks,
@@ -566,7 +613,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => markDirty('order_annotations'), [orderAnnotations]);
   useEffect(() => markDirty('purchased_material_links'), [purchasedMaterialLinks]);
   useEffect(() => markDirty('flow_builder_states'), [flowData]);
-  useEffect(() => markDirty('user_settings'), [calendarConfig, hiddenTabs, shiftConfig, isSidebarCollapsed]);
+  useEffect(() => markDirty('user_settings'), [calendarConfig, hiddenTabs, shiftConfig]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -577,7 +624,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const contextValue = {
     user, setUser, isDataLoaded, isSyncing, hasUnsavedChanges, setHasUnsavedChanges,
-    lastSavedAt, hiddenTabs, setHiddenTabs, isSidebarCollapsed, setIsSidebarCollapsed,
+    lastSavedAt, hiddenTabs, setHiddenTabs,
     isDark, setIsDark, companySettings, saveCompanySettings, flowData, setFlowData,
     calendarConfig, setCalendarConfig, calendarEvents, setCalendarEvents, emails, setEmails,
     links, setLinks, extensions, setExtensions, postIts, setPostIts, importantNotes, setImportantNotes,
