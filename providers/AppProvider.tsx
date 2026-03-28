@@ -33,9 +33,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [dirtyTables, setDirtyTables] = useState<Set<string>>(new Set());
 
   const markDirty = (tableName: string) => {
-    if (!isDataLoaded) return;
+    // Permitir marcar como dirty mesmo se não estiver carregado se for uma operação crítica,
+    // mas em geral queremos evitar loops durante o fetch inicial.
+    if (!isDataLoaded && !initializedTables.current.has(tableName)) return;
+    
     setDirtyTables(prev => {
       const next = new Set(prev);
+      if (next.has(tableName)) return prev; // Evita re-render se já estiver lá
       next.add(tableName);
       return next;
     });
@@ -132,13 +136,31 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           googleAccessToken: session.provider_token
         });
       } else {
-        setUser(null);
-        setIsDataLoaded(false);
+        const demoSession = localStorage.getItem('ysoffice_demo_session');
+        if (demoSession) {
+           setUser(JSON.parse(demoSession));
+        } else {
+           setUser(null);
+           setIsDataLoaded(false);
+        }
       }
     });
 
-    return () => { subscription.unsubscribe(); };
-  }, []);
+    // Proteção contra saída acidental com alterações pendentes
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges || isSyncing) {
+        e.preventDefault();
+        e.returnValue = 'Você tem alterações que ainda não foram salvas. Deseja realmente sair?';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => { 
+      subscription.unsubscribe(); 
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges, isSyncing]);
 
   // Sync Logic (Fetch)
   useEffect(() => {
@@ -402,7 +424,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (fetchErr) {
         console.warn(`Sync fetch error for ${tableName}:`, fetchErr);
-        return; // Don't proceed with deletion if we can't fetch current state
+        return false; // Don't proceed with deletion if we can't fetch current state
       }
 
       if (existing) {
@@ -414,11 +436,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (currentData.length > 0) {
         const { error: upsertErr } = await supabase.from(tableName).upsert(currentData);
-        if (upsertErr) console.error(`Sync upsert error for ${tableName}:`, upsertErr);
+        if (upsertErr) {
+          console.error(`Sync upsert error for ${tableName}:`, upsertErr);
+          return false;
+        }
       }
+      return true;
     } catch (e) {
       console.error(`Fatal sync error for ${tableName}:`, e);
-      throw e; // Relaunch to be caught by the motor
+      return false;
     }
   };
 
@@ -445,140 +471,158 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         // Real user: sync to Supabase
         if (user.id !== 'demo_user_id') {
-          const savePromises = tablesToSave.map(async (table) => {
-            let dataToSave: any[] = [];
-            
-            // Mapeamento de estado para banco (toDB)
-            switch (table) {
-              case 'warehouse_inventory':
-                dataToSave = warehouseInventory.map(i => ({ 
-                  id: i.id, user_id: user.id, code: i.code, name: i.name, 
-                  category: i.category, quantity: i.quantity, min_stock: i.minStock, 
-                  unit: i.unit, consumable: i.consumable, 
-                  items_per_container: i.itemsPerContainer || 1, 
-                  last_updated: i.lastUpdated,
-                  location: i.location || ''
-                }));
-                break;
-              case 'warehouse_employees':
-                dataToSave = warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active, cpf: e.cpf }));
-                break;
-              case 'warehouse_logs':
-                dataToSave = warehouseLogs.map(l => ({ id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: (l.employeeId === 'system' || !l.employeeId) ? SYSTEM_UUID : l.employeeId, employee_name: l.employeeName || 'Sistema', note: l.note, date: l.date }));
-                break;
-              case 'user_settings':
-                await supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, updated_at: new Date().toISOString() });
-                return; 
-              case 'kanban_columns':
-                dataToSave = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
-                break;
-              case 'kanban_cards':
-                dataToSave = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ id: card.id, user_id: user.id, column_id: col.id, order: idx, title: card.title, description: card.description || '', priority: card.priority || 'medium', due_date: card.dueDate, labels: card.labels || [], created_at: card.createdAt || new Date().toISOString() })));
-                break;
-              case 'calendar_events':
-                dataToSave = calendarEvents.map(e => ({ id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description }));
-                break;
-              case 'financial_transactions':
-                dataToSave = financialTransactions.map(t => ({ id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date }));
-                break;
-              case 'logistics_freight_tables':
-                dataToSave = logisticsData.freightTables.map(t => ({ id: t.id, user_id: user.id, name: t.name, fuel_price: t.fuelPrice, avg_consumption: t.avgConsumption, driver_per_dieum: t.driverPerDieum, insurance_rate: t.insuranceRate, updated_at: t.updatedAt }));
-                break;
-              case 'email_templates':
-                dataToSave = emails.map(e => ({ id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt }));
-                break;
-              case 'extensions':
-                dataToSave = extensions.map(e => ({ id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes }));
-                break;
-              case 'signatures':
-                dataToSave = signatures.map(s => ({ id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt }));
-                break;
-              case 'personal_files':
-                dataToSave = personalFiles.map(f => ({ id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt }));
-                break;
-              case 'whatsapp_templates':
-                dataToSave = whatsappTemplates.map(t => ({ id: t.id, user_id: user.id, title: t.title, content: t.content }));
-                break;
-              case 'important_notes':
-                dataToSave = importantNotes.map(n => ({ id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt }));
-                break;
-              case 'post_its':
-                dataToSave = postIts.map(p => ({ id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation }));
-                break;
-              case 'professional_links':
-                dataToSave = links.map(l => ({ id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon }));
-                break;
-               case 'order_annotations':
-                dataToSave = orderAnnotations.map(o => ({ 
-                  id: o.id, user_id: user.id, customer_name: o.requester, 
-                  order_number: o.orderNumber, type: o.type, 
-                  requester: o.requester, supplier: o.supplier, date: o.date, 
-                  expected_delivery: o.expectedDelivery, items: o.items, notes: o.notes, 
-                  payment_method: o.paymentMethod, status: o.status, priority: o.priority,
-                  total_value: o.totalValue, status_history: o.statusHistory,
-                  deleted_at: o.deletedAt, archived: !!o.archived
-                }));
-                break;
-              case 'purchased_material_links':
-                dataToSave = purchasedMaterialLinks.map(p => ({ 
-                  id: p.id, user_id: user.id, name: p.name, url: p.url, 
-                  category: p.category, notes: p.notes, created_at: p.createdAt 
-                }));
-                break;
-              case 'flow_builder_states':
-                await supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData });
-                return;
-              case 'logistics_data':
-                await supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes });
-                return;
-              case 'warehouse_categories':
-                dataToSave = warehouseCategories.map(c => ({ id: c.id, user_id: user.id, name: c.name, color: c.color }));
-                break;
+          // Ordenar tabelas para respeitar Chaves Estrangeiras (Inventory -> Logs)
+          const priorityTables = ['warehouse_inventory', 'warehouse_employees', 'kanban_columns'];
+          const otherTables = tablesToSave.filter(t => !priorityTables.includes(t));
+          
+          const savedTables: string[] = [];
+          
+          // 1. Salvar tabelas de prioridade primeiro (sequencialmente ou em um lote controlado)
+          for (const table of priorityTables) {
+            if (tablesToSave.includes(table)) {
+              const success = await processTableSave(table);
+              if (success) savedTables.push(table);
             }
-  
-            if (dataToSave.length > 0) {
-               await syncTableData(table, dataToSave);
-            }
+          }
+
+          // 2. Salvar o resto concorrentemente
+          const otherResults = await Promise.all(otherTables.map(async (table) => {
+            const success = await processTableSave(table);
+            return success ? table : null;
+          }));
+          otherResults.forEach(t => { if (t) savedTables.push(t); });
+
+          setDirtyTables(prev => {
+            const next = new Set(prev);
+            savedTables.forEach(t => next.delete(t));
+            return next;
           });
-          await Promise.all(savePromises);
+
+          setHasUnsavedChanges(prev => {
+            const currentDirty = Array.from(dirtyTables);
+            return currentDirty.some(t => !savedTables.includes(t));
+          });
         } else {
           // Demo user: sync to localStorage
-          console.log("MOTOR_SYNC: Salvando estado demo no localStorage");
-          const demoData = {
-            flow: flowData,
-            calendarConfig,
-            calendarEvents,
-            emails,
-            links,
-            extensions,
-            postIts,
-            importantNotes,
-            shiftHandoffs,
-            shiftConfig,
-            signatures,
-            personalFiles,
-            logistics: logisticsData,
-            hiddenTabs,
-            kanban: kanbanData,
-            financialTransactions,
-            warehouseInventory,
-            warehouseEmployees,
-            warehouseLogs,
-            warehouseCategories,
-            orderAnnotations,
-            purchasedMaterialLinks
-          };
-          localStorage.setItem('ysoffice_demo_data', JSON.stringify(demoData));
+          localStorage.setItem('ysoffice_demo_data', JSON.stringify({
+            flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, 
+            importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, 
+            logistics: logisticsData, hiddenTabs, kanban: kanbanData, 
+            financialTransactions, warehouseInventory, warehouseEmployees, 
+            warehouseLogs, warehouseCategories, orderAnnotations, purchasedMaterialLinks
+          }));
+
+          setDirtyTables(prev => {
+            const next = new Set(prev);
+            tablesToSave.forEach(t => next.delete(t));
+            return next;
+          });
+          setHasUnsavedChanges(false);
         }
-        setDirtyTables(new Set()); // Limpa após sucesso
-        setHasUnsavedChanges(false);
+
         setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
       } catch (err) {
         console.error("MOTOR_SYNC: Erro fatal na sincronização:", err);
       } finally {
         setIsSyncing(false);
       }
-    }, 3000);
+    }, 1000);
+
+    async function processTableSave(table: string) {
+      let dataToSave: any[] = [];
+      
+      switch (table) {
+        case 'warehouse_inventory':
+          dataToSave = warehouseInventory.map(i => ({ 
+            id: i.id, user_id: user.id, code: i.code, name: i.name, 
+            category: i.category, quantity: i.quantity, min_stock: i.minStock, 
+            unit: i.unit, consumable: i.consumable, 
+            items_per_container: i.itemsPerContainer || 1, 
+            last_updated: i.lastUpdated,
+            location: i.location || ''
+          }));
+          break;
+        case 'warehouse_employees':
+          dataToSave = warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active, cpf: e.cpf }));
+          break;
+        case 'warehouse_logs':
+          dataToSave = warehouseLogs.map(l => ({ id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: (l.employeeId === 'system' || !l.employeeId) ? SYSTEM_UUID : l.employeeId, employee_name: l.employeeName || 'Sistema', note: l.note, date: l.date }));
+          break;
+        case 'user_settings':
+          await supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, updated_at: new Date().toISOString() });
+          return; 
+        case 'kanban_columns':
+          dataToSave = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
+          break;
+        case 'kanban_cards':
+          dataToSave = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ id: card.id, user_id: user.id, column_id: col.id, order: idx, title: card.title, description: card.description || '', priority: card.priority || 'medium', due_date: card.dueDate, labels: card.labels || [], created_at: card.createdAt || new Date().toISOString() })));
+          break;
+        case 'calendar_events':
+          dataToSave = calendarEvents.map(e => ({ id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description }));
+          break;
+        case 'financial_transactions':
+          dataToSave = financialTransactions.map(t => ({ id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date }));
+          break;
+        case 'logistics_freight_tables':
+          dataToSave = logisticsData.freightTables.map(t => ({ id: t.id, user_id: user.id, name: t.name, fuel_price: t.fuelPrice, avg_consumption: t.avgConsumption, driver_per_dieum: t.driverPerDieum, insurance_rate: t.insuranceRate, updated_at: t.updatedAt }));
+          break;
+        case 'email_templates':
+          dataToSave = emails.map(e => ({ id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt }));
+          break;
+        case 'extensions':
+          dataToSave = extensions.map(e => ({ id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes }));
+          break;
+        case 'signatures':
+          dataToSave = signatures.map(s => ({ id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt }));
+          break;
+        case 'personal_files':
+          dataToSave = personalFiles.map(f => ({ id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt }));
+          break;
+        case 'whatsapp_templates':
+          dataToSave = whatsappTemplates.map(t => ({ id: t.id, user_id: user.id, title: t.title, content: t.content }));
+          break;
+        case 'important_notes':
+          dataToSave = importantNotes.map(n => ({ id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt }));
+          break;
+        case 'post_its':
+          dataToSave = postIts.map(p => ({ id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation }));
+          break;
+        case 'professional_links':
+          dataToSave = links.map(l => ({ id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon }));
+          break;
+         case 'order_annotations':
+          dataToSave = orderAnnotations.map(o => ({ 
+            id: o.id, user_id: user.id, customer_name: o.requester, 
+            order_number: o.orderNumber, type: o.type, 
+            requester: o.requester, supplier: o.supplier, date: o.date, 
+            expected_delivery: o.expectedDelivery, items: o.items, notes: o.notes, 
+            payment_method: o.paymentMethod, status: o.status, priority: o.priority,
+            total_value: o.totalValue, status_history: o.statusHistory,
+            deleted_at: o.deletedAt, archived: !!o.archived
+          }));
+          break;
+        case 'purchased_material_links':
+          dataToSave = purchasedMaterialLinks.map(p => ({ 
+            id: p.id, user_id: user.id, name: p.name, url: p.url, 
+            category: p.category, notes: p.notes, created_at: p.createdAt 
+          }));
+          break;
+        case 'flow_builder_states':
+          await supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData });
+          return;
+        case 'logistics_data':
+          await supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes });
+          return;
+        case 'warehouse_categories':
+          dataToSave = warehouseCategories.map(c => ({ id: c.id, user_id: user.id, name: c.name, color: c.color }));
+          break;
+      }
+
+      if (dataToSave.length > 0) {
+         return await syncTableData(table, dataToSave);
+      }
+      return true; // Nada a salvar conta como sucesso
+    }
 
     return () => clearTimeout(timeout);
   }, [
@@ -597,7 +641,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => markDirty('warehouse_logs'), [warehouseLogs]);
   useEffect(() => markDirty('warehouse_categories'), [warehouseCategories]);
   useEffect(() => markDirty('kanban_columns'), [kanbanData.columns]);
-  useEffect(() => markDirty('kanban_cards'), [kanbanData.columns]); // Simplified
+  useEffect(() => markDirty('kanban_cards'), [kanbanData.columns]); // Mapeado no motor
   useEffect(() => markDirty('calendar_events'), [calendarEvents]);
   useEffect(() => markDirty('financial_transactions'), [financialTransactions]);
   useEffect(() => markDirty('logistics_freight_tables'), [logisticsData.freightTables]);
