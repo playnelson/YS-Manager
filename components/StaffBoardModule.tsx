@@ -7,19 +7,19 @@ import {
   ArrowUpRight, ArrowDownLeft, ShieldCheck, HardHat, Info, Check, X, Edit, Trash2, Clock,
   FileSpreadsheet
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 
 function genId() { 
   try { return crypto.randomUUID(); } 
   catch (e) { return Math.random().toString(36).substring(2, 15); }
 }
 
-function exportEmployeeReport(
+async function exportEmployeeReport(
   employees: any[],
   logs: any[],
   inventory: any[],
   possessionData: Record<string, { items: any[]; epiCount: number; matCount: number; lastUpdate: string | null }>
 ) {
+  const XLSX = await import('xlsx');
   const workbook = XLSX.utils.book_new();
 
   // ABA 1: Retiradas e Devolucoes por Funcionario (uma linha por funcionario+item)

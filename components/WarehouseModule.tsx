@@ -6,7 +6,6 @@ import {
   Trash2, Archive, Box, Download, Upload, Users, X, Check, FileSpreadsheet,
   UserPlus, ShoppingCart, Minus, Printer, Edit, PackagePlus, ChevronDown
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,7 +100,8 @@ function downloadTemplate() {
   document.body.removeChild(link);
 }
 
-function exportInventory(inventory: InventoryItem[], logs: StockLog[], selectedCols?: Record<string, boolean>, selectedCats?: string[]) {
+async function exportInventory(inventory: InventoryItem[], logs: StockLog[], selectedCols?: Record<string, boolean>, selectedCats?: string[]) {
+  const XLSX = await import('xlsx');
   const possessionMap: Record<string, number> = {};
   logs.forEach(l => {
     if (!l.employeeId || l.employeeId === 'system') return;
@@ -257,7 +257,8 @@ function parseCSV(text: string): Partial<InventoryItem>[] {
   }).filter(i => i.name);
 }
 
-function parseXLSX(data: ArrayBuffer): Partial<InventoryItem>[] {
+async function parseXLSX(data: ArrayBuffer): Promise<Partial<InventoryItem>[]> {
+  const XLSX = await import('xlsx');
   const workbook = XLSX.read(data, { type: 'array' });
   const firstSheetName = workbook.SheetNames[0];
   const firstSheet = workbook.Sheets[firstSheetName];
@@ -1020,9 +1021,9 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({
     const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
       if (isXlsx) {
-        setImportPreview(parseXLSX(ev.target?.result as ArrayBuffer));
+        setImportPreview(await parseXLSX(ev.target?.result as ArrayBuffer));
       } else {
         setImportPreview(parseCSV(ev.target?.result as string));
       }

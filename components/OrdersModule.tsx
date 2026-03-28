@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { OrderAnnotation, OrderItem, OrderType, OrderStatus, OrderPriority } from '@/types';
 import { generateUUID } from '../uuid';
-import * as XLSX from 'xlsx';
 import { parseProductUrl } from '@/app/actions/parse-product';
 
 interface OrdersModuleProps {
@@ -361,7 +360,8 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
     return `R$ ${val.toFixed(2).replace('.', ',')}`;
   };
 
-  const exportToXLSX = () => {
+  const exportToXLSX = async () => {
+    const XLSX = await import('xlsx');
     const from = exportDateFrom ? new Date(exportDateFrom + 'T00:00:00') : null;
     const to = exportDateTo ? new Date(exportDateTo + 'T23:59:59') : null;
 
