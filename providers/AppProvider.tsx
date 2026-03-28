@@ -7,7 +7,7 @@ import {
   AppData, FlowState, EmailTemplate, User, ProfessionalLink, PostIt,
   CalendarConfig, Extension, UserEvent, ImportantNote, ShiftConfig,
   Signature, ShiftHandoff, StoredFile, LogisticsState, KanbanState,
-  KanbanPriority, NotePriority, OrderAnnotation
+  KanbanPriority, NotePriority, OrderAnnotation, PurchasedMaterialLink
 } from '@/types';
 
 const initialFlow: FlowState = { nodes: [], connections: [], templates: [] };
@@ -78,6 +78,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [whatsappHistory, setWhatsappHistory] = useState<any[]>([]);
   const [kanbanData, setKanbanData] = useState<KanbanState>(initialKanban);
   const [orderAnnotations, setOrderAnnotations] = useState<OrderAnnotation[]>([]);
+  const [purchasedMaterialLinks, setPurchasedMaterialLinks] = useState<PurchasedMaterialLink[]>([]);
 
   const initializedTables = useRef<Set<string>>(new Set());
 
@@ -96,7 +97,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         const demoSession = localStorage.getItem('ysoffice_demo_session');
         if (demoSession) setUser(JSON.parse(demoSession));
-        else setIsDataLoaded(true); // Se não há sessão nem demo, terminou de carregar (ficará na tela de login)
+        else setIsDataLoaded(true);
       }
     };
 
@@ -119,8 +120,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   // Sync Logic (Fetch)
   useEffect(() => {
     if (!user) { setIsDataLoaded(false); return; }
-    
-    // Evitar fetch duplo
     if (isDataLoaded) return;
 
     const fetchData = async () => {
@@ -150,6 +149,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             if (parsed.warehouseEmployees) setWarehouseEmployees(parsed.warehouseEmployees || []);
             if (parsed.warehouseLogs) setWarehouseLogs(parsed.warehouseLogs || []);
             if (parsed.warehouseCategories) setWarehouseCategories(parsed.warehouseCategories || SEED_DATA.warehouse.categories);
+            if (parsed.orderAnnotations) setOrderAnnotations(parsed.orderAnnotations || []);
+            if (parsed.purchasedMaterialLinks) setPurchasedMaterialLinks(parsed.purchasedMaterialLinks || []);
           }
         } else {
           const safeFetch = async (query: any, tableName: string) => {
@@ -164,7 +165,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
           const [
             kbCols, kbCards, evts, notes, pts, trans, freight, settings, emailsRes, linksRes, 
-            exts, sigs, files, flow, logData, whInv, whEmps, whLogs, whCats, waTemp, waHist, orderAnnRes
+            exts, sigs, files, flow, logData, whInv, whEmps, whLogs, whCats, waTemp, waHist, orderAnnRes, pmlRes
           ] = await Promise.all([
             safeFetch(supabase.from('kanban_columns').select('*').eq('user_id', user.id).order('order'), 'kanban_columns'),
             safeFetch(supabase.from('kanban_cards').select('*').eq('user_id', user.id).order('order'), 'kanban_cards'),
@@ -187,7 +188,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             safeFetch(supabase.from('warehouse_categories').select('*').eq('user_id', user.id), 'warehouse_categories'),
             safeFetch(supabase.from('whatsapp_templates').select('*').eq('user_id', user.id), 'whatsapp_templates'),
             safeFetch(supabase.from('whatsapp_history').select('*').eq('user_id', user.id).limit(50).order('timestamp', { ascending: false }), 'whatsapp_history'),
-            safeFetch(supabase.from('order_annotations').select('*').eq('user_id', user.id).order('date', { ascending: false }), 'order_annotations')
+            safeFetch(supabase.from('order_annotations').select('*').eq('user_id', user.id).order('date', { ascending: false }), 'order_annotations'),
+            safeFetch(supabase.from('purchased_material_links').select('*').eq('user_id', user.id).order('created_at', { ascending: false }), 'purchased_material_links')
           ]);
           
           const isFirstTimeUser = !settings.data;
@@ -228,8 +230,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           if (whLogs.data) {
             initializedTables.current.add('warehouse_logs');
             setWarehouseLogs(whLogs.data.map((l: any) => ({
-              id: l.id, itemId: l.item_id, type: l.type, quantity: l.quantity, employeeId: l.employee_id || '', 
-              employeeName: l.employee_name, note: l.note, date: l.date, itemCode: l.item_code || '', itemName: l.item_name || ''
+              id: l.id, itemId: l.itemId, type: l.type, quantity: l.quantity, employeeId: l.employeeId || '', 
+              employeeName: l.employeeName, note: l.note, date: l.date, itemCode: l.itemCode || '', itemName: l.itemName || ''
             })));
           }
 
@@ -237,7 +239,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             initializedTables.current.add('warehouse_categories');
             if (whCats.data.length > 0) setWarehouseCategories(whCats.data);
             else setWarehouseCategories(SEED_DATA.warehouse.categories);
-          } else { setWarehouseCategories(SEED_DATA.warehouse.categories); }
+          }
 
           if (freight.data) {
             initializedTables.current.add('logistics');
@@ -284,9 +286,17 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
               id: o.id, orderNumber: o.order_number, type: o.type || 'purchase', requester: o.requester || o.customer_name || '',
               supplier: o.supplier || '', date: o.date, expectedDelivery: o.expected_delivery, items: o.items || [],
               notes: o.notes || '', paymentMethod: o.payment_method || '', status: o.status || 'draft', priority: o.priority || 'normal',
-              totalValue: o.total_value || 0, statusHistory: o.status_history || []
+              totalValue: o.total_value || 0, statusHistory: o.status_history || [],
+              deletedAt: o.deleted_at, archived: o.archived || false
             })));
           } else initializedTables.current.add('order_annotations');
+
+          if (pmlRes && pmlRes.data) {
+            initializedTables.current.add('purchased_material_links');
+            setPurchasedMaterialLinks(pmlRes.data.map((p: any) => ({
+              id: p.id, name: p.name, url: p.url, category: p.category, notes: p.notes, createdAt: p.created_at
+            })));
+          } else initializedTables.current.add('purchased_material_links');
 
           if (evts.data) { initializedTables.current.add('calendar_events'); setCalendarEvents(evts.data); }
           if (pts.data) { initializedTables.current.add('post_its'); setPostIts(pts.data); }
@@ -306,14 +316,14 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     fetchData();
-  }, [user?.id]); // Removido isDataLoaded das dependências para evitar reload infinito
+  }, [user?.id]);
 
   // Data Save Effect
   useEffect(() => {
     if (!user || !isDataLoaded) return;
     const saveData = async () => {
       if (user.id === 'demo_user_id') {
-        const payload = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs, financialTransactions, warehouseInventory, warehouseLogs };
+        const payload = { kanban: kanbanData, flow: flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logistics: logisticsData, hiddenTabs, financialTransactions, warehouseInventory, warehouseLogs, orderAnnotations, purchasedMaterialLinks };
         localStorage.setItem('ysoffice_demo_data', JSON.stringify(payload));
         setHasUnsavedChanges(false);
         setIsSyncing(false);
@@ -379,13 +389,22 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           initializedTables.current.has('user_settings') && safeSave(supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, sidebar_collapsed: isSidebarCollapsed, updated_at: new Date().toISOString() }), 'user_settings'),
           initializedTables.current.has('flow_builder_states') && safeSave(supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData }), 'flow_builder_states'),
           initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes }), 'logistics_data'),
-          initializedTables.current.has('order_annotations') && safeSave(supabase.from('order_annotations').upsert(
-            orderAnnotations.map(o => ({
-              id: o.id, user_id: user.id, order_number: o.orderNumber, type: o.type, requester: o.requester, customer_name: o.requester,
-              supplier: o.supplier, date: o.date, expected_delivery: o.expectedDelivery || null, items: o.items, notes: o.notes || null,
-              payment_method: o.paymentMethod || null, status: o.status, priority: o.priority, total_value: o.totalValue || 0, status_history: o.statusHistory || []
-            }))
-          ), 'order_annotations')
+          syncTableData('order_annotations', orderAnnotations.filter(o => {
+            if (o.deletedAt) {
+              const limit = new Date();
+              limit.setDate(limit.getDate() - 7);
+              return new Date(o.deletedAt) > limit;
+            }
+            return true;
+          }).map(o => ({
+            id: o.id, user_id: user.id, order_number: o.orderNumber, type: o.type, requester: o.requester, customer_name: o.requester,
+            supplier: o.supplier, date: o.date, expected_delivery: o.expectedDelivery || null, items: o.items, notes: o.notes || null,
+            payment_method: o.paymentMethod || null, status: o.status, priority: o.priority, total_value: o.totalValue || 0, status_history: o.statusHistory || [],
+            deleted_at: o.deletedAt || null, archived: o.archived || false
+          }))),
+          syncTableData('purchased_material_links', purchasedMaterialLinks.map(p => ({
+            id: p.id, user_id: user.id, name: p.name, url: p.url, category: p.category || null, notes: p.notes || null, created_at: p.createdAt
+          })))
         ].filter(Boolean));
       } catch (err) {} finally { 
         setIsSyncing(false); 
@@ -400,7 +419,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         saveData();
     }, 2000);
     return () => clearTimeout(timeout);
-  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories, whatsappTemplates, whatsappHistory, kanbanData, isSidebarCollapsed, orderAnnotations]);
+  }, [flowData, calendarConfig, calendarEvents, emails, links, extensions, postIts, importantNotes, shiftHandoffs, shiftConfig, signatures, personalFiles, logisticsData, hiddenTabs, user, isDataLoaded, financialTransactions, warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories, whatsappTemplates, whatsappHistory, kanbanData, isSidebarCollapsed, orderAnnotations, purchasedMaterialLinks]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -421,6 +440,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     warehouseEmployees, setWarehouseEmployees, warehouseLogs, setWarehouseLogs,
     warehouseCategories, setWarehouseCategories, whatsappTemplates, setWhatsappTemplates,
     whatsappHistory, setWhatsappHistory, kanbanData, setKanbanData, orderAnnotations, setOrderAnnotations,
+    purchasedMaterialLinks, setPurchasedMaterialLinks,
     handleLogout
   };
 

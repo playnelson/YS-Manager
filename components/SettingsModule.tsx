@@ -11,7 +11,7 @@ import {
   IconLink,
   IconLinkOff
 } from '@tabler/icons-react';
-import { User } from '@/types';
+import { User, CalendarConfig } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 
@@ -21,9 +21,11 @@ interface SettingsModuleProps {
   onLogout: () => void;
   companySettings: { name: string; logoUrl: string };
   onCompanySettingsChange: (data: { name: string; logoUrl: string }) => void;
+  calendarConfig?: CalendarConfig;
+  onCalendarConfigChange?: (config: CalendarConfig) => void;
 }
 
-export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUser, onLogout, companySettings, onCompanySettingsChange }) => {
+export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUser, onLogout, companySettings, onCompanySettingsChange, calendarConfig, onCalendarConfigChange }) => {
   const [nick, setNick] = useState(user.nick);
   const [photoUrl, setPhotoUrl] = useState(user.photoUrl || '');
   const [loading, setLoading] = useState(false);
@@ -35,6 +37,33 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({ user, onUpdateUs
   const [companyLogoUrl, setCompanyLogoUrl] = useState(companySettings.logoUrl);
   const [companySaved, setCompanySaved] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const [uf, setUf] = useState(calendarConfig?.uf || 'SP');
+  const [city, setCity] = useState(calendarConfig?.city || 'SÃO PAULO');
+  const [citiesList, setCitiesList] = useState<string[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+
+  React.useEffect(() => {
+     if (!uf) return;
+     setLoadingCities(true);
+     fetch('https://brasilapi.com.br/api/ibge/municipios/v1/' + uf)
+       .then(res => res.json())
+       .then(data => {
+         if (Array.isArray(data)) {
+           setCitiesList(data.map((m: any) => m.nome).sort());
+         }
+       })
+       .catch(e => console.error("Erro IBGE", e))
+       .finally(() => setLoadingCities(false));
+  }, [uf]);
+
+  const handleSaveLocation = () => {
+      if (onCalendarConfigChange) {
+          onCalendarConfigChange({ uf, city });
+          setSuccess('Localização de Calendário salva com sucesso!');
+          setTimeout(() => setSuccess(''), 3000);
+      }
+  };
 
   const handleSaveProfile = async () => {
     setLoading(true);

@@ -45,13 +45,6 @@ interface CalendarToolProps {
 
 const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 
-const STATE_HOLIDAYS_DB: Record<string, { day: number, month: number, name: string }[]> = {
-  'SP': [{ day: 9, month: 7, name: 'Rev. Constitucionalista' }, { day: 20, month: 11, name: 'Consciência Negra' }],
-  'RJ': [{ day: 23, month: 4, name: 'Dia de São Jorge' }, { day: 20, month: 11, name: 'Consciência Negra' }],
-  'MG': [{ day: 21, month: 4, name: 'Tiradentes (Data Magna)' }],
-  'RS': [{ day: 20, month: 9, name: 'Revolução Farroupilha' }],
-};
-
 export const CalendarTool: React.FC<CalendarToolProps> = ({ 
   config, 
   events = [], 
@@ -138,12 +131,28 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({
   const fetchHolidays = async () => {
     setIsLoading(true);
     try {
-      // 1. Brasil API (Nacionais)
-      const resBH = await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`);
+      // 1. Brasil API (Nacionais) e Feriados Regionais (Scraper)
+      const ufParam = config?.uf || 'SP';
+      const cityParam = config?.city ? encodeURIComponent(config.city) : '';
+      
+      const [resBH, resRegional] = await Promise.allSettled([
+        fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`),
+        fetch(`/api/feriados?year=${year}&state=${ufParam}&city=${cityParam}`)
+      ]);
+      
       let apiHolidays: Holiday[] = [];
-      if (resBH.ok) {
-        const data = await resBH.json();
+      if (resBH.status === 'fulfilled' && resBH.value.ok) {
+        const data = await resBH.value.json();
         apiHolidays = data.map((h: any) => ({ date: h.date, name: h.name, type: 'national' }));
+      }
+      
+      let regionalHolidays: Holiday[] = [];
+      if (resRegional.status === 'fulfilled' && resRegional.value.ok) {
+         try {
+           regionalHolidays = await resRegional.value.json();
+         } catch {
+           // Falha ao parear JSON
+         }
       }
 
       // 2. Seasonal / Commemorative
@@ -168,17 +177,8 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({
       // 3. Historical Events (Simulated)
       const historical: Holiday[] = [
         { date: `${year}-04-22`, name: 'Descobrimento do Brasil (1500)', type: 'commemorative' },
-        { date: `${year}-05-13`, name: 'Abolição da Escravidão (1888)', type: 'commemorative' },
-        { date: `${year}-07-09`, name: 'Rev. Constitucionalista (SP)', type: 'state' },
+        { date: `${year}-05-13`, name: 'Abolição da Escravidão (1888)', type: 'commemorative' }
       ];
-
-      // 3. State Holidays (Simulated/Local DB)
-      const stateHolidaysRaw = STATE_HOLIDAYS_DB[config.uf] || [];
-      const stateHolidays: Holiday[] = stateHolidaysRaw.map(sh => ({
-        date: `${year}-${String(sh.month).padStart(2, '0')}-${String(sh.day).padStart(2, '0')}`,
-        name: sh.name,
-        type: 'state'
-      }));
 
       const dynamicHolidays = calculateDynamicDates(year);
 
@@ -193,7 +193,7 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({
         });
       };
 
-      merge(stateHolidays);
+      merge(regionalHolidays);
       merge(dynamicHolidays);
       merge(seasonal);
       merge(historical);
@@ -259,17 +259,32 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({
     for (let i = 0; i < start.getDay(); i++) days.push(null);
     for (let i = 1; i <= end.getDate(); i++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      
+      const ordersOnThisDay = orderAnnotations
+        .filter(o => o.status === 'in_progress' && !o.archived && !o.deletedAt)
+        .filter(o => {
+          const orderDate = o.expectedDelivery || o.date;
+          return orderDate.split('T')[0] === dateStr;
+        })
+        .map(o => ({
+          id: o.id,
+          date: dateStr,
+          title: `Pedido: ${o.orderNumber || 'S/N'} (${o.requester})`,
+          type: 'order' as any,
+          description: `Fornecedor: ${o.supplier || 'N/A'}\nStatus: Em Andamento`
+        }));
+
       days.push({
         day: i,
         date: dateStr,
         holidays: holidays.filter(h => h.date === dateStr),
-        userEvents: events.filter(e => e.date === dateStr),
+        userEvents: [...events.filter(e => e.date === dateStr), ...ordersOnThisDay],
         shift: projectedShifts.get(dateStr),
         moon: moonPhases.find(m => m.date === dateStr)
       });
     }
     return days;
-  }, [year, month, holidays, events, projectedShifts, moonPhases]);
+  }, [year, month, holidays, events, projectedShifts, moonPhases, orderAnnotations]);
 
   const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -309,7 +324,8 @@ export const CalendarTool: React.FC<CalendarToolProps> = ({
     holiday: <IconTarget size={12} className="text-red-500" />,
     meeting: <IconUsers size={12} className="text-blue-500" />,
     reminder: <IconBell size={12} className="text-yellow-500" />,
-    birthday: <IconCake size={12} className="text-pink-500" />
+    birthday: <IconCake size={12} className="text-pink-500" />,
+    order: <IconFileText size={12} className="text-indigo-500" />
   };
 
   const isToday = (dateStr: string) => new Date().toISOString().split('T')[0] === dateStr;

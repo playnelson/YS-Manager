@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Building2, MapPin, Landmark, Search, Copy, Check, ExternalLink, AlertTriangle,
-  Loader2, FileText, FileCheck, Barcode
+  Loader2, FileText, FileCheck, Barcode, XCircle, Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CnpjData, CepData, BankData } from '@/types';
 
 export const ConsultationModule: React.FC = () => {
-  const [activeTool, setActiveTool] = useState<'cnpj' | 'nfe' | 'cep' | 'banks'>('cnpj');
+  const [activeTool, setActiveTool] = useState<'cnpj' | 'nfe' | 'cep' | 'banks' | 'ca'>('cnpj');
 
   return (
     <div className="h-full flex gap-2 overflow-hidden">
@@ -39,6 +39,12 @@ export const ConsultationModule: React.FC = () => {
           icon={<Landmark size={20} />}
           label="Bancos"
         />
+        <NavButton
+          active={activeTool === 'ca'}
+          onClick={() => setActiveTool('ca')}
+          icon={<FileCheck size={20} />}
+          label="Consulta CA"
+        />
       </div>
 
       {/* Área Principal */}
@@ -48,6 +54,7 @@ export const ConsultationModule: React.FC = () => {
           {activeTool === 'nfe' && <NFeTool />}
           {activeTool === 'cep' && <CepTool />}
           {activeTool === 'banks' && <BanksTool />}
+          {activeTool === 'ca' && <CATool />}
         </div>
       </div>
     </div>
@@ -88,12 +95,10 @@ const CnpjTool: React.FC = () => {
     finally { setLoading(false); }
   };
 
-  // Campo de Dados com Seleção de Texto Habilitada
   const DataField = ({ label, value }: any) => (
     <div className="mb-2 group">
       <span className="text-[9px] font-bold uppercase text-palette-darkest/50 block mb-0.5">{label}</span>
       <div className="flex items-start bg-transparent border-b border-palette-mediumLight hover:border-win95-blue transition-colors">
-        {/* 'select-text' e 'break-all' permitem selecionar partes do texto */}
         <span className="text-sm font-bold text-black dark:text-white px-1 py-0.5 select-text cursor-text break-all whitespace-normal flex-1 leading-snug">
           {value || '-'}
         </span>
@@ -190,12 +195,11 @@ const NFeTool: React.FC = () => {
       return;
     }
 
-    // Validação Modulo 11
     let soma = 0;
     let peso = 2;
     for (let i = 42; i >= 0; i--) {
       soma += parseInt(cleanKey.charAt(i)) * peso;
-      peso++;
+      weight: peso++;
       if (peso > 9) peso = 2;
     }
     const resto = soma % 11;
@@ -203,7 +207,6 @@ const NFeTool: React.FC = () => {
     const dvInformado = parseInt(cleanKey.charAt(43));
     const isValid = dvCalculado === dvInformado;
 
-    // Extração de Dados
     const ufCode = cleanKey.substring(0, 2);
     const aamm = cleanKey.substring(2, 6);
     const cnpj = cleanKey.substring(6, 20);
@@ -235,12 +238,11 @@ const NFeTool: React.FC = () => {
         <h3 className="text-sm font-black uppercase mb-4 flex items-center gap-2">
           <Barcode size={16} /> Consulta de Chave de Acesso (NFe / NFCe)
         </h3>
-
         <div className="mb-4">
           <label className="text-[10px] font-bold uppercase block mb-1">Chave de Acesso (44 dígitos):</label>
           <div className="flex gap-2">
             <input
-              className="w-full win95-sunken p-2 font-mono font-bold text-sm"
+              className="w-full win95-sunken p-2 font-mono font-bold text-sm dark:bg-gray-800 dark:text-white"
               value={key}
               onChange={e => setKey(e.target.value.replace(/\D/g, ''))}
               placeholder="0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000"
@@ -250,7 +252,6 @@ const NFeTool: React.FC = () => {
           </div>
           {error && <div className="text-red-600 text-xs font-bold mt-1 flex items-center gap-1"><AlertTriangle size={10} /> {error}</div>}
         </div>
-
         {info && (
           <div className={`win95-sunken bg-palette-lightest dark:bg-gray-900 p-4 border-l-4 ${info.valida ? 'border-l-green-600' : 'border-l-red-600'}`}>
             <div className="flex items-center gap-2 mb-4 border-b pb-2">
@@ -260,11 +261,10 @@ const NFeTool: React.FC = () => {
                 <span className="text-[10px] text-palette-darkest/50">Algoritmo Módulo 11</span>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="p-2 bg-palette-mediumLight/50 dark:bg-gray-800 border border-palette-mediumLight dark:border-gray-700">
-                <span className="text-[9px] font-bold text-palette-darkest/50 uppercase block">UF de Origem</span>
-                <span className="font-bold text-palette-darkest dark:text-white">{info.uf}</span>
+              <div className="p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <span className="text-[9px] font-bold text-gray-500 uppercase block">UF de Origem</span>
+                <span className="font-bold text-gray-900 dark:text-white">{info.uf}</span>
               </div>
               <div className="p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                 <span className="text-[9px] font-bold text-gray-500 uppercase block">Período (AA/MM)</span>
@@ -283,15 +283,10 @@ const NFeTool: React.FC = () => {
                 <span className="font-bold text-gray-900 dark:text-white">{info.serie} / {info.numero}</span>
               </div>
             </div>
-
             {info.valida && (
               <div className="mt-4 pt-4 border-t border-palette-mediumLight text-center">
-                <p className="text-[10px] mb-2 font-bold text-blue-900">
-                  Para visualizar os produtos e valores, acesse o Portal Nacional:
-                </p>
                 <Button
                   className="w-full"
-                  icon={<ExternalLink size={12} />}
                   onClick={() => window.open(`http://www.nfe.fazenda.gov.br/portal/consultarNFe.aspx`, '_blank')}
                 >
                   ABRIR PORTAL NACIONAL DA NFE
@@ -300,10 +295,6 @@ const NFeTool: React.FC = () => {
             )}
           </div>
         )}
-
-        <div className="mt-4 text-[9px] text-palette-darkest/50 text-center italic">
-          Este módulo valida a estrutura da chave de acesso e extrai metadados. A consulta completa requer certificado digital no site da SEFAZ.
-        </div>
       </div>
     </div>
   );
@@ -330,7 +321,7 @@ const CepTool: React.FC = () => {
           <Button onClick={search}>Buscar</Button>
         </div>
         {data && (
-          <div className="win95-sunken bg-palette-lightest dark:bg-gray-900 p-4 space-y-2">
+          <div className="win95-sunken bg-palette-lightest dark:bg-gray-900 p-4 space-y-2 rounded-xl">
             <div className="font-bold text-lg text-palette-darkest dark:text-white select-text">{data.street}</div>
             <div className="text-palette-darkest/70 dark:text-gray-300 select-text">{data.neighborhood}</div>
             <div className="text-palette-darkest/70 dark:text-gray-300 select-text">{data.city} - {data.state}</div>
@@ -360,7 +351,7 @@ const BanksTool: React.FC = () => {
         <Search size={16} className="text-palette-darkest/50" />
         <input className="flex-1 win95-sunken px-2 py-1 outline-none text-palette-darkest dark:text-white" placeholder="Buscar banco ou código COMPE..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
-      <div className="flex-1 win95-sunken bg-palette-lightest dark:bg-gray-900 overflow-y-auto">
+      <div className="flex-1 win95-sunken bg-palette-lightest dark:bg-gray-900 overflow-y-auto rounded-xl">
         <table className="w-full text-xs text-left">
           <thead className="bg-palette-mediumLight dark:bg-gray-800 sticky top-0 font-bold uppercase text-palette-darkest/70 dark:text-gray-300">
             <tr>
@@ -379,6 +370,102 @@ const BanksTool: React.FC = () => {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+};
+
+// --- 5. FERRAMENTA CONSULTA CA (EPI) ---
+const CATool: React.FC = () => {
+  const [caNumber, setCaNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  const handleSearch = () => {
+    if (!caNumber) return;
+    setLoading(true);
+    setTimeout(() => {
+      setResult({
+        ca: caNumber,
+        status: 'Instruções de Consulta',
+        message: 'A consulta de Certificado de Aprovação (CA) deve ser realizada diretamente no portal oficial do Ministério do Trabalho e Emprego para garantir a validade legal.'
+      });
+      setLoading(false);
+    }, 800);
+  };
+
+  return (
+    <div className="h-full flex flex-col items-center p-4">
+      <div className="max-w-xl w-full win95-raised p-6 space-y-6">
+        <div className="flex items-center gap-3 border-b-2 border-palette-mediumLight dark:border-gray-800 pb-4">
+          <div className="p-3 bg-blue-600 text-white rounded-xl shadow-lg">
+            <FileCheck size={24} />
+          </div>
+          <div>
+            <h3 className="text-lg font-black uppercase text-gray-900 dark:text-white leading-tight">Consulta de CA (EPI)</h3>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Certificado de Aprovação de Equipamentos</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Número do CA</label>
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={caNumber}
+                onChange={e => setCaNumber(e.target.value.replace(/\D/g, ''))}
+                placeholder="Ex: 38329"
+                className="flex-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-bold text-blue-600 dark:text-blue-400"
+              />
+              <Button onClick={handleSearch} disabled={loading} className="px-6 h-11">
+                {loading ? <Loader2 className="animate-spin" size={18} /> : 'CONSULTAR'}
+              </Button>
+            </div>
+          </div>
+
+          {result && (
+            <div className="win95-sunken bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded-lg shrink-0">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{result.status}</h4>
+                  <p className="text-xs text-gray-500 leading-relaxed">{result.message}</p>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                <p className="text-[10px] font-black text-blue-800 dark:text-blue-400 uppercase mb-3">Ações Disponíveis para o CA {result.ca}:</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <a 
+                    href="https://caepi.mte.gov.br/internet/ConsultaCAInternet.aspx" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 hover:bg-blue-600 hover:text-white transition-all rounded-xl border border-blue-100 dark:border-gray-700 font-bold text-xs group"
+                  >
+                    <span>Abrir Portal do Ministério do Trabalho</span>
+                    <ExternalLink size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </a>
+                  <a 
+                    href={`https://www.google.com/search?q=consulta+CA+${result.ca}+validade`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 hover:bg-blue-600 hover:text-white transition-all rounded-xl border border-blue-100 dark:border-gray-700 font-bold text-xs group"
+                  >
+                    <span>Pesquisa Rápida (Google)</span>
+                    <Search size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800 italic text-[10px] text-gray-400 text-center">
+          Dica: O portal do MTE é a única fonte oficial para validar EPIs. Sempre verifique a data de validade e o enquadramento do equipamento antes do uso.
+        </div>
       </div>
     </div>
   );

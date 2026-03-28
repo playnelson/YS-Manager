@@ -9,13 +9,20 @@ const OrdersModule = dynamic(() => import('@/components/OrdersModule').then(m =>
 });
 
 export default function PedidosPage() {
-  const { orderAnnotations, setOrderAnnotations, setHasUnsavedChanges, warehouseInventory, user } = useAppContext();
+  const { 
+    orderAnnotations, setOrderAnnotations, 
+    setHasUnsavedChanges, warehouseInventory, 
+    user, purchasedMaterialLinks, setPurchasedMaterialLinks 
+  } = useAppContext();
+
   return (
     <OrdersModule
       orders={orderAnnotations}
       onOrdersChange={(data: any) => { setOrderAnnotations(data); setHasUnsavedChanges(true); }}
       inventory={warehouseInventory}
       currentUser={user}
+      purchasedMaterialLinks={purchasedMaterialLinks || []}
+      onPurchasedMaterialLinksChange={(data: any) => { setPurchasedMaterialLinks(data); setHasUnsavedChanges(true); }}
     />
   );
 }

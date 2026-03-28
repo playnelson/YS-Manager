@@ -15,14 +15,19 @@ interface OrdersModuleProps {
   onOrdersChange: (orders: OrderAnnotation[]) => void;
   inventory: any[]; // InventoryItem from Warehouse
   currentUser?: { nick: string };
+  purchasedMaterialLinks: any[];
+  onPurchasedMaterialLinksChange: (links: any[]) => void;
 }
 
 export const OrdersModule: React.FC<OrdersModuleProps> = ({
   orders,
   onOrdersChange,
   inventory,
-  currentUser
+  currentUser,
+  purchasedMaterialLinks,
+  onPurchasedMaterialLinksChange
 }) => {
+  const [activeTab, setActiveTab] = useState<'active' | 'history' | 'trash' | 'links'>('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<OrderType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<OrderStatus | 'all'>('all');
@@ -59,8 +64,15 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
     description: '',
     unit: 'UN',
     quantity: 1,
-    unitPrice: 0
+    unitPrice: 0,
+    fulfillment: 'pending'
   });
+
+  const [fulfillmentOrder, setFulfillmentOrder] = useState<OrderAnnotation | null>(null);
+
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [editingLink, setEditingLink] = useState<any | null>(null);
+  const [linkForm, setLinkForm] = useState({ name: '', url: '', category: '', notes: '' });
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -74,6 +86,15 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
 
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
+      // Tab Filtering
+      if (activeTab === 'trash') {
+        if (!o.deletedAt) return false;
+      } else if (activeTab === 'history') {
+        if (o.deletedAt || !o.archived) return false;
+      } else {
+        if (o.deletedAt || o.archived) return false;
+      }
+
       const matchSearch = 
         (o.requester?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (o.supplier?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -85,7 +106,7 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
       
       return matchSearch && matchType && matchStatus;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [orders, searchTerm, filterType, filterStatus]);
+  }, [orders, searchTerm, filterType, filterStatus, activeTab]);
 
   const calculateTotal = (items: OrderItem[]) => {
     return items.reduce((sum, item) => sum + (item.quantity * (item.unitPrice || 0)), 0);
@@ -251,6 +272,11 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
   };
 
   const quickChangeStatus = (order: OrderAnnotation, newStatus: OrderStatus) => {
+    if (newStatus === 'completed') {
+      setFulfillmentOrder({ ...order });
+      return;
+    }
+
     const now = new Date().toISOString();
     const user = currentUser?.nick || 'Sistema';
     
@@ -266,6 +292,57 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
     if (viewDetailOrder?.id === order.id) {
       setViewDetailOrder({ ...order, status: newStatus, statusHistory });
     }
+  };
+
+  const handleCompleteOrder = (order: OrderAnnotation, items: OrderItem[]) => {
+    const now = new Date().toISOString();
+    const user = currentUser?.nick || 'Sistema';
+    
+    const statusHistory = [{ status: 'completed' as OrderStatus, date: now, by: user }, ...(order.statusHistory || [])];
+    
+    const updated: OrderAnnotation[] = orders.map(o => o.id === order.id ? {
+      ...o,
+      status: 'completed' as OrderStatus,
+      statusHistory,
+      archived: true,
+      items
+    } : o);
+    onOrdersChange(updated);
+    setFulfillmentOrder(null);
+  };
+
+  const handleDeleteOrder = (id: string) => {
+    const updated = orders.map(o => o.id === id ? { ...o, deletedAt: new Date().toISOString() } : o);
+    onOrdersChange(updated);
+  };
+
+  const handleRestoreOrder = (id: string) => {
+    const updated = orders.map(o => o.id === id ? { ...o, deletedAt: undefined } : o);
+    onOrdersChange(updated);
+  };
+
+  const handlePermanentDelete = (id: string) => {
+    if (!confirm('Esta ação é permanente. Deseja continuar?')) return;
+    const updated = orders.filter(o => o.id !== id);
+    onOrdersChange(updated);
+  };
+
+  const handleSaveLink = () => {
+    if (!linkForm.name || !linkForm.url) return;
+    
+    if (editingLink) {
+      onPurchasedMaterialLinksChange(purchasedMaterialLinks.map(l => l.id === editingLink.id ? { ...l, ...linkForm } : l));
+    } else {
+      onPurchasedMaterialLinksChange([{ id: generateUUID(), ...linkForm, createdAt: new Date().toISOString() }, ...purchasedMaterialLinks]);
+    }
+    setShowLinkModal(false);
+    setEditingLink(null);
+    setLinkForm({ name: '', url: '', category: '', notes: '' });
+  };
+
+  const handleDeleteLink = (id: string) => {
+    if (!confirm('Excluir este link?')) return;
+    onPurchasedMaterialLinksChange(purchasedMaterialLinks.filter(l => l.id !== id));
   };
 
   const duplicateOrder = (order: OrderAnnotation) => {
@@ -482,188 +559,281 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
         </div>
       </div>
 
-      {/* Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400">
-            <FileText size={20} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-500 uppercase">Rascunhos</p>
-            <p className="text-xl font-black text-gray-900 dark:text-white">{stats.draft}</p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600">
-            <Clock size={20} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-500 uppercase">Pendentes</p>
-            <p className="text-xl font-black text-gray-900 dark:text-white">{stats.pending}</p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600">
-            <Factory size={20} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-500 uppercase">Em Andamento</p>
-            <p className="text-xl font-black text-gray-900 dark:text-white">{stats.inProgress}</p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600">
-            <CheckCircle2 size={20} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-500 uppercase">Concluídos</p>
-            <p className="text-xl font-black text-gray-900 dark:text-white">{stats.completed}</p>
-          </div>
-        </div>
+      {/* Tab Navigation */}
+      <div className="flex border-b border-gray-200 dark:border-gray-800">
+        {[
+          { id: 'active', label: 'Pedidos Ativos', icon: <ClipboardList size={18} /> },
+          { id: 'history', label: 'Histórico', icon: <Clock size={18} /> },
+          { id: 'trash', label: 'Lixeira', icon: <Trash2 size={18} /> },
+          { id: 'links', label: 'Materiais Comprados', icon: <ExternalLink size={18} /> }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex items-center gap-2 px-6 py-4 text-sm font-bold border-b-2 transition-all ${
+              activeTab === tab.id 
+                ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/10' 
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Filters & Search */}
-      <div className="flex flex-col md:flex-row gap-3 bg-white dark:bg-gray-900 p-3 rounded-2xl border border-gray-100 dark:border-gray-800">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Buscar por número, pessoa ou empresa..." 
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-sm"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2">
-          <select 
-            className="bg-gray-50 dark:bg-gray-800 text-sm font-semibold border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 dark:text-gray-300"
-            value={filterType}
-            onChange={e => setFilterType(e.target.value as any)}
-          >
-            <option value="all">Todos Tipos</option>
-            <option value="purchase">Compras</option>
-            <option value="sale">Vendas</option>
-            <option value="internal">Interno</option>
-          </select>
-          <select 
-            className="bg-gray-50 dark:bg-gray-800 text-sm font-semibold border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 dark:text-gray-300"
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value as any)}
-          >
-            <option value="all">Qualquer Status</option>
-            <option value="draft">Rascunhos</option>
-            <option value="pending_approval">Aguardando Aprov.</option>
-            <option value="approved">Aprovados</option>
-            <option value="in_progress">Em Andamento</option>
-            <option value="completed">Concluídos</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Orders Grid */}
-      <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
-        {filteredOrders.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center justify-center py-20 opacity-40">
-            <ClipboardList size={64} className="mb-4" />
-            <p className="font-semibold text-lg">Nenhum pedido encontrado</p>
-            <p className="text-sm">Tente ajustar seus filtros ou crie um novo pedido.</p>
-          </div>
-        ) : (
-          filteredOrders.map(order => (
-            <div key={order.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-0 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden">
-              {/* Card Header */}
-              <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                      {order.orderNumber || order.id.substring(0,8).toUpperCase()}
-                    </span>
-                    {order.priority !== 'normal' && (
-                      <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${getPriorityColor(order.priority)}`}>
-                        {order.priority}
-                      </span>
-                    )}
-                  </div>
-                  <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${getStatusColor(order.status)}`}>
-                    {getStatusLabel(order.status)}
-                  </span>
-                </div>
-                
-                <h3 className="font-bold text-base text-gray-900 dark:text-white line-clamp-1 mb-1">
-                  {order.supplier ? `Para: ${order.supplier}` : order.requester}
-                </h3>
-                
-                <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
-                  <div className="flex items-center gap-1">
-                    {getTypeIcon(order.type)} {getTypeLabel(order.type)}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Package size={14} /> {order.items.length} {order.items.length === 1 ? 'item' : 'itens'}
-                  </div>
-                </div>
+      {activeTab !== 'links' && (
+        <>
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400">
+                <FileText size={20} />
               </div>
-              
-              {/* Card Body */}
-              <div className="p-4 flex-1 flex flex-col justify-center">
-                <div className="space-y-2 mb-3">
-                  {order.items.slice(0, 3).map((item, idx) => (
-                    <div key={item.id || idx} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-400">
-                      <span className="truncate flex-1 pr-2">- {item.description}</span>
-                      <span className="font-mono text-[10px] text-gray-400 whitespace-nowrap">{item.quantity} {item.unit}</span>
-                    </div>
-                  ))}
-                  {order.items.length > 3 && (
-                    <p className="text-[10px] text-gray-400 italic mt-1 font-medium bg-gray-50 dark:bg-gray-800/50 inline-block px-2 py-0.5 rounded">
-                      + {order.items.length - 3} outros itens
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Card Footer */}
-              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 border-t border-gray-100 dark:border-gray-800">
-                <div className="flex justify-between items-center mb-3">
-                  <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
-                    <Clock size={12} />
-                    {new Date(order.date).toLocaleDateString('pt-BR')}
-                  </div>
-                  {(order.totalValue || 0) > 0 && (
-                    <div className="font-bold text-sm text-gray-900 dark:text-white">
-                      {formatCurrency(order.totalValue)}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setViewDetailOrder(order)}
-                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-500 text-gray-700 dark:text-gray-300 py-1.5 rounded-lg text-xs font-bold transition-colors"
-                  >
-                    Ver Detalhes
-                  </button>
-                  
-                  {order.status === 'draft' && (
-                    <button 
-                      onClick={() => quickChangeStatus(order, 'pending_approval')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow flex items-center justify-center"
-                      title="Enviar para Aprovação"
-                    >
-                      <Check size={14} />
-                    </button>
-                  )}
-                  {order.status === 'in_progress' && (
-                    <button 
-                      onClick={() => quickChangeStatus(order, 'completed')}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow flex items-center justify-center"
-                      title="Marcar como Concluído"
-                    >
-                      <CheckCircle2 size={14} />
-                    </button>
-                  )}
-                </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase">Rascunhos</p>
+                <p className="text-xl font-black text-gray-900 dark:text-white">{stats.draft}</p>
               </div>
             </div>
-          ))
+            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600">
+                <Clock size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase">Pendentes</p>
+                <p className="text-xl font-black text-gray-900 dark:text-white">{stats.pending}</p>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600">
+                <Factory size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase">Em Andamento</p>
+                <p className="text-xl font-black text-gray-900 dark:text-white">{stats.inProgress}</p>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600">
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase">Concluídos</p>
+                <p className="text-xl font-black text-gray-900 dark:text-white">{stats.completed}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters & Search */}
+          <div className="flex flex-col md:flex-row gap-3 bg-white dark:bg-gray-900 p-3 rounded-2xl border border-gray-100 dark:border-gray-800">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Buscar por número, pessoa ou empresa..." 
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-sm"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <select 
+                className="bg-gray-50 dark:bg-gray-800 text-sm font-semibold border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 dark:text-gray-300"
+                value={filterType}
+                onChange={e => setFilterType(e.target.value as any)}
+              >
+                <option value="all">Todos Tipos</option>
+                <option value="purchase">Compras</option>
+                <option value="sale">Vendas</option>
+                <option value="internal">Interno</option>
+              </select>
+              <select 
+                className="bg-gray-50 dark:bg-gray-800 text-sm font-semibold border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 dark:text-gray-300"
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value as any)}
+              >
+                <option value="all">Qualquer Status</option>
+                <option value="draft">Rascunhos</option>
+                <option value="pending_approval">Aguardando Aprov.</option>
+                <option value="approved">Aprovados</option>
+                <option value="in_progress">Em Andamento</option>
+                <option value="completed">Concluídos</option>
+              </select>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Orders & Links Grid */}
+      <div className="flex-1 overflow-y-auto pb-10">
+        {activeTab === 'links' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <button 
+              onClick={() => { setEditingLink(null); setLinkForm({ name: '', url: '', category: '', notes: '' }); setShowLinkModal(true); }}
+              className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-blue-600 hover:border-blue-500 hover:bg-blue-50/30 transition-all group"
+            >
+              <Plus size={32} className="group-hover:scale-110 transition-transform" />
+              <span className="font-bold">Adicionar Novo Link</span>
+            </button>
+            {purchasedMaterialLinks.map(link => (
+              <div key={link.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col group">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg">
+                    <ExternalLink size={20} />
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => { setEditingLink(link); setLinkForm({ ...link }); setShowLinkModal(true); }} className="p-1.5 text-gray-400 hover:text-blue-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"><FileText size={14} /></button>
+                    <button onClick={() => handleDeleteLink(link.id)} className="p-1.5 text-gray-400 hover:text-rose-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+                <h3 className="font-bold text-gray-900 dark:text-white mb-1 line-clamp-1">{link.name}</h3>
+                <p className="text-xs text-gray-500 mb-4 line-clamp-1">{new URL(link.url).hostname}</p>
+                <div className="mt-auto flex gap-2">
+                  <a 
+                    href={link.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                  >
+                    Acessar Link <ExternalLink size={14} />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredOrders.length === 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-20 opacity-40">
+                <ClipboardList size={64} className="mb-4" />
+                <p className="font-semibold text-lg">Nenhum pedido encontrado</p>
+                <p className="text-sm">Tente ajustar seus filtros ou mude de aba.</p>
+              </div>
+            ) : (
+              filteredOrders.map(order => (
+                <div key={order.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-0 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden">
+                  {/* Card Header */}
+                  <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                          {order.orderNumber || order.id.substring(0,8).toUpperCase()}
+                        </span>
+                        {order.priority !== 'normal' && (
+                          <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${getPriorityColor(order.priority)}`}>
+                            {order.priority}
+                          </span>
+                        )}
+                      </div>
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${getStatusColor(order.status)}`}>
+                        {getStatusLabel(order.status)}
+                      </span>
+                    </div>
+                    
+                    <h3 className="font-bold text-base text-gray-900 dark:text-white line-clamp-1 mb-1">
+                      {order.supplier ? `Para: ${order.supplier}` : order.requester}
+                    </h3>
+                    
+                    <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
+                      <div className="flex items-center gap-1">
+                        {getTypeIcon(order.type)} {getTypeLabel(order.type)}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Package size={14} /> {order.items.length} {order.items.length === 1 ? 'item' : 'itens'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Card Body */}
+                  <div className="p-4 flex-1 flex flex-col justify-center">
+                    <div className="space-y-2 mb-3">
+                      {order.items.slice(0, 3).map((item, idx) => (
+                        <div key={item.id || idx} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-400">
+                          <span className="truncate flex-1 pr-2">- {item.description}</span>
+                          <span className="font-mono text-[10px] text-gray-400 whitespace-nowrap">{item.quantity} {item.unit}</span>
+                        </div>
+                      ))}
+                      {order.items.length > 3 && (
+                        <p className="text-[10px] text-gray-400 italic mt-1 font-medium bg-gray-50 dark:bg-gray-800/50 inline-block px-2 py-0.5 rounded">
+                          + {order.items.length - 3} outros itens
+                        </p>
+                      )}
+                    </div>
+                  </div>
+    
+                  {/* Card Footer */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex justify-between items-center mb-3">
+                      <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
+                        <Clock size={12} />
+                        {new Date(order.date).toLocaleDateString('pt-BR')}
+                      </div>
+                      {(order.totalValue || 0) > 0 && (
+                        <div className="font-bold text-sm text-gray-900 dark:text-white">
+                          {formatCurrency(order.totalValue)}
+                        </div>
+                      )}
+                    </div>
+    
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setViewDetailOrder(order)}
+                        className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-500 text-gray-700 dark:text-gray-300 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                      >
+                        Ver Detalhes
+                      </button>
+                      
+                      {activeTab === 'active' && (
+                        <>
+                          {order.status === 'draft' && (
+                            <button 
+                              onClick={() => quickChangeStatus(order, 'pending_approval')}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow flex items-center justify-center"
+                              title="Enviar para Aprovação"
+                            >
+                              <Check size={14} />
+                            </button>
+                          )}
+                          {order.status === 'in_progress' && (
+                            <button 
+                              onClick={() => quickChangeStatus(order, 'completed')}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow flex items-center justify-center"
+                              title="Marcar como Concluído"
+                            >
+                              <CheckCircle2 size={14} />
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => handleDeleteOrder(order.id)}
+                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                            title="Mover para Lixeira"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
+
+                      {activeTab === 'trash' && (
+                        <>
+                          <button 
+                            onClick={() => handleRestoreOrder(order.id)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow flex items-center justify-center gap-1"
+                          >
+                            <RefreshCw size={14} /> Restaurar
+                          </button>
+                          <button 
+                            onClick={() => handlePermanentDelete(order.id)}
+                            className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow flex items-center justify-center"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         )}
       </div>
 
@@ -1269,6 +1439,176 @@ export const OrdersModule: React.FC<OrdersModuleProps> = ({
                 disabled={!formState.requester || !formState.items?.length}
               >
                 <Check size={18} /> Salvar Pedido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fulfillment Modal */}
+      {fulfillmentOrder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col shadow-2xl border border-gray-200 dark:border-gray-800">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/20">
+              <h3 className="font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-2">
+                <CheckCircle2 size={20} /> Conferência de Recebimento
+              </h3>
+              <button onClick={() => setFulfillmentOrder(null)} className="p-2 text-gray-400 hover:text-gray-700"><XCircle size={20} /></button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <p className="text-sm text-gray-500 mb-4 font-medium italic bg-amber-50 dark:bg-amber-900/10 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                Marque cada item como "Recebido" ou "Faltante" para concluir o pedido. 
+                Os itens faltantes serão registrados no histórico.
+              </p>
+              <div className="space-y-3">
+                {fulfillmentOrder.items.map(item => (
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 transition-all">
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-900 dark:text-white text-sm">{item.description}</p>
+                      <p className="text-[10px] text-gray-500 font-mono">{item.quantity} {item.unit}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          const updatedItems = fulfillmentOrder.items.map(i => i.id === item.id ? { ...i, fulfillment: 'received' as any } : i);
+                          setFulfillmentOrder({ ...fulfillmentOrder, items: updatedItems });
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                          item.fulfillment === 'received' 
+                            ? 'bg-emerald-600 text-white' 
+                            : 'bg-white dark:bg-gray-700 text-gray-500 border border-gray-200 dark:border-gray-600 hover:border-emerald-500'
+                        }`}
+                      >
+                        <Check size={14} /> Recebido
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const updatedItems = fulfillmentOrder.items.map(i => i.id === item.id ? { ...i, fulfillment: 'missing' as any } : i);
+                          setFulfillmentOrder({ ...fulfillmentOrder, items: updatedItems });
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                          item.fulfillment === 'missing' 
+                            ? 'bg-rose-600 text-white' 
+                            : 'bg-white dark:bg-gray-700 text-gray-400 border border-gray-200 dark:border-gray-600 hover:border-rose-500'
+                        }`}
+                      >
+                        <XCircle size={14} /> Faltante
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-6 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+              <button 
+                onClick={() => setFulfillmentOrder(null)}
+                className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                disabled={fulfillmentOrder.items.some(i => i.fulfillment === 'pending' || !i.fulfillment)}
+                onClick={() => handleCompleteOrder(fulfillmentOrder, fulfillmentOrder.items)}
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                Finalizar Recebimento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Material Link Modal */}
+      {showLinkModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-800">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="font-bold flex items-center gap-2"><ExternalLink size={20} className="text-blue-500" /> {editingLink ? 'Editar' : 'Novo'} Link de Material</h3>
+              <button onClick={() => setShowLinkModal(false)} className="p-2 text-gray-400 hover:text-gray-700"><XCircle size={20} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Nome do Material</label>
+                <input 
+                  type="text" 
+                  value={linkForm.name}
+                  onChange={e => setLinkForm({ ...linkForm, name: e.target.value })}
+                  placeholder="Ex: Luva de Proteção Nitrílica"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">URL (Link)</label>
+                <input 
+                  type="text" 
+                  value={linkForm.url}
+                  onChange={e => setLinkForm({ ...linkForm, url: e.target.value })}
+                  placeholder="https://exemplo.com/produto"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Categoria (Opcional)</label>
+                <input 
+                  type="text" 
+                  value={linkForm.category}
+                  onChange={e => setLinkForm({ ...linkForm, category: e.target.value })}
+                  placeholder="Ex: EPI, Elétrica, Hidráulica"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-sm"
+                />
+              </div>
+            </div>
+            <div className="p-6 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowLinkModal(false)}
+                className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSaveLink}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all"
+              >
+                Salvar Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal (existing) */}
+      {showExport && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-800">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="font-bold flex items-center gap-2"><Download size={20} className="text-blue-500" /> Exportar Pedidos</h3>
+              <button onClick={() => setShowExport(false)} className="p-2 text-gray-400 hover:text-gray-700"><XCircle size={20} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">De</label>
+                  <input type="date" value={exportDateFrom} onChange={e => setExportDateFrom(e.target.value)} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-sm" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Até</label>
+                  <input type="date" value={exportDateTo} onChange={e => setExportDateTo(e.target.value)} className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Agrupar por</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => setExportGroupBy('type')} className={`py-2 rounded-xl text-xs font-bold transition-all ${exportGroupBy === 'type' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>Tipo de Pedido</button>
+                  <button onClick={() => setExportGroupBy('requester')} className={`py-2 rounded-xl text-xs font-bold transition-all ${exportGroupBy === 'requester' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>Solicitante</button>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+              <button 
+                onClick={exportToXLSX}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2"
+              >
+                <Download size={18} /> Gerar Excel (.xlsx)
               </button>
             </div>
           </div>

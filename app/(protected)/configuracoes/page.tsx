@@ -9,7 +9,7 @@ const SettingsModuleComp = dynamic(() => import('@/components/SettingsModule').t
 });
 
 export default function ConfiguracoesPage() {
-  const { user, setUser, handleLogout, companySettings, saveCompanySettings } = useAppContext();
+  const { user, setUser, handleLogout, companySettings, saveCompanySettings, calendarConfig, setCalendarConfig } = useAppContext();
 
   if (!user) return <LoadingPlaceholder />;
 
@@ -20,6 +20,8 @@ export default function ConfiguracoesPage() {
       onLogout={handleLogout}
       companySettings={companySettings}
       onCompanySettingsChange={saveCompanySettings}
+      calendarConfig={calendarConfig}
+      onCalendarConfigChange={setCalendarConfig}
     />
   );
 }

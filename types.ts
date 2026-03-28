@@ -129,6 +129,7 @@ export interface OrderItem {
   quantity: number;
   unitPrice?: number;         // preço unitário (opcional)
   warehouseItemId?: string;   // vínculo opcional ao estoque
+  fulfillment?: 'received' | 'missing' | 'pending'; // novo: rastreio de entrega
 }
 
 export interface StatusHistoryEntry {
@@ -152,6 +153,18 @@ export interface OrderAnnotation {
   priority: OrderPriority;
   totalValue?: number;
   statusHistory?: StatusHistoryEntry[];
+  deletedAt?: string;         // novo: para lixeira
+  archived?: boolean;         // novo: para histórico
+}
+
+// Materiais Comprados (Biblioteca de Links)
+export interface PurchasedMaterialLink {
+  id: string;
+  name: string;
+  url: string;
+  category?: string;
+  notes?: string;
+  createdAt: string;
 }
 
 // Professional Links Types
@@ -383,6 +396,7 @@ export interface AppData {
   warehouseLogs?: any[];
   warehouseCategories?: any[];
   orderAnnotations?: OrderAnnotation[];
+  purchasedMaterialLinks?: PurchasedMaterialLink[];
   logistics?: LogisticsState;
   hiddenTabs?: string[];
 }
