@@ -81,6 +81,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [purchasedMaterialLinks, setPurchasedMaterialLinks] = useState<PurchasedMaterialLink[]>([]);
 
   const initializedTables = useRef<Set<string>>(new Set());
+  const lastLoadedUserId = useRef<string | null>(null);
 
   // Supabase Auth and Data Loading
   useEffect(() => {
@@ -96,8 +97,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         });
       } else {
         const demoSession = localStorage.getItem('ysoffice_demo_session');
-        if (demoSession) setUser(JSON.parse(demoSession));
-        else setIsDataLoaded(true);
+        if (demoSession) {
+          setUser(JSON.parse(demoSession));
+        } else {
+          setIsDataLoaded(true);
+        }
       }
     };
 
@@ -111,6 +115,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           photoUrl: session.user.user_metadata.avatar_url,
           googleAccessToken: session.provider_token
         });
+      } else {
+        setUser(null);
+        setIsDataLoaded(false);
       }
     });
 
@@ -119,8 +126,14 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Sync Logic (Fetch)
   useEffect(() => {
-    if (!user) { setIsDataLoaded(false); return; }
-    if (isDataLoaded) return;
+    if (!user) {
+      lastLoadedUserId.current = null;
+      initializedTables.current.clear();
+      setIsDataLoaded(false); 
+      return; 
+    }
+    
+    if (isDataLoaded && lastLoadedUserId.current === user.id) return;
 
     const fetchData = async () => {
       setIsSyncing(true);
@@ -311,12 +324,18 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           if (files.data) { initializedTables.current.add('personal_files'); setPersonalFiles(files.data); }
           if (flow.data) { initializedTables.current.add('flow_builder_states'); setFlowData(flow.data.payload || initialFlow); }
         }
-      } catch (err) { console.error('Error loading data', err); }
-      finally { setIsSyncing(false); setIsDataLoaded(true); }
+ 
+        lastLoadedUserId.current = user.id;
+      } catch (err) { 
+        console.error('Error loading data', err); 
+      } finally { 
+        setIsSyncing(false); 
+        setIsDataLoaded(true); 
+      }
     };
-
+ 
     fetchData();
-  }, [user?.id]);
+  }, [user?.id, isDataLoaded]);
 
   // Data Save Effect
   useEffect(() => {
