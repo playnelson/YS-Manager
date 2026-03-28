@@ -235,8 +235,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             initializedTables.current.add('warehouse_inventory');
             if (whInv.data.length > 0) {
               setWarehouseInventory(whInv.data.map((i: any) => ({
-                id: i.id, code: i.code, name: i.name, category: i.category, consumable: i.consumable ?? false, 
-                quantity: parseFloat(i.quantity) || 0, minStock: parseFloat(i.min_stock) || 0, unit: i.unit, 
+                id: i.id, 
+                itemId: i.id, // Adicionado para compatibilidade com componentes
+                code: i.code, 
+                name: i.name, 
+                category: i.category, 
+                consumable: i.consumable ?? false, 
+                quantity: parseFloat(i.quantity) || 0, 
+                minStock: parseFloat(i.min_stock) || 0, 
+                unit: i.unit, 
                 itemsPerContainer: parseFloat(i.items_per_container) || 1, 
                 lastUpdated: i.last_updated
               })));
@@ -252,8 +259,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           if (whLogs.data) {
             initializedTables.current.add('warehouse_logs');
             setWarehouseLogs(whLogs.data.map((l: any) => ({
-              id: l.id, itemId: l.item_id, type: l.type, quantity: parseFloat(l.quantity) || 0, employeeId: l.employee_id || '', 
-              employeeName: l.employee_name, note: l.note, date: l.date, itemCode: l.item_code || '', itemName: l.item_name || ''
+              id: l.id, 
+              itemId: l.item_id || l.id, 
+              type: l.type, 
+              quantity: parseFloat(l.quantity) || 0, 
+              employeeId: l.employee_id || '', 
+              employeeName: l.employee_name, 
+              note: l.note, 
+              date: l.date, 
+              itemCode: l.item_code || '', 
+              itemName: l.item_name || ''
             })));
           }
 
