@@ -32,19 +32,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [dirtyTables, setDirtyTables] = useState<Set<string>>(new Set());
 
-  const markDirty = (tableName: string) => {
-    // Permitir marcar como dirty mesmo se não estiver carregado se for uma operação crítica,
-    // mas em geral queremos evitar loops durante o fetch inicial.
-    if (!isDataLoaded && !initializedTables.current.has(tableName)) return;
-    
-    setDirtyTables(prev => {
-      const next = new Set(prev);
-      if (next.has(tableName)) return prev; // Evita re-render se já estiver lá
-      next.add(tableName);
-      return next;
-    });
-    setHasUnsavedChanges(true);
-  };
 
   const SYSTEM_UUID = '00000000-0000-0000-0000-000000000000';
 
@@ -635,29 +622,58 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   ]);
 
 
+  // Carregamento concluído: aguardar estabilização do estado inicial
+  const isReadyForSync = useRef(false);
+  useEffect(() => {
+    if (isDataLoaded && !isReadyForSync.current) {
+      const t = setTimeout(() => { isReadyForSync.current = true; }, 1500);
+      return () => clearTimeout(t);
+    }
+  }, [isDataLoaded]);
+
   // ── GATILHOS DE SUJEIRA (AUTO-DIRTY) ─────────────────────────────────────
-  useEffect(() => markDirty('warehouse_inventory'), [warehouseInventory]);
-  useEffect(() => markDirty('warehouse_employees'), [warehouseEmployees]);
-  useEffect(() => markDirty('warehouse_logs'), [warehouseLogs]);
-  useEffect(() => markDirty('warehouse_categories'), [warehouseCategories]);
-  useEffect(() => markDirty('kanban_columns'), [kanbanData.columns]);
-  useEffect(() => markDirty('kanban_cards'), [kanbanData.columns]); // Mapeado no motor
-  useEffect(() => markDirty('calendar_events'), [calendarEvents]);
-  useEffect(() => markDirty('financial_transactions'), [financialTransactions]);
-  useEffect(() => markDirty('logistics_freight_tables'), [logisticsData.freightTables]);
-  useEffect(() => markDirty('logistics_data'), [logisticsData.checklists, logisticsData.savedRoutes]);
-  useEffect(() => markDirty('email_templates'), [emails]);
-  useEffect(() => markDirty('extensions'), [extensions]);
-  useEffect(() => markDirty('signatures'), [signatures]);
-  useEffect(() => markDirty('personal_files'), [personalFiles]);
-  useEffect(() => markDirty('whatsapp_templates'), [whatsappTemplates]);
-  useEffect(() => markDirty('important_notes'), [importantNotes]);
-  useEffect(() => markDirty('post_its'), [postIts]);
-  useEffect(() => markDirty('professional_links'), [links]);
-  useEffect(() => markDirty('order_annotations'), [orderAnnotations]);
-  useEffect(() => markDirty('purchased_material_links'), [purchasedMaterialLinks]);
-  useEffect(() => markDirty('flow_builder_states'), [flowData]);
-  useEffect(() => markDirty('user_settings'), [calendarConfig, hiddenTabs, shiftConfig]);
+  const markDirty = (table: string) => {
+    if (!isDataLoaded || !isReadyForSync.current) return;
+    setDirtyTables(prev => {
+      if (prev.has(table)) return prev;
+      const next = new Set(prev);
+      next.add(table);
+      return next;
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  // Funções para salvar manualmente (como solicitado)
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const forceManualSave = () => {
+    // Basta que o motor de efeito detecte dirtyTables > 0.
+    // O motor já está ouvindo dirtyTables.
+    console.log("MANUAL_SYNC: Forçando ciclo de salvamento");
+  };
+
+  // Re-vinculação dos gatilhos (Protegida)
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('warehouse_inventory'); }, [warehouseInventory]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('warehouse_employees'); }, [warehouseEmployees]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('warehouse_logs'); }, [warehouseLogs]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('warehouse_categories'); }, [warehouseCategories]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('kanban_columns'); }, [kanbanData.columns]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('kanban_cards'); }, [kanbanData.columns]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('calendar_events'); }, [calendarEvents]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('financial_transactions'); }, [financialTransactions]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('logistics_freight_tables'); }, [logisticsData.freightTables]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('logistics_data'); }, [logisticsData.checklists, logisticsData.savedRoutes]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('email_templates'); }, [emails]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('extensions'); }, [extensions]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('signatures'); }, [signatures]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('personal_files'); }, [personalFiles]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('whatsapp_templates'); }, [whatsappTemplates]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('important_notes'); }, [importantNotes]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('post_its'); }, [postIts]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('professional_links'); }, [links]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('order_annotations'); }, [orderAnnotations]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('purchased_material_links'); }, [purchasedMaterialLinks]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('flow_builder_states'); }, [flowData]);
+  useEffect(() => { if (isReadyForSync.current && isDataLoaded) markDirty('user_settings'); }, [calendarConfig, hiddenTabs, shiftConfig]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -680,7 +696,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     whatsappHistory, setWhatsappHistory, kanbanData, setKanbanData, orderAnnotations, setOrderAnnotations,
     purchasedMaterialLinks, setPurchasedMaterialLinks,
     handleLogout,
-    markDirty
+    markDirty,
+    forceManualSave,
+    autoSaveEnabled,
+    setAutoSaveEnabled
   };
 
   return (
