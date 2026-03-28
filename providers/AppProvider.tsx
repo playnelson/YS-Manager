@@ -133,7 +133,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       return; 
     }
     
-    if (isDataLoaded && lastLoadedUserId.current === user.id) return;
+    if (lastLoadedUserId.current === user.id) return;
 
     const fetchData = async () => {
       setIsSyncing(true);
@@ -169,9 +169,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           const safeFetch = async (query: any, tableName: string) => {
             try {
               const res = await query;
-              if (res.error) return { data: null, error: res.error };
+              if (res.error) {
+                console.warn(`Fetch warning for ${tableName}:`, res.error);
+                return { data: null, error: res.error };
+              }
               return res;
             } catch (e) {
+              console.error(`Fetch crash for ${tableName}:`, e);
               return { data: null, error: e };
             }
           };
@@ -326,8 +330,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         }
  
         lastLoadedUserId.current = user.id;
+        setHasUnsavedChanges(false);
+        console.log("Environment loaded for user:", user.id);
       } catch (err) { 
         console.error('Error loading data', err); 
+        lastLoadedUserId.current = user.id; // Still set to prevent infinite retry loops
       } finally { 
         setIsSyncing(false); 
         setIsDataLoaded(true); 
@@ -335,7 +342,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     };
  
     fetchData();
-  }, [user?.id, isDataLoaded]);
+  }, [user?.id]);
 
   // Data Save Effect
   useEffect(() => {
