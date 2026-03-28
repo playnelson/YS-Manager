@@ -30,6 +30,17 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [dirtyTables, setDirtyTables] = useState<Set<string>>(new Set());
+
+  const markDirty = (tableName: string) => {
+    if (!isDataLoaded) return;
+    setDirtyTables(prev => {
+      const next = new Set(prev);
+      next.add(tableName);
+      return next;
+    });
+    setHasUnsavedChanges(true);
+  };
 
   const SYSTEM_UUID = '00000000-0000-0000-0000-000000000000';
 
@@ -140,11 +151,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
     
     // Force clean data fetch on each user identification
-    console.log("Identifying user and cleaning loading state for:", user.id);
+    console.log("IDENTIDADE_YURI: User ID:", user.id);
     
     const fetchData = async () => {
       setIsSyncing(true);
-      setIsDataLoaded(false); // Reset while loading new user
+      setIsDataLoaded(false);
+      console.log("SINC_YURI: Iniciando fetch para", user.id);
       try {
         if (user.id === 'demo_user_id') {
           const saved = localStorage.getItem('ysoffice_demo_data');
@@ -422,125 +434,139 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     return () => clearTimeout(timeout);
   }, [calendarConfig, hiddenTabs, shiftConfig, isSidebarCollapsed]);
 
-  // Warehouse Sync
+  // ── MOTOR DE SINCRONIZAÇÃO CENTRALIZADO ──────────────────────────────────
   useEffect(() => {
-    if (!user || !isDataLoaded) return;
-    const timeout = setTimeout(() => {
-      if (hasUnsavedChanges) {
-        setIsSyncing(true);
-        Promise.all([
-          syncTableData('warehouse_inventory', warehouseInventory.map(i => ({ id: i.id, user_id: user.id, code: i.code, name: i.name, category: i.category, quantity: i.quantity, min_stock: i.minStock, unit: i.unit, consumable: i.consumable, items_per_container: i.itemsPerContainer || 1, last_updated: i.lastUpdated }))),
-          syncTableData('warehouse_employees', warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active, cpf: e.cpf }))),
-          syncTableData('warehouse_logs', warehouseLogs.map(l => ({ 
-            id: l.id, 
-            user_id: user.id, 
-            item_id: l.itemId, 
-            item_code: l.itemCode, 
-            item_name: l.itemName, 
-            type: l.type, 
-            quantity: l.quantity, 
-            employee_id: (l.employeeId === 'system' || !l.employeeId) ? SYSTEM_UUID : l.employeeId, 
-            employee_name: l.employeeName || 'Sistema', 
-            note: l.note, 
-            date: l.date 
-          }))),
-          syncTableData('warehouse_categories', warehouseCategories.map(c => ({ id: c.id, user_id: user.id, name: c.name, color: c.color })))
-        ]).finally(() => { 
-          setIsSyncing(false); 
-          setHasUnsavedChanges(false); 
-          setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
+    if (!user || !isDataLoaded || dirtyTables.size === 0) return;
+
+    const timeout = setTimeout(async () => {
+      setIsSyncing(true);
+      const tablesToSave = Array.from(dirtyTables);
+      console.log("MOTOR_SYNC: Salvando tabelas sujas:", tablesToSave);
+
+      try {
+        const savePromises = tablesToSave.map(async (table) => {
+          let dataToSave: any[] = [];
+          
+          // Mapeamento de estado para banco (toDB)
+          switch (table) {
+            case 'warehouse_inventory':
+              dataToSave = warehouseInventory.map(i => ({ id: i.id, user_id: user.id, code: i.code, name: i.name, category: i.category, quantity: i.quantity, min_stock: i.minStock, unit: i.unit, consumable: i.consumable, items_per_container: i.itemsPerContainer || 1, last_updated: i.lastUpdated }));
+              break;
+            case 'warehouse_employees':
+              dataToSave = warehouseEmployees.map(e => ({ id: e.id, user_id: user.id, name: e.name, role: e.role, department: e.department, active: e.active, cpf: e.cpf }));
+              break;
+            case 'warehouse_logs':
+              dataToSave = warehouseLogs.map(l => ({ id: l.id, user_id: user.id, item_id: l.itemId, item_code: l.itemCode, item_name: l.itemName, type: l.type, quantity: l.quantity, employee_id: (l.employeeId === 'system' || !l.employeeId) ? SYSTEM_UUID : l.employeeId, employee_name: l.employeeName || 'Sistema', note: l.note, date: l.date }));
+              break;
+            case 'user_settings':
+              await supabase.from('user_settings').upsert({ user_id: user.id, calendar_config: calendarConfig, hidden_tabs: hiddenTabs, shift_config: shiftConfig, sidebar_collapsed: isSidebarCollapsed, updated_at: new Date().toISOString() });
+              return; // Upsert direto
+            case 'kanban_columns':
+              dataToSave = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
+              break;
+            case 'kanban_cards':
+              dataToSave = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ id: card.id, user_id: user.id, column_id: col.id, order: idx, title: card.title, description: card.description || '', priority: card.priority || 'medium', due_date: card.dueDate, labels: card.labels || [], created_at: card.createdAt || new Date().toISOString() })));
+              break;
+            case 'calendar_events':
+              dataToSave = calendarEvents.map(e => ({ id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description }));
+              break;
+            case 'financial_transactions':
+              dataToSave = financialTransactions.map(t => ({ id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date }));
+              break;
+            case 'logistics_freight_tables':
+              dataToSave = logisticsData.freightTables.map(t => ({ id: t.id, user_id: user.id, name: t.name, fuel_price: t.fuelPrice, avg_consumption: t.avgConsumption, driver_per_dieum: t.driverPerDieum, insurance_rate: t.insuranceRate, updated_at: t.updatedAt }));
+              break;
+            case 'email_templates':
+              dataToSave = emails.map(e => ({ id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt }));
+              break;
+            case 'extensions':
+              dataToSave = extensions.map(e => ({ id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes }));
+              break;
+            case 'signatures':
+              dataToSave = signatures.map(s => ({ id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt }));
+              break;
+            case 'personal_files':
+              dataToSave = personalFiles.map(f => ({ id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt }));
+              break;
+            case 'whatsapp_templates':
+              dataToSave = whatsappTemplates.map(t => ({ id: t.id, user_id: user.id, title: t.title, content: t.content }));
+              break;
+            case 'important_notes':
+              dataToSave = importantNotes.map(n => ({ id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt }));
+              break;
+            case 'post_its':
+              dataToSave = postIts.map(p => ({ id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation }));
+              break;
+            case 'professional_links':
+              dataToSave = links.map(l => ({ id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon }));
+              break;
+            case 'order_annotations':
+              dataToSave = orderAnnotations.map(o => ({ id: o.id, user_id: user.id, order_number: o.orderNumber, type: o.type, requester: o.requester, date: o.date, items: o.items, status: o.status }));
+              break;
+            case 'purchased_material_links':
+              dataToSave = purchasedMaterialLinks.map(p => ({ id: p.id, user_id: user.id, name: p.name, url: p.url, category: p.category, created_at: p.createdAt }));
+              break;
+            case 'flow_builder_states':
+              await supabase.from('flow_builder_states').upsert({ user_id: user.id, payload: flowData });
+              return;
+            case 'logistics_data':
+              await supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes });
+              return;
+            case 'warehouse_categories':
+              dataToSave = warehouseCategories.map(c => ({ id: c.id, user_id: user.id, name: c.name, color: c.color }));
+              break;
+          }
+
+          if (dataToSave.length > 0 || table === 'user_settings') {
+             await syncTableData(table, dataToSave);
+          }
         });
+
+        await Promise.all(savePromises);
+        setDirtyTables(new Set()); // Limpa após sucesso
+        setHasUnsavedChanges(false);
+        setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
+      } catch (err) {
+        console.error("MOTOR_SYNC: Erro fatal na sincronização:", err);
+      } finally {
+        setIsSyncing(false);
       }
     }, 3000);
-    return () => clearTimeout(timeout);
-  }, [warehouseInventory, warehouseEmployees, warehouseLogs, warehouseCategories]);
 
-  // Kanban & Flow Sync
-  useEffect(() => {
-    if (!user || !isDataLoaded) return;
-    const timeout = setTimeout(() => {
-      if (hasUnsavedChanges) {
-        setIsSyncing(true);
-        const kanbanCols = kanbanData.columns.map((col, idx) => ({ id: col.id, user_id: user.id, title: col.title, color: col.color, order: idx }));
-        const kanbanCards = kanbanData.columns.flatMap(col => col.cards.map((card, idx) => ({ 
-            id: card.id, user_id: user.id, column_id: col.id, order: idx, title: card.title, description: card.description || '', priority: card.priority || 'medium', due_date: card.dueDate, labels: card.labels || [], created_at: card.createdAt || new Date().toISOString()
-        })));
-
-        Promise.all([
-          syncTableData('kanban_columns', kanbanCols),
-          syncTableData('kanban_cards', kanbanCards),
-          syncTableData('flow_builder_states', [{ user_id: user.id, payload: flowData }], 'flow_builder_states')
-        ]).finally(() => { 
-          setIsSyncing(false); 
-          setHasUnsavedChanges(false);
-          setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
-        });
-      }
-    }, 4000);
     return () => clearTimeout(timeout);
-  }, [kanbanData, flowData]);
+  }, [
+    dirtyTables, warehouseInventory, warehouseEmployees, warehouseLogs, 
+    calendarConfig, hiddenTabs, shiftConfig, isSidebarCollapsed,
+    kanbanData, calendarEvents, financialTransactions, logisticsData,
+    emails, extensions, signatures, personalFiles, whatsappTemplates,
+    importantNotes, postIts, links, orderAnnotations, purchasedMaterialLinks,
+    flowData, warehouseCategories
+  ]);
 
-  // Logistics & Finance Sync
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!user || !isDataLoaded || !hasUnsavedChanges) return;
-      setIsSyncing(true);
-      const logisticsFreightToSave = logisticsData.freightTables.map(t => ({
-        id: t.id, user_id: user.id, name: t.name, fuel_price: t.fuelPrice, avg_consumption: t.avgConsumption, driver_per_dieum: t.driverPerDieum, insurance_rate: t.insuranceRate, updated_at: t.updatedAt
-      }));
-      Promise.all([
-        syncTableData('financial_transactions', financialTransactions.map(t => ({ id: t.id, user_id: user.id, description: t.description, amount: t.amount, type: t.type, category: t.category, date: t.date }))),
-        syncTableData('logistics_freight_tables', logisticsFreightToSave, 'logistics'),
-        initializedTables.current.has('logistics') && safeSave(supabase.from('logistics_data').upsert({ user_id: user.id, checklists: logisticsData.checklists, saved_routes: logisticsData.savedRoutes }), 'logistics_data')
-      ]).finally(() => { 
-        setIsSyncing(false); 
-        setHasUnsavedChanges(false);
-        setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
-      });
-    }, 6000);
-    return () => clearTimeout(timeout);
-  }, [financialTransactions, logisticsData]);
 
-  // Communication & Files Sync
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!user || !isDataLoaded || !hasUnsavedChanges) return;
-      setIsSyncing(true);
-      Promise.all([
-        syncTableData('email_templates', emails.map(e => ({ id: e.id, user_id: user.id, name: e.name, category: e.category, subject: e.subject, body: e.body, to: e.to, cc: e.cc, saved_at: e.savedAt }))),
-        syncTableData('extensions', extensions.map(e => ({ id: e.id, user_id: user.id, name: e.name, department: e.department, number: e.number, notes: e.notes }))),
-        syncTableData('signatures', signatures.map(s => ({ id: s.id, user_id: user.id, name: s.name, data_url: s.dataUrl, created_at: s.createdAt }))),
-        syncTableData('personal_files', personalFiles.map(f => ({ id: f.id, user_id: user.id, name: f.name, type: f.type, size: f.size, data: f.data, category: f.category, uploaded_at: f.uploadedAt }))),
-        syncTableData('whatsapp_templates', whatsappTemplates.map(t => ({ id: t.id, user_id: user.id, title: t.title, content: t.content })))
-      ]).finally(() => { 
-        setIsSyncing(false); 
-        setHasUnsavedChanges(false);
-        setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
-      });
-    }, 7000);
-    return () => clearTimeout(timeout);
-  }, [emails, extensions, signatures, personalFiles, whatsappTemplates]);
-
-  // Others & Documents Sync
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!user || !isDataLoaded || !hasUnsavedChanges) return;
-      setIsSyncing(true);
-      Promise.all([
-        syncTableData('calendar_events', calendarEvents.map(e => ({ id: e.id, user_id: user.id, date: e.date, title: e.title, type: e.type, description: e.description }))),
-        syncTableData('important_notes', importantNotes.map(n => ({ id: n.id, user_id: user.id, title: n.title, content: n.content, category: n.category, priority: n.priority, updated_at: n.updatedAt }))),
-        syncTableData('post_its', postIts.map(p => ({ id: p.id, user_id: user.id, text: p.text, color: p.color, rotation: p.rotation }))),
-        syncTableData('professional_links', links.map(l => ({ id: l.id, user_id: user.id, title: l.title, url: l.url, category: l.category, custom_icon: l.customIcon }))),
-        syncTableData('order_annotations', orderAnnotations.map(o => ({ id: o.id, user_id: user.id, order_number: o.orderNumber, type: o.type, requester: o.requester, date: o.date, items: o.items, status: o.status }))),
-        syncTableData('purchased_material_links', purchasedMaterialLinks.map(p => ({ id: p.id, user_id: user.id, name: p.name, url: p.url, category: p.category, created_at: p.createdAt })))
-      ]).finally(() => { 
-        setIsSyncing(false); 
-        setHasUnsavedChanges(false); 
-        setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
-      });
-    }, 8000);
-    return () => clearTimeout(timeout);
-  }, [calendarEvents, importantNotes, postIts, links, orderAnnotations, purchasedMaterialLinks]);
+  // ── GATILHOS DE SUJEIRA (AUTO-DIRTY) ─────────────────────────────────────
+  useEffect(() => markDirty('warehouse_inventory'), [warehouseInventory]);
+  useEffect(() => markDirty('warehouse_employees'), [warehouseEmployees]);
+  useEffect(() => markDirty('warehouse_logs'), [warehouseLogs]);
+  useEffect(() => markDirty('warehouse_categories'), [warehouseCategories]);
+  useEffect(() => markDirty('kanban_columns'), [kanbanData.columns]);
+  useEffect(() => markDirty('kanban_cards'), [kanbanData.columns]); // Simplified
+  useEffect(() => markDirty('calendar_events'), [calendarEvents]);
+  useEffect(() => markDirty('financial_transactions'), [financialTransactions]);
+  useEffect(() => markDirty('logistics_freight_tables'), [logisticsData.freightTables]);
+  useEffect(() => markDirty('logistics_data'), [logisticsData.checklists, logisticsData.savedRoutes]);
+  useEffect(() => markDirty('email_templates'), [emails]);
+  useEffect(() => markDirty('extensions'), [extensions]);
+  useEffect(() => markDirty('signatures'), [signatures]);
+  useEffect(() => markDirty('personal_files'), [personalFiles]);
+  useEffect(() => markDirty('whatsapp_templates'), [whatsappTemplates]);
+  useEffect(() => markDirty('important_notes'), [importantNotes]);
+  useEffect(() => markDirty('post_its'), [postIts]);
+  useEffect(() => markDirty('professional_links'), [links]);
+  useEffect(() => markDirty('order_annotations'), [orderAnnotations]);
+  useEffect(() => markDirty('purchased_material_links'), [purchasedMaterialLinks]);
+  useEffect(() => markDirty('flow_builder_states'), [flowData]);
+  useEffect(() => markDirty('user_settings'), [calendarConfig, hiddenTabs, shiftConfig, isSidebarCollapsed]);
 
   const handleLogout = async () => {
     if (user?.id !== 'demo_user_id') await supabase.auth.signOut();
@@ -562,7 +588,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     warehouseCategories, setWarehouseCategories, whatsappTemplates, setWhatsappTemplates,
     whatsappHistory, setWhatsappHistory, kanbanData, setKanbanData, orderAnnotations, setOrderAnnotations,
     purchasedMaterialLinks, setPurchasedMaterialLinks,
-    handleLogout
+    handleLogout,
+    markDirty
   };
 
   return (

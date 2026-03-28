@@ -233,15 +233,28 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       <footer className="w-full bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-auto flex-shrink-0">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>deployed_code</span>
-            LogB &copy; {new Date().getFullYear()}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>deployed_code</span>
+              LogB &copy; {new Date().getFullYear()}
+            </p>
+            <p className="text-[10px] font-mono text-gray-400 dark:text-gray-600 flex items-center gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>fingerprint</span>
+              ID: <span className="select-all cursor-copy hover:text-blue-500 transition-colors" title="Clique para copiar seu ID de Usuário">{user.id}</span>
+            </p>
+          </div>
+          
           <div className="flex items-center gap-4 text-sm text-gray-400 dark:text-gray-500">
-            <span>Versão 1.2.0</span>
+            <div className="flex flex-col items-end gap-1">
+               <span className="text-[11px] font-medium tracking-wide">VERSÃO 1.2.5 [NORMALIZED]</span>
+               {lastSavedAt && (
+                 <span className="text-[10px] text-emerald-500/80 font-mono">Última: {lastSavedAt}</span>
+               )}
+            </div>
             <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
-            <span className="flex items-center gap-1">
-              Status: <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="flex items-center gap-2 px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800/50">
+              <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-blue-500 animate-pulse' : 'bg-emerald-500'}`}></span>
+              <span className="text-xs font-semibold">{isSyncing ? 'SINCRONIZANDO...' : 'SINC. OK'}</span>
             </span>
           </div>
         </div>
