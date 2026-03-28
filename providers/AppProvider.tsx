@@ -91,7 +91,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     const refreshAndGetSession = async () => {
       try { await supabase.auth.refreshSession(); } catch (e) { }
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (session?.user) {
+        // Limpar qualquer resquício de sessão demo se o usuário estiver realmente logado
+        localStorage.removeItem('ysoffice_demo_session');
         setUser({
           id: session.user.id,
           nick: session.user.user_metadata.username || session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'Usuário',
@@ -136,11 +139,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       return; 
     }
     
-    if (lastLoadedUserId.current === user.id) {
-      setIsDataLoaded(true);
-      return;
-    }
-
+    // Force clean data fetch on each user identification
+    console.log("Identifying user and cleaning loading state for:", user.id);
+    
     const fetchData = async () => {
       setIsSyncing(true);
       setIsDataLoaded(false); // Reset while loading new user
