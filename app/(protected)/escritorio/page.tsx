@@ -24,7 +24,6 @@ export default function EscritorioPage() {
         importantNotes={importantNotes} onNoteChange={setImportantNotes}
         handoffs={shiftHandoffs} onHandoffChange={setShiftHandoffs}
         currentUser={user} links={links} onLinkChange={setLinks}
-        extensions={extensions} onExtensionChange={setExtensions}
         personalFiles={personalFiles} onFilesChange={setPersonalFiles}
         hiddenTabs={hiddenTabs}
         kanbanData={kanbanData} onKanbanChange={setKanbanData}

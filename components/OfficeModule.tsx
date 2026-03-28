@@ -7,11 +7,9 @@ import { StickyNotesWall } from '@/components/StickyNotesWall';
 import { ImportantNotes } from '@/components/ImportantNotes';
 import { ShiftHandoffModule } from '@/components/ShiftHandoff';
 import { ProfessionalLinks } from '@/components/ProfessionalLinks';
-import { ExtensionsDirectory } from '@/components/ExtensionsDirectory';
 import { DocumentGenerator } from '@/components/DocumentGenerator';
 import { SignatureManager } from '@/components/SignatureManager';
 import { PersonalFileManager } from '@/components/DocumentsModule';
-import { PricingCalculator } from '@/components/PricingCalculator';
 import { BrasilApiModule } from '@/components/BrasilApiModule';
 import { KanbanBoard } from '@/components/KanbanBoard';
 
@@ -30,8 +28,6 @@ interface OfficeModuleProps {
   currentUser: User | null;
   links: ProfessionalLink[];
   onLinkChange: (links: ProfessionalLink[]) => void;
-  extensions: Extension[];
-  onExtensionChange: (extensions: Extension[]) => void;
   personalFiles: StoredFile[];
   onFilesChange: (files: StoredFile[]) => void;
   hiddenTabs?: string[];
@@ -39,7 +35,7 @@ interface OfficeModuleProps {
   onKanbanChange: (data: KanbanState) => void;
 }
 
-type SubTab = 'kanban' | 'mural' | 'notes' | 'handoff' | 'directory' | 'extensions' | 'arquivos' | 'gerador' | 'assinador' | 'precificacao' | 'emails' | 'brasil';
+type SubTab = 'kanban' | 'mural' | 'notes' | 'handoff' | 'directory' | 'arquivos' | 'gerador' | 'assinador' | 'emails' | 'brasil';
 
 const SUB_TABS: { id: SubTab; label: string }[] = [
   { id: 'kanban', label: 'Kanban' },
@@ -47,9 +43,7 @@ const SUB_TABS: { id: SubTab; label: string }[] = [
   { id: 'notes', label: 'Pedidos' },
   { id: 'handoff', label: 'Passagem' },
   { id: 'directory', label: 'Diretório' },
-  { id: 'extensions', label: 'Ramais' },
   { id: 'assinador', label: 'Assinador' },
-  { id: 'precificacao', label: 'Precificação' },
   { id: 'emails', label: 'E-mails' },
 ];
 
@@ -62,7 +56,6 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
   handoffs, onHandoffChange,
   currentUser,
   links, onLinkChange,
-  extensions, onExtensionChange,
   personalFiles, onFilesChange,
   hiddenTabs = [],
   kanbanData, onKanbanChange,
@@ -103,9 +96,7 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
         {activeSubTab === 'notes' && <ImportantNotes notes={importantNotes} onChange={onNoteChange} />}
         {activeSubTab === 'handoff' && <ShiftHandoffModule handoffs={handoffs} onChange={onHandoffChange} currentUser={currentUser} />}
         {activeSubTab === 'directory' && <ProfessionalLinks links={links} onChange={onLinkChange} />}
-        {activeSubTab === 'extensions' && <ExtensionsDirectory extensions={extensions} onChange={onExtensionChange} />}
         {activeSubTab === 'assinador' && <SignatureManager signatures={signatures} onChange={onSignatureChange} onAddEvent={onAddEvent} />}
-        {activeSubTab === 'precificacao' && <PricingCalculator />}
         {activeSubTab === 'emails' && <EmailManager emails={emails} onChange={onEmailChange} />}
         {activeSubTab === 'brasil' && <BrasilApiModule />}
       </div>
@@ -122,8 +113,6 @@ export const OfficeModule: React.FC<OfficeModuleProps> = ({
         </div>
         <div className="flex items-center gap-4 text-[10px] text-gray-500 font-medium">
           <span className="uppercase tracking-widest">Documentos: {personalFiles.length}</span>
-          <span className="text-gray-300 dark:text-gray-700">|</span>
-          <span className="uppercase tracking-widest">Contatos: {extensions.length}</span>
         </div>
       </div>
     </div>

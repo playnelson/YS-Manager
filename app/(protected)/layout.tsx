@@ -15,7 +15,6 @@ import { LoadingPlaceholder } from '@/components/LoadingPlaceholder';
 const NAV_ITEMS = [
   { id: 'escritorio',   href: '/escritorio',  label: 'Escritório',    icon: <Home size={18} /> },
   { id: 'calendario',   href: '/calendario',  label: 'Calendário',    icon: <CalendarIcon size={18} /> },
-  { id: 'whatsapp',     href: '/whatsapp',    label: 'WhatsApp',      icon: <MessageSquare size={18} /> },
   { id: 'documentos',   href: '/documentos',  label: 'Documentos',    icon: <FolderOpen size={18} /> },
   { id: 'pedidos',      href: '/pedidos',     label: 'Pedidos',       icon: <ClipboardList size={18} /> },
   { id: 'funcionarios', href: '/funcionarios',label: 'Quadro Fun.',   icon: <Users size={18} /> },
